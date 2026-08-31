@@ -1,0 +1,36 @@
+{
+  "schema": 1,
+  "source": "etymon-source/app/data/pie (generated public subset)",
+  "files": {
+    "roots": {
+      "file": "roots.json",
+      "bytes": 1033894,
+      "count": 1436,
+      "sha256": "b7a5696b598b74d3f72fe0457338b823924f0a6d7f43ef26527afa15ca819349"
+    },
+    "words": {
+      "file": "words.json",
+      "bytes": 5745789,
+      "count": 20857,
+      "sha256": "607400d39c8bc511c6039190817c2b56051ba03fe95d3b35c40ffe8397592cf5"
+    },
+    "affixes": {
+      "file": "affixes.json",
+      "bytes": 257191,
+      "count": 888,
+      "sha256": "243da94e9b367b0c6a00ac1b3148e5f59f35d02c7713df6747152935ca9d90f2"
+    },
+    "word_block": {
+      "file": "word_block.json",
+      "bytes": 843762,
+      "count": 9,
+      "sha256": "aaef2f5f2c4d6868223281660bb10aa74bc0919722c48bf7653e3578981c2f84"
+    },
+    "details_brief": {
+      "file": "details_brief.json",
+      "bytes": 62572,
+      "count": 20857,
+      "sha256": "e38514969ee3dccf68235871859e716ca56e8da251bea91edebc17ebd3e8850f"
+    }
+  }
+}

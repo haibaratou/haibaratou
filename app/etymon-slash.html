@@ -38,7 +38,7 @@
     斬った瞬間、時計も敵の動きも止まる。指の続きが切れないように。
 
   データ:
-    app/data/pie/word_block.json(語源データベース由来)。
+    app/data/generated-etymon/word_block.json(語源データベースから生成した公開用データ)。
     http で開けば fetch し、file:// 直開きなら下の #cardData を使う。
     敵の絵は assets/enemy/m_<英単語>.png。ファイル名がそのまま出題される語。
 -->
@@ -1478,7 +1478,7 @@ let timerFailing=false;
 /* ====================================================================== */
 async function loadData(){
   try{
-    const r=await fetch("data/pie/word_block.json",{cache:"no-store"});
+    const r=await fetch("data/generated-etymon/word_block.json",{cache:"no-store"});
     if(r.ok)DATA=await r.json();
   }catch(e){}
   if(!DATA.cards||!DATA.cards.length){
@@ -4149,7 +4149,7 @@ syncViewportHeight();
 (async()=>{
   await loadData();
   if(!DATA.cards.length){
-    veil(`<h2>データが読めない</h2><p class="sub">app/data/pie/word_block.json</p>`,
+    veil(`<h2>データが読めない</h2><p class="sub">app/data/generated-etymon/word_block.json</p>`,
          "再読込",()=>location.reload());
     return;
   }

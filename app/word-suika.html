@@ -67,7 +67,7 @@ function setDictionary(entries,source="語源DB抜粋"){
   dictState.textContent=`${source} ${dictionary.length}語 ／ 目標 6文字以上`;
 }
 setDictionary(FALLBACK,"語源DB抜粋");
-fetch("data/pie/words.json").then(r=>r.ok?r.json():Promise.reject()).then(rows=>{
+fetch("data/generated-etymon/words.json").then(r=>r.ok?r.json():Promise.reject()).then(rows=>{
   const best=new Map();rows.forEach(x=>{const w=String(x.w||"").toLowerCase();if(!x.pic||!/^[a-z]{2,8}$/.test(w))return;const rank=Number(x.r)||9999;if(!best.has(w)||rank<best.get(w).r)best.set(w,{w,ja:x.ja||"",r:rank})});
   setDictionary([...best.values()].sort((a,b)=>a.r-b.r),"語源DB");refillQueue();renderQueue();
 }).catch(()=>{});

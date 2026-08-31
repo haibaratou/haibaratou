@@ -283,7 +283,7 @@ async function init(){
     const bundled=window.ETYMON_WORD_FORGE_DATA;
     const [roots,words]=bundled
       ? [bundled.roots,bundled.words]
-      : await Promise.all([fetch("data/pie/roots.json").then(r=>r.json()),fetch("data/pie/words.json").then(r=>r.json())]);
+      : await Promise.all([fetch("data/generated-etymon/roots.json").then(r=>r.json()),fetch("data/generated-etymon/words.json").then(r=>r.json())]);
     state.roots=roots.filter(r=>r.img);state.words=words.filter(w=>w.w&&Array.isArray(w.p)&&w.p.length&&w.r!=null).map((w,i)=>({...w,_id:i}));state.rootByKey=new Map(state.roots.map(r=>[r.key,r]));
     for(const w of state.words){const p=[...new Set(w.p)];if(p.length<1||p.length>3||!p.every(k=>state.rootByKey.has(k)))continue;const key=keyOf(p);if(!state.exact.has(key))state.exact.set(key,[]);state.exact.get(key).push(w)}
     for(const v of state.exact.values())v.sort((a,b)=>(a.r??9999)-(b.r??9999));

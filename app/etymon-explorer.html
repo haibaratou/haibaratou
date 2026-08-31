@@ -298,28 +298,11 @@ const $=s=>document.querySelector(s);
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const PIE_V='c7e0a8132e';   // build_pie_data.py がデータのハッシュに書き換える(キャッシュ破り)
 let ROOTS=[], WORDS=[], AFFIXES=[], BRIEF=null, byRoot=new Map();
-// 単語詳細は頭文字ごとの分割ファイル。開いた語のぶんだけ読んで貯める。
-const DET_SHARD={};
-function detOf(word,i){
-  const c=/^[a-z]/i.test(word)?word[0].toLowerCase():'_';
-  if(!DET_SHARD[c])DET_SHARD[c]=fetch('data/pie/det/'+c+'.json?v='+PIE_V)
-    .then(r=>r.ok?r.json():{}).catch(()=>({}));
-  return DET_SHARD[c].then(sh=>sh[i]||null);
-}
-let EO_SLUG=new Set();   // etymonline に実在する見出し(data/pie/eo_slugs.json)
-/* 同音異義語よけ: 行番号 → 残す語義の並び。guy「張り綱」に guy「やつ」の語源が
-   混ざらないようにする。build_eo_pick.py が data/pie/eo_pick.json を作る。 */
-let EO_PICK=null;
-function eoPick(){
-  if(!EO_PICK)EO_PICK=fetch('data/pie/eo_pick.json?v='+PIE_V).then(r=>r.ok?r.json():{}).catch(()=>({}));
-  return EO_PICK;
-}
-const EO_SHARD={};       // 先頭文字 → {単語: 項目} (data/pie/eo/*.json を必要なときだけ読む)
-function eoShard(w){
-  const k=/^[a-z]/i.test(w)?w[0].toLowerCase():'_';
-  if(!EO_SHARD[k])EO_SHARD[k]=fetch('data/pie/eo/'+k+'.json?v='+PIE_V).then(r=>r.ok?r.json():{}).catch(()=>({}));
-  return EO_SHARD[k];
-}
+// 購入辞書・取得キャッシュは非公開の母艦だけに置く。公開版は公開用スナップショットを使う。
+function detOf(){return Promise.resolve(null)}
+let EO_SLUG=new Set();
+function eoPick(){return Promise.resolve({})}
+function eoShard(){return Promise.resolve({})}
 async function fillEO(word,row,w){
   const box=row.querySelector('.eoLocal span');if(!box)return;
   const all=(await eoShard(word))[word];
@@ -379,9 +362,9 @@ const saveF=()=>{};   // 絞り込みは保存しない(開き直せばまっさ
 async function loadData(){
   try{
     const [r,w,a]=await Promise.all([
-      fetch('data/pie/roots.json?v='+PIE_V).then(x=>{if(!x.ok)throw 0;return x.json();}),
-      fetch('data/pie/words.json?v='+PIE_V).then(x=>{if(!x.ok)throw 0;return x.json();}),
-      fetch('data/pie/affixes.json?v='+PIE_V).then(x=>{if(!x.ok)throw 0;return x.json();}),
+      fetch('data/generated-etymon/roots.json?v='+PIE_V).then(x=>{if(!x.ok)throw 0;return x.json();}),
+      fetch('data/generated-etymon/words.json?v='+PIE_V).then(x=>{if(!x.ok)throw 0;return x.json();}),
+      fetch('data/generated-etymon/affixes.json?v='+PIE_V).then(x=>{if(!x.ok)throw 0;return x.json();}),
     ]);
     ROOTS=r;WORDS=w;AFFIXES=a;
   }catch(e){
@@ -408,11 +391,8 @@ async function loadData(){
     if(!byRoot.has(c))byRoot.set(c,[]);
     byRoot.get(c).push(w);
   }
-  // 単語詳細(約30MB)は別ファイルを非同期で読む。届いたら表を描き直す
-  fetch('data/pie/eo_slugs.json?v='+PIE_V).then(x=>x.ok?x.json():[]) 
-    .then(list=>{EO_SLUG=new Set(list);}).catch(()=>{});
-  // 一覧の「語源」列に要るのは d[0] だけ。9項目そろった本体は詳細を開いたときに取る。
-  fetch('data/pie/details_brief.json?v='+PIE_V).then(x=>{if(!x.ok)throw 0;return x.json();})
+  // 一覧表示に必要な公開可能項目だけを、母艦から生成した軽量データで読む。
+  fetch('data/generated-etymon/details_brief.json?v='+PIE_V).then(x=>{if(!x.ok)throw 0;return x.json();})
     .then(d=>{BRIEF=d;fillDefs();}).catch(e=>{});
   // 版番号も出す。HTML自体にはキャッシュ破りが効かないので、
   // 「更新したのに画面が変わらない」ときはここを見れば古い版を掴んでいると分かる。
