@@ -258,23 +258,36 @@ const SHARE_URL = "https://haibaratou.github.io/haibaratou/app/word-drop.html";
    ・単語ボール(合体後)= 文字数で決まる淡い色。短い=淡く冷たい、長い=濃く熱い
    ・両者は最小ΔE16.0 離してあるので、文字と単語を取りちがえない
    (app/build_word_drop.py と同じ流儀で、生成の手順はコミットログに残してある) */
-const JA_KANA = "ぁあぃいうぇえぉおかがきぎくぐけげこごさざしじすずせぜそぞただちぢっつづてでとどなにぬねのはばぱひびぴふぶぷへべぺほぼぽまみむめもゃやゅゆょよらりるれろわをんゔ";
-const EN_ALPHA = "abcdefghijklmnopqrstuvwxyz";
+const JA_KANA = "うんいしくかきょこりじつちるゅとせたっすさてあけおらまながみはえどだふそにもれめひよゃわぶろほばげむやのぎごびねぐぼでゆざぜずぞへべぱぷぽぴぃづぬぺぇぁをぉぢゔ";
+const EN_ALPHA = "eairtonslcumpdhgybfvwkxzqj";
 const CHAR_COLOR = {
   en: [
-  "#f7f7bb", "#d740e7", "#409fe7", "#e9534e", "#40e740", "#f292cf", "#40e7e7", "#dce740", "#b48574", "#63c576", "#8777ee", "#e3a945", "#cfcae7",
-  "#e740b0", "#947eb9", "#e55283", "#7eb99c", "#b1c563", "#63aec5", "#9eec69", "#dc7aeb", "#e77e40", "#f4cebe", "#bda76b", "#40e7bb", "#b47490",
+  "#fdfdd3", "#8516f3", "#e81111", "#16f316", "#1b93ee", "#f75fb5", "#f3e416", "#a26049", "#16f3a9", "#16ddf3", "#f0c9f8", "#ed8c0c", "#82a744",
+  "#7d43b6", "#f425e6", "#cc1e4d", "#52987c", "#a8f254", "#98527c", "#ecc569", "#527a98", "#fab8a8", "#1651f3", "#f67251", "#dd90f4", "#31b943",
   ],
   ja: [
-  "#f7f7bb", "#d740e7", "#409fe7", "#e9534e", "#40e740", "#f292cf", "#40e7e7", "#dce740", "#b48574", "#63c576", "#8777ee", "#e3a945", "#cfcae7",
-  "#e740b0", "#947eb9", "#e55283", "#7eb99c", "#b1c563", "#63aec5", "#9eec69", "#dc7aeb", "#e77e40", "#f4cebe", "#bda76b", "#40e7bb", "#b47490",
-  "#ee8777", "#40e778", "#f1b1c9", "#a2f1b4", "#adb4f5", "#4e87e9", "#bf95ef", "#748db4", "#edad87", "#8db474", "#bd6bba", "#cedfc3", "#8fd6d6",
-  "#f0d384", "#d95ea4", "#d95e6a", "#92c5f2", "#a5f292", "#40e799", "#b55fe7", "#caee77", "#d28356", "#e8a19c", "#e552d6", "#b0e740", "#e5ce9e",
-  "#8dc95e", "#63c594", "#45cee3", "#83e740", "#8f92e5", "#c4ab92", "#bea5cf", "#b8c492", "#40b5e7", "#d1668d", "#ee77d2", "#c17678", "#62ce5a",
-  "#aa6ed8", "#62d5be", "#9cb6c9", "#db694d", "#d4afb3", "#e995ef", "#d2b956", "#b474a9", "#6387c5", "#edc4ed", "#c19167", "#c9d651", "#c1c176",
-  "#5fe156", "#d392b9",
+  "#fdfdd3", "#8516f3", "#e81111", "#16f316", "#1b93ee", "#f75fb5", "#f3e416", "#a26049", "#16f3a9", "#16ddf3", "#f0c9f8", "#ed8c0c", "#82a744",
+  "#7d43b6", "#f425e6", "#cc1e4d", "#52987c", "#a8f254", "#98527c", "#ecc569", "#527a98", "#fab8a8", "#1651f3", "#f67251", "#dd90f4", "#31b943",
+  "#9ee5aa", "#8bc5f9", "#988a52", "#e3f98b", "#6760a9", "#0c67df", "#15d5bc", "#f490b8", "#a5cfc5", "#be2daf", "#c08139", "#3fab67", "#aba8fa",
+  "#c45ff7", "#aec328", "#16f367", "#94f68d", "#ed5f0c", "#b85162", "#bf8891", "#bdc680", "#48a7b1", "#977ff5", "#be2d70", "#a752a7", "#d5a215",
+  "#51d11a", "#cef316", "#c32d28", "#c9ba9c", "#e6ccd3", "#b210da", "#f76e77", "#8df6ec", "#a97eb9", "#f76eee", "#e68870", "#7c3cdd", "#a8a5cf",
+  "#1a9ad1", "#f425b6", "#b0a83b", "#75b931", "#d5a372", "#b95a31", "#ecf75f", "#3b71b0", "#f5d89e", "#f75f92", "#93f316", "#dc7ac2", "#f18a46",
+  "#83b474", "#8ddef6",
   ]
 };
+/* 色の範囲を広げたぶん暗い玉ができる。文字が読めるよう、玉ごとに
+   黒文字と白文字を切りかえる(明るさで決める) */
+const inkCache = new Map();
+function isDark(hex) {
+  let v = inkCache.get(hex);
+  if (v !== undefined) return v;
+  const n = parseInt(hex.slice(1), 16);
+  const lin = c => { c /= 255; return c <= .03928 ? c / 12.92 : Math.pow((c + .055) / 1.055, 2.4); };
+  const L = .2126 * lin(n >> 16 & 255) + .7152 * lin(n >> 8 & 255) + .0722 * lin(n & 255);
+  v = (1.05 / (L + .05)) > ((L + .05) / .0637);      // 白文字のほうが読めるか
+  inkCache.set(hex, v);
+  return v;
+}
 function charColor(ch) {
   const list = dictMode === "ja" ? JA_KANA : EN_ALPHA, pal = CHAR_COLOR[dictMode];
   const i = list.indexOf(ch);
@@ -1651,9 +1664,13 @@ function drawBall(b) {
   ctx.beginPath(); ctx.arc(2, 4, r, 0, 6.2832); ctx.fillStyle = "rgba(0,0,0,.3)"; ctx.fill();
   ctx.beginPath(); ctx.arc(0, 0, r, 0, 6.2832); ctx.fillStyle = b.color; ctx.fill();
   const g = ctx.createRadialGradient(-r * .3, -r * .4, r * .1, 0, 0, r);
-  g.addColorStop(0, "rgba(255,255,255,.55)"); g.addColorStop(1, "rgba(255,255,255,0)");
+  g.addColorStop(0, isDark(b.color) ? "rgba(255,255,255,.3)" : "rgba(255,255,255,.55)");
+  g.addColorStop(1, "rgba(255,255,255,0)");
   ctx.fillStyle = g; ctx.fill();
-  ctx.lineWidth = Math.max(2, r * .1); ctx.strokeStyle = b.isWord ? "rgba(20,17,30,.85)" : "rgba(20,17,30,.5)"; ctx.stroke();
+  const dark = !b.isWord && isDark(b.color);
+  ctx.lineWidth = Math.max(2, r * .1);
+  ctx.strokeStyle = b.isWord ? "rgba(20,17,30,.85)" : (dark ? "rgba(255,255,255,.45)" : "rgba(20,17,30,.5)");
+  ctx.stroke();
   if (picked) { ctx.lineWidth = Math.max(3, r * .17); ctx.strokeStyle = "#fff"; ctx.stroke(); }
   else if (glow.has(b) && performance.now() < glowUntil) {
     const ph = Math.abs(1 - (performance.now() / 320) % 2);
@@ -1661,7 +1678,8 @@ function drawBall(b) {
     ctx.strokeStyle = `rgba(255,236,110,${(.5 + .5 * ph).toFixed(2)})`;
     ctx.stroke();
   }
-  ctx.textAlign = "center"; ctx.textBaseline = "middle"; ctx.fillStyle = "#211d2c";
+  ctx.textAlign = "center"; ctx.textBaseline = "middle";
+  ctx.fillStyle = dark ? "#ffffff" : "#211d2c";
   if (!b.isWord) {
     const one = upper(b.letters);
     const fs = fitText(one, r * 1.2, r * 1.25, 1000);
@@ -1686,7 +1704,7 @@ function drawBall(b) {
     if (mean && r > 22) {
       const ms = Math.min(fs * .58, fitText(mean, r * 1.28, fs * .58, 800));
       ctx.font = `800 ${ms}px "M PLUS Rounded 1c","Yu Gothic",system-ui,sans-serif`;
-      ctx.fillStyle = "#5b5164"; ctx.fillText(mean, 0, r * .70);
+      ctx.fillStyle = dark ? "rgba(255,255,255,.85)" : "#5b5164"; ctx.fillText(mean, 0, r * .70);
     }
   }
   ctx.restore();
