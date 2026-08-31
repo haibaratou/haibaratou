@@ -17,13 +17,13 @@ h1{font-size:clamp(20px,5vw,29px);line-height:1;margin:0;font-weight:1000}.sub{f
 .scoreBox{display:flex;gap:6px}.scoreCell{min-width:66px;text-align:center;background:#fff;border:3px solid var(--ink);border-radius:13px;padding:3px 8px;box-shadow:0 4px 0 rgba(41,35,45,.18)}.scoreCell small{display:block;font-size:9px;font-weight:900;color:#89778c}.scoreCell b{font-size:18px}
 .boardWrap{min-height:0;position:relative;background:linear-gradient(180deg,#90d9ef 0%,#dcf4e7 54%,#ffe8a3 100%);overflow:hidden}
 canvas{display:block;width:100%;height:100%;touch-action:none;cursor:crosshair}
-.queueHud{position:absolute;right:10px;top:10px;z-index:2;display:flex;align-items:center;gap:5px;background:rgba(255,255,255,.94);border:3px solid var(--ink);border-radius:18px;padding:5px 7px;pointer-events:none;box-shadow:0 4px 0 rgba(41,35,45,.18);white-space:nowrap}.currentBall{width:64px;height:64px;border:3px solid var(--ink);border-radius:50%;display:grid;place-items:center;background:var(--yellow);font-size:39px;font-weight:1000}.nextRow{display:flex;gap:4px}.peekBall{width:32px;height:32px;border:2px solid var(--ink);border-radius:50%;display:grid;place-items:center;font-size:17px;font-weight:1000;background:#fff}.choiceRow{display:none;gap:5px}.queueHud.choice{pointer-events:auto}.queueHud.choice .currentBall,.queueHud.choice .nextRow{display:none}.queueHud.choice .choiceRow{display:flex}.choiceBall{width:48px;height:48px;padding:0;border-radius:50%;font-size:25px;box-shadow:0 3px 0 rgba(41,35,45,.22)}.choiceBall.on{background:var(--yellow);transform:translateY(-3px);box-shadow:0 6px 0 rgba(41,35,45,.25)}
-.toast{position:absolute;left:50%;top:82px;z-index:4;transform:translate(-50%,-15px) scale(.9);opacity:0;min-width:180px;text-align:center;background:#fff;border:4px solid var(--ink);border-radius:18px;padding:8px 16px;font-weight:1000;font-size:22px;box-shadow:0 6px 0 rgba(41,35,45,.25);pointer-events:none;transition:.2s}.toast.on{opacity:1;transform:translate(-50%,0) scale(1)}.toast b{color:#e67623}
+.queueHud{position:absolute;right:10px;top:10px;z-index:2;display:flex;align-items:center;gap:5px;background:rgba(255,255,255,.94);border:3px solid var(--ink);border-radius:18px;padding:5px 7px;pointer-events:none;box-shadow:0 4px 0 rgba(41,35,45,.18);white-space:nowrap}.currentBall{width:64px;height:64px;border:3px solid var(--ink);border-radius:50%;display:grid;place-items:center;background:var(--yellow);font-size:39px;font-weight:1000}.nextRow{display:flex;gap:4px}.peekBall{width:32px;height:32px;border:2px solid var(--ink);border-radius:50%;display:grid;place-items:center;font-size:17px;font-weight:1000;background:#fff}.queueHud.choice .nextRow{display:none}.choiceDock{position:absolute;left:10px;bottom:10px;z-index:3;display:none;gap:5px;padding:6px;background:rgba(255,255,255,.94);border:3px solid var(--ink);border-radius:18px;box-shadow:0 4px 0 rgba(41,35,45,.18)}.choiceDock.on{display:flex}.choiceBall{width:48px;height:48px;padding:0;border-radius:50%;font-size:25px;box-shadow:0 3px 0 rgba(41,35,45,.22)}.choiceBall.on{background:var(--yellow);transform:translateY(-3px);box-shadow:0 6px 0 rgba(41,35,45,.25)}
+.toast{position:absolute;left:50%;top:82px;z-index:4;transform:translate(-50%,-15px) scale(.9);opacity:0;min-width:180px;text-align:center;background:#fff;border:4px solid var(--ink);border-radius:18px;padding:8px 16px;font-weight:1000;font-size:22px;box-shadow:0 6px 0 rgba(41,35,45,.25);pointer-events:none;transition:.2s}.toast.on{opacity:1;transform:translate(-50%,0) scale(1)}.toast b{color:#e67623}.toast.new{background:#fff2a8;border-color:#e67623}.toast.new strong{display:block;color:#e94f68;font-size:34px;line-height:1;letter-spacing:.06em}.toast.new b{display:block;margin-top:3px;color:var(--ink);font-size:16px}
 .bottom{padding:8px 10px max(9px,env(safe-area-inset-bottom));border-top:4px solid var(--ink);background:#fff9e9;display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px;align-items:center}.bottomBtns{display:flex;gap:6px}.modeChange{padding-inline:10px;background:#fff}
 .log{min-width:0}.log b{display:block;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.log span{display:block;font-size:11px;color:#7c6b7e;font-weight:750;margin-top:2px}
 button{appearance:none;border:3px solid var(--ink);border-radius:13px;background:#fff;color:var(--ink);font:inherit;font-weight:1000;padding:9px 13px;box-shadow:0 4px 0 rgba(41,35,45,.22);cursor:pointer}button:active{transform:translateY(3px);box-shadow:0 1px 0 rgba(41,35,45,.22)}
 .over,.modeSelect{position:absolute;inset:0;z-index:10;display:none;place-items:center;background:rgba(25,23,34,.75);padding:24px}.over.on,.modeSelect.on{display:grid}.overCard,.modeCard{width:min(440px,94%);background:#fffaf0;border:5px solid var(--ink);border-radius:24px;text-align:center;padding:24px;box-shadow:0 10px 0 rgba(0,0,0,.25)}.overCard h2,.modeCard h2{font-size:30px;margin:0 0 8px}.overCard p,.modeCard p{font-weight:850}.overCard button{background:var(--yellow);font-size:19px}.modeButtons{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:18px}.modeButtons button{min-height:112px;font-size:21px}.modeButtons button:first-child{background:#fff}.modeButtons button:last-child{background:var(--yellow)}.modeButtons small{display:block;margin-top:7px;font-size:11px;line-height:1.45;color:#6e6070}
-@media(max-width:430px){.game{min-height:500px}.top{padding-left:8px;padding-right:8px}.sub{display:none}.scoreCell{min-width:57px;padding-inline:5px}.queueHud{top:7px;max-width:calc(100% - 14px)}.choiceBall{width:41px;height:41px;font-size:22px}.modeButtons{grid-template-columns:1fr}.modeButtons button{min-height:82px}.modeChange{font-size:0}.modeChange::after{content:"方式";font-size:13px}}
+@media(max-width:430px){.game{min-height:500px}.top{padding-left:8px;padding-right:8px}.sub{display:none}.scoreCell{min-width:57px;padding-inline:5px}.queueHud{top:7px;max-width:calc(100% - 14px)}.choiceDock{left:7px;bottom:7px}.choiceBall{width:41px;height:41px;font-size:22px}.modeButtons{grid-template-columns:1fr}.modeButtons button{min-height:82px}.modeChange{font-size:0}.modeChange::after{content:"方式";font-size:13px}}
 </style>
 </head>
 <body>
@@ -34,7 +34,8 @@ button{appearance:none;border:3px solid var(--ink);border-radius:13px;background
   </header>
   <section class="boardWrap" id="boardWrap">
     <canvas id="board" aria-label="文字を落とす盤面"></canvas>
-    <div class="queueHud" id="queueHud"><span class="currentBall" id="current">A</span><div class="nextRow" id="next"></div><div class="choiceRow" id="choices"></div></div>
+    <div class="queueHud" id="queueHud"><span class="currentBall" id="current">A</span><div class="nextRow" id="next"></div></div>
+    <div class="choiceDock" id="choices" aria-label="選べる文字"></div>
     <div class="toast" id="toast"></div>
   </section>
   <footer class="bottom"><div class="log"><b id="log">好きな横位置をタップして落とす</b><span id="dictState">辞書を準備中…</span></div><div class="bottomBtns"><button class="modeChange" id="modeChange" type="button">方式変更</button><button id="reset" type="button">↻ やりなおす</button></div></footer>
@@ -48,6 +49,8 @@ const $=s=>document.querySelector(s),canvas=$("#board"),ctx=canvas.getContext("2
 const wrap=$("#boardWrap"),scoreEl=$("#score"),wordsEl=$("#words"),queueHud=$("#queueHud"),currentEl=$("#current"),nextEl=$("#next"),choicesEl=$("#choices"),logEl=$("#log"),dictState=$("#dictState"),toast=$("#toast"),modeSelect=$("#modeSelect");
 let W=0,H=0,dpr=1,bodies=[],particles=[],queue=[],aimX=220,last=performance.now(),nextId=1,score=0,wordCount=0,canDrop=false,over=false,dangerFrames=0,toastTimer=0,finishTimer=0,mode="",choiceIndex=0;
 let dictionary=[],wordBySignature=new Map(),wordInfo=new Map(),buildTargets=[];
+const DISCOVERY_KEY="word-suika-discovered-v1";let discoveredWords=new Set();
+try{discoveredWords=new Set(JSON.parse(localStorage.getItem(DISCOVERY_KEY)||"[]"))}catch(e){}
 const colors=["#ffd34d","#f39b61","#71c6e7","#ef91aa","#8fd19b","#bda0e5"];
 const signature=s=>[...String(s).toLowerCase().replace(/[^a-z]/g,"")].sort().join("");
 const shuffle=a=>{for(let i=a.length-1;i;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]]}return a};
@@ -92,9 +95,11 @@ function renderQueue(){
   refillQueue();queueHud.classList.toggle("choice",mode==="choice");
   if(mode==="choice"){
     const offered=choiceCandidates();if(!offered.some(x=>x.index===choiceIndex))choiceIndex=offered[0]?.index??0;
+    currentEl.textContent=(queue[choiceIndex]||queue[0]).toUpperCase();choicesEl.classList.add("on");
     choicesEl.innerHTML=offered.map(x=>`<button class="choiceBall${x.index===choiceIndex?" on":""}" type="button" data-index="${x.index}" aria-pressed="${x.index===choiceIndex}">${x.ch.toUpperCase()}</button>`).join("");
     choicesEl.querySelectorAll("button").forEach(b=>b.onclick=()=>{choiceIndex=Number(b.dataset.index);renderQueue();logEl.textContent=`${queue[choiceIndex].toUpperCase()} を選択中`});
   }else{
+    choicesEl.classList.remove("on");
     currentEl.textContent=queue[0].toUpperCase();nextEl.innerHTML=queue.slice(1,4).map((c,i)=>`<span class="peekBall" style="background:${colors[(c.charCodeAt(0)+i)%colors.length]}">${c.toUpperCase()}</span>`).join("");
   }
 }
@@ -111,7 +116,8 @@ function mergeBodies(parts,word){
   const total=parts.reduce((sum,b)=>sum+b.r*b.r,0),x=parts.reduce((sum,b)=>sum+b.x*b.r*b.r,0)/total,y=parts.reduce((sum,b)=>sum+b.y*b.r*b.r,0)/total;
   const source=new Set(parts),names=parts.map(b=>b.label);bodies=bodies.filter(o=>!source.has(o));const n=addBody(word,x,y,word);n.vx=parts.reduce((sum,b)=>sum+b.vx,0)/parts.length*.35;n.vy=Math.min(...parts.map(b=>b.vy))-55;
   score+=word.length*word.length*10;wordCount++;scoreEl.textContent=score;wordsEl.textContent=wordCount;
-  logEl.textContent=`${names.join(" + ")} → ${word.toUpperCase()}`;showToast(word);
+  const isNew=!discoveredWords.has(word);if(isNew){discoveredWords.add(word);try{localStorage.setItem(DISCOVERY_KEY,JSON.stringify([...discoveredWords]))}catch(e){}}
+  logEl.textContent=`${names.join(" + ")} → ${word.toUpperCase()}`;showToast(word,isNew);
   for(let i=0;i<18;i++)particles.push({x,y,vx:(Math.random()-.5)*220,vy:(Math.random()-.8)*180,life:1,color:n.color});
   if(word.length>=6)gameClear(word);
 }
@@ -139,7 +145,7 @@ function tryWordMerge(){
   }
   if(best){mergeBodies(best.indices.map(i=>bodies[i]),best.word);return true}return false;
 }
-function showToast(word){clearTimeout(toastTimer);toast.innerHTML=`WORD! <b>${word.toUpperCase()}</b>`;toast.classList.add("on");toastTimer=setTimeout(()=>toast.classList.remove("on"),1000)}
+function showToast(word,isNew=false){clearTimeout(toastTimer);toast.classList.toggle("new",isNew);toast.innerHTML=isNew?`<strong>NEW!</strong><b>${word.toUpperCase()}</b>`:`WORD! <b>${word.toUpperCase()}</b>`;toast.classList.add("on");toastTimer=setTimeout(()=>toast.classList.remove("on"),1000)}
 function physics(dt){
   const s=Math.min(.033,dt/1000),floor=H-9;
   bodies.forEach(b=>{b.vy+=720*s;b.vx*=Math.pow(.994,dt/16.67);b.vy*=Math.pow(.997,dt/16.67);b.x+=b.vx*s;b.y+=b.vy*s});
@@ -167,9 +173,9 @@ function draw(){ctx.clearRect(0,0,W,H);ctx.fillStyle="rgba(255,255,255,.2)";for(
 function loop(now){const dt=now-last;last=now;if(!over)physics(dt);draw();requestAnimationFrame(loop)}
 function gameOver(){if(over)return;over=true;$("#resultTitle").textContent="いっぱい！";$("#result").textContent=`${wordCount}語を完成　${score}点`;$("#over").classList.add("on")}
 function gameClear(word){if(over)return;over=true;clearTimeout(finishTimer);finishTimer=setTimeout(()=>{$("#resultTitle").textContent=word.length>=7?"スペシャルクリア！":"6文字クリア！";$("#result").textContent=`${word.toUpperCase()}（${wordInfo.get(word)?.ja||"和訳なし"}） ／ ${score}点`;$("#over").classList.add("on")},650)}
-function reset(){clearTimeout(finishTimer);bodies=[];particles=[];queue=[];score=0;wordCount=0;dangerFrames=0;over=false;canDrop=!!mode;choiceIndex=0;scoreEl.textContent=0;wordsEl.textContent=0;$("#over").classList.remove("on");logEl.textContent=mode==="choice"?"候補を選んで、落とす位置をタップ":"6文字以上の英単語を作ればクリア";refillQueue();renderQueue()}
+function reset(){clearTimeout(finishTimer);clearTimeout(toastTimer);toast.classList.remove("on","new");bodies=[];particles=[];queue=[];score=0;wordCount=0;dangerFrames=0;over=false;canDrop=!!mode;choiceIndex=0;scoreEl.textContent=0;wordsEl.textContent=0;$("#over").classList.remove("on");logEl.textContent=mode==="choice"?"候補を選んで、落とす位置をタップ":"6文字以上の英単語を作ればクリア";refillQueue();renderQueue()}
 function chooseMode(nextMode){mode=nextMode;modeSelect.classList.remove("on");reset()}
-function changeMode(){mode="";canDrop=false;bodies=[];particles=[];queue=[];queueHud.classList.remove("choice");modeSelect.classList.add("on")}
+function changeMode(){mode="";canDrop=false;bodies=[];particles=[];queue=[];queueHud.classList.remove("choice");choicesEl.classList.remove("on");modeSelect.classList.add("on")}
 canvas.addEventListener("pointermove",e=>{const r=canvas.getBoundingClientRect();aimX=Math.max(57,Math.min(W-57,e.clientX-r.left))});canvas.addEventListener("pointerdown",e=>{e.preventDefault();const r=canvas.getBoundingClientRect();dropAt(e.clientX-r.left)});$("#reset").onclick=reset;$("#again").onclick=reset;
 document.querySelectorAll("[data-mode]").forEach(b=>b.onclick=()=>chooseMode(b.dataset.mode));$("#modeChange").onclick=changeMode;
 requestAnimationFrame(t=>{last=t;loop(t)});
