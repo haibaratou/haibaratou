@@ -1730,6 +1730,11 @@ const reachable = (a, b) => Math.hypot(a.x - b.x, a.y - b.y) <= a.r + b.r + R0 *
 /* ヒントが出す経路は、指をまっすぐ滑らせても途中のボールを巻き込まない
    ── すぐ隣どうし ── に限る。プレイヤー自身にはこの縛りはない。 */
 const sideBySide = (a, b) => Math.hypot(a.x - b.x, a.y - b.y) <= a.r + b.r + R0 * 0.5;
+/* 天井から上にはみ出しているボールは、光らせても半分しか見えない。
+   落ちている途中のボールも、指がとどく前に位置が変わってしまう。
+   どちらもヒントには使わない。 */
+const onBoard = b => b.y - b.r >= 2;
+const grabbable = b => onBoard(b) && b.vy < 30 && b.vy > -30;
 const chainLetters = () => chain.map(b => b.letters).join("");
 function chainHit() {
   if (chain.length < 2) return null;
@@ -1970,7 +1975,7 @@ $("#btnSound").onclick = () => {
    タップするたびに 短い語 → 長い語 へ切り替わり、その組が光る。
    どの長さの語まで作れる盤面なのかを一目で確かめられる。            */
 function collectChains() {
-  const list = bodies.slice();
+  const list = bodies.filter(grabbable);
   for (let i = list.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [list[i], list[j]] = [list[j], list[i]]; }
   const nbr = new Map();
   for (const a of list) nbr.set(a, list.filter(b => b !== a && sideBySide(a, b)));
@@ -2006,9 +2011,10 @@ const findChain = () => { const a = collectChains(); return a.length ? a[a.lengt
 function doFind() {
   if (!running) return;
   /* 集め直すのは合体したときだけ。補充でボールが増えるたびに集め直すと
-     番号が毎回1に戻ってしまう。持っている組のボールが盤から消えていたときも集め直す */
+     番号が毎回1に戻ってしまう。持っている組のボールが盤から消えたときや、
+     山が育って天井の外へ押し出されたときも集め直す */
   const key = String(madeWords.length);
-  const alive = hintList.length && hintList.every(h => h.balls.every(b => bodies.includes(b)));
+  const alive = hintList.length && hintList.every(h => h.balls.every(b => bodies.includes(b) && onBoard(b)));
   if (key !== hintKey || !alive) { hintKey = key; hintList = collectChains(); hintIdx = -1; }
   if (!hintList.length) { setLog(t().findNone); return; }
   hintIdx = (hintIdx + 1) % hintList.length;       // 短い語から順に、押すたび長い語へ
