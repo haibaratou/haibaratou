@@ -112,6 +112,15 @@ button.pick b{display:block;font-size:15px;font-weight:1000}
 button.pick i{display:block;font-style:normal;font-size:11px;font-weight:800;color:#6f6175;margin-top:3px;
   white-space:normal;line-height:1.35}
 button.pick.on{background:#fff3c4}
+.dexlist{display:flex;flex-wrap:wrap;gap:5px;max-height:46vh;overflow:auto;
+  background:#fff;border:3px solid var(--ink);border-radius:14px;padding:8px}
+.dexlist i{font-style:normal;border:2px solid var(--ink);border-radius:10px;padding:3px 7px;
+  font-size:12px;font-weight:1000;line-height:1.15;text-align:center}
+.dexlist i small{display:block;font-size:8.5px;font-weight:800;color:#5b5164}
+.dexlist .none{font-size:12px;font-weight:800;color:#8e7f92;padding:6px}
+#dexTabs button{font-size:11px;padding:5px 8px}
+#dexTabs button.on{background:var(--yellow)}
+.dex{cursor:pointer}
 </style>
 </head>
 <body>
@@ -124,7 +133,7 @@ button.pick.on{background:#fff3c4}
     <div class="stats">
       <div class="stat"><small id="lbLong">最長</small><b id="statLong">–</b></div>
       <div class="stat"><small id="lbScore">スコア</small><b id="statScore">0</b></div>
-      <div class="stat" id="timeBox"><small id="lbTime">のこり</small><b id="statTime">3:00</b></div>
+      <div class="stat" id="timeBox"><small id="lbTime">つくった語</small><b id="statTime">0</b></div>
     </div>
   </header>
 
@@ -149,7 +158,8 @@ button.pick.on{background:#fff3c4}
       <button id="btnHow" class="ghostbtn" type="button">遊びかた</button>
       <button id="btnLang" class="ghostbtn" type="button">EN</button>
       <button id="btnFree" class="ghostbtn" type="button">フリー</button>
-      <button id="btnRetry" class="ghostbtn" type="button" style="margin-left:auto">やりなおす</button>
+      <button id="btnEnd" class="primary" type="button" style="margin-left:auto">おわる</button>
+      <button id="btnRetry" class="ghostbtn" type="button">やりなおす</button>
     </div>
   </footer>
 
@@ -185,6 +195,15 @@ button.pick.on{background:#fff3c4}
       <span><b id="pickJaT">日本語モード</b><i id="pickJaD">ひらがなをつないで漢字の語をつくる</i></span>
     </button>
     <button id="startHow" type="button" style="width:100%;margin-top:4px">遊びかた</button>
+  </div></div>
+
+  <div class="over" id="overDex"><div class="card">
+    <h2 id="dexTitle">ずかん</h2>
+    <p class="lead" id="dexLead"></p>
+    <div class="row" id="dexTabs" style="flex-wrap:wrap;margin-bottom:10px"></div>
+    <div class="dexlist" id="dexList"></div>
+    <p class="mini" id="dexMore"></p>
+    <button class="primary" id="dexClose" type="button" style="width:100%;margin-top:10px">とじる</button>
   </div></div>
 
   <div class="over" id="overHow"><div class="card">
@@ -229,7 +248,6 @@ const dispOf = e => !e ? "" : (dictMode === "ja" ? (e.s || e.w) : e.w.toUpperCas
 const subOf  = e => !e ? "" : (dictMode === "ja" ? e.w : (lang === "ja" ? (e.ja || e.en || "") : (e.en || e.ja || "")));
 const artOf  = e => !e ? "" : (dictMode === "ja" ? (e.art || "") : (e.pic ? e.w : ""));
 const glossOf = e => !e ? "" : (dictMode === "ja" ? (e.g || "") : "");
-const DAILY_SEC = 180;
 const FILL = 0.76;                 // ボールで埋める面積のねらい(密だが枠からはみ出さない)
 const STARTER_RATE = 0.20;         // 最初の山に混ぜておく単語ボールの割合
 const EPOCH = Date.UTC(2026, 0, 1);
@@ -240,7 +258,7 @@ const SHARE_URL = "https://haibaratou.github.io/haibaratou/app/word-drop.html";
    ・単語ボール(合体後)= 文字数で決まる淡い色。短い=淡く冷たい、長い=濃く熱い
    ・両者は最小ΔE16.0 離してあるので、文字と単語を取りちがえない
    (app/build_word_drop.py と同じ流儀で、生成の手順はコミットログに残してある) */
-const JA_KANA = "ぁあぃいうぇえおかがきぎくぐけげこごさざしじすずせぜそぞただちぢっつづてでとどなにぬねのはばぱひびぴふぶぷへべぺほぼぽまみむめもゃやゅゆょよらりるれろわをん";
+const JA_KANA = "ぁあぃいうぇえぉおかがきぎくぐけげこごさざしじすずせぜそぞただちぢっつづてでとどなにぬねのはばぱひびぴふぶぷへべぺほぼぽまみむめもゃやゅゆょよらりるれろわをんゔ";
 const EN_ALPHA = "abcdefghijklmnopqrstuvwxyz";
 const CHAR_COLOR = {
   en: [
@@ -254,6 +272,7 @@ const CHAR_COLOR = {
   "#f0d384", "#d95ea4", "#d95e6a", "#92c5f2", "#a5f292", "#40e799", "#b55fe7", "#caee77", "#d28356", "#e8a19c", "#e552d6", "#b0e740", "#e5ce9e",
   "#8dc95e", "#63c594", "#45cee3", "#83e740", "#8f92e5", "#c4ab92", "#bea5cf", "#b8c492", "#40b5e7", "#d1668d", "#ee77d2", "#c17678", "#62ce5a",
   "#aa6ed8", "#62d5be", "#9cb6c9", "#db694d", "#d4afb3", "#e995ef", "#d2b956", "#b474a9", "#6387c5", "#edc4ed", "#c19167", "#c9d651", "#c1c176",
+  "#5fe156", "#d392b9",
   ]
 };
 function charColor(ch) {
@@ -273,7 +292,7 @@ const MIN_LETTERS = 16;            // 文字ボールが減りすぎると手が
 const T = {
   ja: {
     title:"ワードドロップ", daily:"今日の一戦", free:"フリープレイ",
-    long:"最長", score:"スコア", time:"のこり", made:"つくった単語",
+    long:"最長", score:"スコア", time:"つくった語", made:"つくった単語",
     trace:"ボールを指でなぞってつなぐ",
     dictReady:n=>`${n.toLocaleString()}語`, dictLocal:n=>`内蔵辞書 ${n}語(http で開くと全語)`,
     needTwo:"2個以上つなぐ", tooShort:n=>`${MINLEN}文字から。いまは${n}文字`,
@@ -282,12 +301,15 @@ const T = {
     perfect:w=>`${w} は最長！ 消えた`,
     findNone:"つながる語が見つからない", find:"ヒント",
     hintPick:(i,n,len,w)=>`確認 ${i}/${n} ・ ${len}文字 ${w}`,
-    endTime:"時間切れ", resultLead:d=>`${d} ／ 今日の記録`, freeLead:"フリープレイの記録",
+    endTime:"時間切れ", endHand:"ここまでの記録", end:"おわる", resultLead:d=>`${d} ／ 今日の記録`, freeLead:"フリープレイの記録",
     noWord:"単語なし", langBtn:"EN", how:"遊びかた", freeBtn:"フリー", retry:"やりなおす",
     again:"もう一度", copy:"結果をコピー", copied:"コピーしました！",
     tomorrow:"あすの一戦は 0:00 に更新されます", best:"自己ベスト", newBest:"自己ベスト更新！",
     practice:"練習プレイ(今日の記録は最初の1回ぶん)",
     stars:["まいにち語","よくみる語","ときどき語","レア語","げきレア語"], dex:"ずかん",
+    dexLead:(n,t,p)=>`${n.toLocaleString()} / ${t.toLocaleString()}語 (${p.toFixed(1)}%)`,
+    dexAll:"すべて", dexEmpty:"まだ1語もありません。遊ぶとここに集まります",
+    dexMore:n=>`ほか ${n.toLocaleString()}語`, dexClose:"とじる",
     startLead:n=>`今日の一戦 #${n} ／ どちらで遊ぶ?`,
     pickEnT:"英語モード", pickEnD:"文字をつないで英単語をつくる",
     pickJaT:"日本語モード", pickJaD:"ひらがなをつないで漢字の語をつくる",
@@ -299,12 +321,13 @@ const T = {
       "その<b>単語ボールも鎖に含められる</b>。含めればもっと長い単語に育つ ── 1234 の「大きな数字をつくろう」と同じ。",
       "<b>10文字</b>まで育てると最長。消えて大ボーナス。毎日おなじ文字が世界中に配られ、<b>その日いちばん長い単語</b>をつくった人が優勝。",
       "<b>ABC / あ→漢</b> のボタンで日本語モードに切り替わる。日本語モードは<b>ひらがなをつないで漢字の語</b>をつくる(つないだ かな を並べかえて語の読みになれば成立)。",
+    "作った語は<b>ずかん</b>にたまる。フッタの数字を押すと、集めた語をレア度べつに見られる。",
     "合体すると<b>その単語を読み上げる</b>。🔊 で切れる。<b>ヒント</b>は開発の確認用で、押すたびに、いま作れる語が<b>短いほうから長いほうへ</b>切り替わって光る。"
     ]
   },
   en: {
     title:"WORDROP", daily:"Today's run", free:"Free play",
-    long:"LONGEST", score:"SCORE", time:"TIME", made:"Words made",
+    long:"LONGEST", score:"SCORE", time:"WORDS", made:"Words made",
     trace:"Drag across touching balls to link them",
     dictReady:n=>`${n.toLocaleString()} words`, dictLocal:n=>`Offline list · ${n} words`,
     needTwo:"Link at least two balls", tooShort:n=>`${MINLEN} letters minimum — you have ${n}`,
@@ -313,12 +336,15 @@ const T = {
     perfect:w=>`${w} is the longest! Cleared`,
     findNone:"No link found", find:"Hint",
     hintPick:(i,n,len,w)=>`check ${i}/${n} · ${len} ${w}`,
-    endTime:"Time!", resultLead:d=>`${d} · your run`, freeLead:"Free play result",
+    endTime:"Time!", endHand:"Your run", end:"Finish", resultLead:d=>`${d} · your run`, freeLead:"Free play result",
     noWord:"no word", langBtn:"日本語", how:"How to play", freeBtn:"Free", retry:"Restart",
     again:"Play again", copy:"Copy result", copied:"Copied!",
     tomorrow:"A new run drops at midnight", best:"Personal best", newBest:"New personal best!",
     practice:"Practice run — today’s record keeps your first attempt.",
     stars:["everyday","common","occasional","rare","very rare"], dex:"collected",
+    dexLead:(n,t,p)=>`${n.toLocaleString()} / ${t.toLocaleString()} words (${p.toFixed(1)}%)`,
+    dexAll:"all", dexEmpty:"Nothing yet — words you make show up here",
+    dexMore:n=>`and ${n.toLocaleString()} more`, dexClose:"Close",
     startLead:n=>`Today's run #${n} — pick a mode`,
     pickEnT:"English", pickEnD:"Link letters into English words",
     pickJaT:"Japanese", pickJaD:"Link hiragana into kanji words",
@@ -330,6 +356,7 @@ const T = {
       "That <b>word ball can join a later chain</b> and grow into a longer word — the same loop as making a bigger number in 1234.",
       "Reach <b>10 letters</b> for the longest possible. Everyone gets the same letters each day — <b>the longest word of the day wins</b>.",
       "The <b>ABC / あ→漢</b> button switches to Japanese: link <b>hiragana into kanji words</b> (the kana you link, in any order, must spell a word's reading).",
+    "Words you make are added to your <b>collection</b> — tap the number in the footer to browse it by rarity.",
     "Each word you make is <b>read aloud</b> (🔊 to mute). <b>Hint</b> is a development check: each press steps through the words currently available, <b>shortest to longest</b>."
     ]
   }
@@ -1419,13 +1446,14 @@ const FALLBACK_JA = `あき|秋|autumn|
 いよく|意欲|will|
 えいご|英語|English (language)|
 えらぶ|選ぶ|to choose|`;
-let DICT = [], INFO = new Map(), BYSIG = new Map(), POOL = [], STARTER = [], dictFull = false, playable = 0;
+let DICT = [], INFO = new Map(), BYSIG = new Map(), BYID = new Map(), POOL = [], STARTER = [], dictFull = false, playable = 0;
 const sortSig = s => [...s].sort().join("");
 function setDict(rows, full) {
-  DICT = rows; INFO = new Map(); BYSIG = new Map(); POOL = []; STARTER = []; playable = 0;
+  DICT = rows; INFO = new Map(); BYSIG = new Map(); BYID = new Map(); POOL = []; STARTER = []; playable = 0;
   rows.forEach((e, i) => {
     e.rank = i;
     if (!INFO.has(e.w)) INFO.set(e.w, e);      // 読みの代表。文字を配るときに使う
+    BYID.set(idOf(e), e);                      // ずかんの引きなおし用
     /* 辞書にある語はぜんぶ答えの候補。同じ文字の組に複数あるときは身近な順に並べる。
        読みが同じで漢字がちがう語(幹事/感じ/漢字/監事)も、別々の候補として入れる */
     const sig = sortSig(e.w);
@@ -1514,7 +1542,7 @@ const pit = $("#pit"), stage = $("#stage"), cv = $("#cv"), ctx = cv.getContext("
 let W = 320, H = 480, dpr = 1, R0 = 26;
 let bodies = [], bodyId = 1, sparks = [];
 let mode = "daily", score = 0, madeWords = [], running = false;
-let chain = [], timeLeft = DAILY_SEC, timer = 0, started = false;
+let chain = [], started = false;
 let glow = new Set(), glowUntil = 0, hintList = [], hintIdx = -1, hintKey = "";
 let marks = [], newCount = 0;
 let lastT = performance.now();
@@ -1853,6 +1881,43 @@ function saveDex() {
     try { localStorage.setItem(dexKey(), [...collected].join("\n")); } catch (_) {}
   }, 1200);
 }
+let dexTab = 0;   // 0 = すべて、1〜5 = レア度
+function openDex() {
+  dexTab = 0;
+  $("#overDex").classList.add("on");
+  paintDexView();
+}
+function paintDexView() {
+  const L = t();
+  const total = DICT.length;
+  $("#dexTitle").textContent = L.dex;
+  $("#dexLead").textContent = L.dexLead(collected.size, total, total ? (collected.size / total * 100) : 0);
+  /* レア度ごとに「集めた数 / ぜんぶの数」を出す */
+  const have = [0,0,0,0,0,0], all = [0,0,0,0,0,0];
+  for (const e of DICT) { const n = starOf(e); if (n) all[n]++; }
+  const mine = [];
+  for (const id of collected) { const e = BYID.get(id); if (e) { mine.push(e); have[starOf(e)]++; } }
+  const tabs = [[0, L.dexAll, collected.size, total]];
+  for (let n = 1; n <= 5; n++) tabs.push([n, "★".repeat(n), have[n], all[n]]);
+  $("#dexTabs").innerHTML = tabs.map(([n, label, h, a]) =>
+    `<button type="button" data-tab="${n}" class="${n === dexTab ? "on" : ""}">${label} ${h.toLocaleString()}/${a.toLocaleString()}</button>`).join("");
+  $("#dexTabs").querySelectorAll("button").forEach(b =>
+    b.onclick = () => { dexTab = Number(b.dataset.tab); paintDexView(); });
+  const list = mine.filter(e => !dexTab || starOf(e) === dexTab)
+                   .sort((a, b) => b.w.length - a.w.length || a.rank - b.rank);
+  const CAP = 400;
+  $("#dexList").innerHTML = list.length
+    ? list.slice(0, CAP).map(e => {
+        const c = LEN_COLOR[Math.min(e.w.length, COLOR_TOP)] || "#fff";
+        const sub = dictMode === "ja" ? `<small>${e.w}</small>` : "";
+        return `<i style="background:${c}">${dispOf(e)}${sub}</i>`;
+      }).join("")
+    : `<span class="none">${L.dexEmpty}</span>`;
+  $("#dexMore").textContent = list.length > CAP ? L.dexMore(list.length - CAP) : "";
+}
+$("#dexClose").onclick = () => $("#overDex").classList.remove("on");
+$("#dex").onclick = openDex;
+
 function paintDex(flash) {
   $("#dexN").textContent = collected.size.toLocaleString();
   if (!flash) return;
@@ -1960,26 +2025,16 @@ function paintStats() {
   const longest = madeWords.reduce((a, b) => (!a || b.w.length > a.w.length) ? b : a, null);
   $("#statLong").textContent = longest ? String(longest.w.length) : "–";
   $("#statScore").textContent = score.toLocaleString();
-  if (mode === "daily") {
-    $("#statTime").textContent = `${Math.floor(timeLeft / 60)}:${String(timeLeft % 60).padStart(2, "0")}`;
-    $("#timeBox").classList.toggle("warn", timeLeft <= 30);
-  } else { $("#statTime").textContent = "∞"; $("#timeBox").classList.remove("warn"); }
+  $("#statTime").textContent = String(madeWords.length);
 }
 function setLog(main, sub) { $("#logMain").textContent = main; if (sub !== undefined) $("#logSub").textContent = sub; }
-function startClock() {
-  if (started) return;
-  started = true;
-  if (mode !== "daily") return;
-  timer = setInterval(() => {
-    timeLeft--; paintStats();
-    if (timeLeft <= 0) { clearInterval(timer); endGame(t().endTime); }
-  }, 1000);
-}
+/* 時間制限は置かない。好きなだけ遊んで、自分で「おわる」を押して終える */
+function startClock() { started = true; }
 function startGame(m) {
-  mode = m; clearInterval(timer);
+  mode = m;
   if (window.speechSynthesis) { try { speechSynthesis.cancel(); } catch (_) {} }
   running = true; started = false;
-  score = 0; madeWords = []; chain = []; timeLeft = DAILY_SEC; glow = new Set(); glowUntil = 0; hintList = []; hintIdx = -1; hintKey = ""; sigPick.clear();
+  score = 0; madeWords = []; chain = []; glow = new Set(); glowUntil = 0; hintList = []; hintIdx = -1; hintKey = ""; sigPick.clear();
   marks = []; newCount = 0; loadDex();
   bodies = []; sparks = [];
   rng = mode === "daily" ? mulberry32(hashSeed("wordrop-" + dictMode + "-" + dateKey())) : mulberry32((Math.random() * 4294967296) >>> 0);
@@ -2010,7 +2065,7 @@ function startGame(m) {
 }
 function endGame(reason) {
   if (!running) return;
-  running = false; clearInterval(timer); chain = []; paintRead();
+  running = false; chain = []; paintRead();
   if (window.speechSynthesis) { try { speechSynthesis.cancel(); } catch (_) {} }
   const longest = madeWords.reduce((a, b) => (!a || b.w.length > a.w.length) ? b : a, null);
   $("#resTitle").textContent = reason;
@@ -2072,7 +2127,7 @@ function paintLang() {
   $("#lbResScore").textContent = L.score; $("#lbResWords").textContent = L.made;
   $("#btnLang").textContent = L.langBtn; $("#btnHow").textContent = L.how;
   $("#btnFree").textContent = L.freeBtn; $("#btnRetry").textContent = L.retry;
-  $("#btnAgain").textContent = L.again; $("#btnShare").textContent = L.copy;
+  $("#btnAgain").textContent = L.again; $("#btnShare").textContent = L.copy; $("#btnEnd").textContent = L.end;
   $("#howTitle").textContent = L.how;
   $("#howList").innerHTML = L.howList.map(s => `<li>${s}</li>`).join("");
   $("#btnHowClose").textContent = lang === "ja" ? "はじめる" : "Start";
@@ -2084,6 +2139,7 @@ function paintLang() {
   $("#pickJaT").textContent = L.pickJaT; $("#pickJaD").textContent = L.pickJaD;
   $("#startHow").textContent = L.how;
   $("#dexL").textContent = L.dex;
+  $("#dexClose").textContent = L.dexClose;
 }
 $("#btnLang").onclick = () => { lang = lang === "ja" ? "en" : "ja"; paintLang(); };
 $("#btnHow").onclick = () => $("#overHow").classList.add("on");
@@ -2093,6 +2149,7 @@ $("#btnRetry").onclick = () => startGame(mode);
 $("#btnAgain").onclick = () => startGame("free");
 $("#btnShare").onclick = doShare;
 $("#btnFind").onclick = doFind;
+$("#btnEnd").onclick = () => { if (running) endGame(t().endHand); };
 function paintDict() {
   $("#btnDict").textContent = D().chip;
   $("#pickEn").classList.toggle("on", dictMode === "en");
