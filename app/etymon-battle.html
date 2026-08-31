@@ -1,0 +1,1958 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>エティモリンゴ 対話戦闘 ― ことばで倒す</title>
+<!--
+  ============================================================================
+  エティモリンゴ:対話戦闘(プロトタイプ)
+  ============================================================================
+  スレイ・ザ・スパイア風のターン制カードバトル。カードは1枚が1つの英単語。
+  絵柄も数字も無く、<b>単語とその日本語語義だけ</b>が書いてある。
+  相手が何に困っているかを場面から読んで、効く単語を選ぶのがこのゲーム。
+
+  勝敗
+    勝ち … 敵HPが0 / 敵の満足度が満タン(どちらでも可)
+    負け … 自分のHPが0
+  資源
+    自分HP     … 敵の攻撃で減る
+    満腹度      … 1手ごとに1減る。0になるとHPが毎手2減っていく
+  手番
+    手札5枚。カードを敵か自分にドラッグ(タップでも可)して使う。
+    <b>リロード</b>で手札を捨てて引き直せるが、代償に敵が1回攻撃する。
+    <b>逆効果カードを使うと敵が激怒</b>して即座に反撃する。
+
+  効果の5段階は event-lab.html と同じ判定を使う(二重/一撃/有効/逆効果/無効)。
+  敵データは <b>event-lab.html から生成</b>している。答えを直したら
+      python3 app/build_battle_enemies.py
+  を流して data/pie/enemies.json を作り直すこと。二重管理しないための仕組み。
+
+  デバッグ(右下の 🐞)
+    透視・数値直接編集・手札の差し替え・デッキ確認・1手戻す・
+    自動プレイ・N回自動戦闘の勝率シミュレーション・全操作ログ。
+  ============================================================================
+-->
+<style>
+:root{
+  --ink:#241f26; --soft:#6f6673; --line:#e3d9cc; --paper:#fffdf8;
+  --ok:#2f7a52; --ng:#a4415c; --gold:#b8860b; --dual:#c2185b;
+  --hp:#e0455f; --sat:#f2a444; --food:#7cba62; --enemy:#7f5aa0;
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+/* ===== 画面は<b>1920x1080 の固定キャンバス</b> =====
+   箱庭(lexicopia-hakoniwa)と同じ作りにした。中の配置は<b>全部固定px</b>で、
+   ウィンドウに合わせて<b>全体を scale で拡縮</b>するだけ。余りは黒帯。
+   これまでレスポンシブに組んでいたので、画面の縦横比を変えるたびに
+   どこかが伸びる・切れる・はみ出すが起き、際限なく直し続けることになった。
+   <b>形が変わらなければ、崩れようがない。</b> */
+html,body{width:100%;height:100%;overflow:hidden;background:#141019}
+body{
+  font-family:-apple-system,BlinkMacSystemFont,"Hiragino Sans","Yu Gothic",sans-serif;
+  color:var(--ink);
+}
+#wrap{position:fixed;inset:0;overflow:hidden}
+button{font-family:inherit;cursor:pointer}
+
+/* ===== 画面枠 ===== */
+/* 横幅の上限をやめた。900pxに固定していたせいで、広い画面では
+   <b>左右に暗い帯が延々と残っていた</b>。画面いっぱいまで使う。 */
+#app{position:absolute;left:50%;top:50%;width:1920px;height:1080px;
+  transform:translate(-50%,-50%) scale(1);transform-origin:center center;
+  background:var(--paper);display:flex;flex-direction:column;overflow:hidden}
+header{display:flex;align-items:center;gap:8px;padding:8px 12px;background:#2f2833;color:#fff;flex-wrap:wrap}
+header h1{font-size:15px;font-weight:900;letter-spacing:.03em;white-space:nowrap}
+header .sp{flex:1}
+.hbtn{background:rgba(255,255,255,.14);border:1.5px solid rgba(255,255,255,.3);color:#fff;
+  border-radius:9px;padding:4px 9px;font-size:11.5px;font-weight:bold;text-decoration:none;white-space:nowrap}
+.hbtn:hover{background:rgba(255,255,255,.26)}
+
+/* ===== 戦場(ポケモン風) =====
+   主人公は左手前に背を向けて大きく、敵は右奥に最大3体。
+   奥ほど小さく置いて、1画面で「誰に使うか」が一目で分かるようにする。 */
+/* 高さは固定。flex:1 にすると窓の高さぶんまで伸びて、
+   メッセージ欄と手札が画面外へ押し出される(実際そうなった)。 */
+/* 余った高さは<b>戦場が吸う</b>。手札の場に吸わせたら、カードが遠くに追いやられて
+   板張りの空き地だけが延々と広がった。伸びるのは絵のあるほうでないと気持ちが悪い。 */
+/* 最低の高さは小さくしておく。ここを大きくすると、背の低い画面で
+   合計が画面を超えて<b>下がはみ出す</b>。伸びるのは flex に任せる。 */
+#field{position:relative;flex:1 1 auto;overflow:hidden;background:#bfe3f5}
+#bg{position:absolute;inset:0;background-repeat:repeat-x;background-size:auto 100%;background-position:0 bottom}
+#fg{position:absolute;inset:0;background-repeat:repeat-x;background-size:auto 100%;background-position:0 bottom;
+  opacity:.85;pointer-events:none}
+#field.night #bg{filter:brightness(.55) saturate(.8) hue-rotate(-15deg)}
+
+/* 敵は1体。<b>吹き出しが画面の主役</b>で、そこに毎ターン台詞が1文字ずつ出る。
+   台詞が弱点のヒントになっているので、読むのがそのまま攻略になる。 */
+/* 幅の上限を外したぶん、役者が両端に飛んで<b>遠すぎ</b>になった。
+   画面が広くても、二人の距離は<b>中央寄りの舞台幅</b>に収める。 */
+/* 役者の大きさは<b>戦場の高さに対する割合</b>で決める。px や vh で決めていたので、
+   画面の縦横比を変えるたびにどこかで はみ出すか小さすぎるかになった。
+   戦場を基準にすれば、戦場がどんな形でも中に収まり、名札の場所も必ず空く。 */
+#foeBox{position:absolute;right:430px;bottom:10px;
+  /* <b>高さで決める。</b>幅で決めると高さが絵の比率任せになり、背の低い戦場では
+     絵が下にはみ出して切れた(実際に切れていた)。高さを戦場に収まる値にすれば
+     構造的に必ず収まる。上の名札のぶん(72px)は必ず空ける。
+     絵は width:auto なので<b>比率は潰れない</b>
+     ―― 以前潰れていたのは max-width:100% を併用していたせいで、それは消した。 */
+  height:300px;width:auto;cursor:pointer;transition:transform .15s}
+#foeBox img{height:100%;width:auto;display:block;
+  filter:brightness(.58) sepia(1) hue-rotate(228deg) saturate(2.3) contrast(1.05)
+  drop-shadow(0 8px 6px rgba(30,20,40,.45))}
+#foeBox.calm img{filter:drop-shadow(0 8px 6px rgba(30,20,40,.4))}
+#foeBox.hit{animation:shake .32s}
+#foeBox.sleeping img{filter:brightness(.42) sepia(1) hue-rotate(228deg) saturate(1.6) contrast(.9)
+  drop-shadow(0 8px 6px rgba(30,20,40,.45))}
+#foeBox.sleeping::after{content:"💤";position:absolute;right:-6px;top:-4px;font-size:26px;
+  animation:zzz 1.6s ease-in-out infinite}
+@keyframes zzz{0%,100%{transform:translateY(0);opacity:.6}50%{transform:translateY(-10px);opacity:1}}
+#foeBox.rage{animation:rage .5s}
+#foeBox.hot img{filter:brightness(.7) sepia(1) hue-rotate(228deg) saturate(2.3) contrast(1.05)
+  drop-shadow(0 0 20px #ffd23e) drop-shadow(0 8px 6px rgba(30,20,40,.45))}
+/* 名札(つぎの攻撃・HP帯・名前)は<b>1つの縦積みの箱</b>にまとめる。
+   以前は3つを別々に絶対配置し、bottom:100% から 3px / 44px / 57px と
+   マジックナンバーでずらしていた。しかも幅を役者の幅の% で取っていたので、
+   役者が小さい画面では名前が4行に折り返して<b>予告と重なった</b>。
+   幅を役者から切り離し、縦に積むだけにすれば、何行になっても重ならない。 */
+/* 名札は<b>戦場の右上に固定</b>。役者の上に置くと、役者の大きさや戦場の高さ次第で
+   上へはみ出す。戦場に対して位置を決めれば、何があってもはみ出さない。 */
+#foeMeta{position:absolute;top:10px;right:430px;z-index:12;width:330px;display:flex;flex-direction:column;gap:3px;align-items:stretch;pointer-events:none}
+#foeTag{text-align:center;font-size:11.5px;font-weight:900;color:#fff;
+  background:rgba(30,20,40,.72);border-radius:8px;padding:3px 9px;line-height:1.35}
+/* HPは<b>数字も出す</b>。帯だけだと残りが何点か分からない */
+#foeHp{position:relative;height:20px;border-radius:99px;background:rgba(0,0,0,.5);overflow:hidden;
+  border:2px solid rgba(255,255,255,.45)}
+#foeHp em{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
+  font-style:normal;font-size:13px;font-weight:900;color:#fff;text-shadow:0 1px 2px rgba(0,0,0,.8)}
+#foeHp i{display:block;height:100%;border-radius:99px;transition:width .3s;
+  background:linear-gradient(90deg,#b79ad6,#7f5aa0)}
+/* 次の攻撃の数字を<b>先に見せる</b>。いくつ来るか分かるから、守りの札で受けるか
+   賭けて殴るかを選べる。隠したままだと ただの理不尽になる。 */
+#foeInt{text-align:center;font-size:12px;font-weight:900;color:#ffd7d7;line-height:1.2}
+#foeInt span{background:rgba(60,18,26,.82);border:1.5px solid #ff9db4;border-radius:8px;padding:2px 8px}
+#foeInt b{font-size:15px;color:#fff}
+#foeInt .gd{background:rgba(20,36,60,.82);border-color:#9fd0ff;color:#dbecff;margin-left:4px}
+#foeInt .rg{background:rgba(70,32,14,.85);border-color:#ffb27a;color:#ffe0c6;margin-left:4px}
+@keyframes shake{0%,100%{transform:translateX(0)}25%{transform:translateX(-9px)}75%{transform:translateX(9px)}}
+@keyframes rage{0%,100%{transform:scale(1)}40%{transform:scale(1.16) rotate(-3deg)}}
+/* ===== 昇天 =====
+   殴った時と<b>まったく違う見え方</b>にする。揺らさない。
+   影の色が抜けて、ふわりと浮かび、光の輪が広がって消える。 */
+/* 撃破。倒れて沈む。昇天とはっきり逆の見え方にする */
+#foeBox.down{animation:downFall 1.1s cubic-bezier(.4,0,.7,1) forwards}
+#foeBox.down img{animation:downImg 1.1s ease-in forwards}
+@keyframes downFall{0%{transform:rotate(0) translateY(0)}
+  30%{transform:rotate(6deg) translateY(4px)}
+  100%{transform:rotate(78deg) translateY(46px)}}
+@keyframes downImg{0%{filter:brightness(.58) sepia(1) hue-rotate(228deg) saturate(2.3) contrast(1.05)
+    drop-shadow(0 8px 6px rgba(30,20,40,.45));opacity:1}
+  100%{filter:grayscale(1) brightness(.45);opacity:.25}}
+#foeBox.asc{animation:ascend 2.1s cubic-bezier(.3,.7,.4,1) forwards}
+#foeBox.asc img{animation:ascendImg 2.1s ease-out forwards}
+@keyframes ascend{
+  0%{transform:translateY(0) scale(1)}
+  18%{transform:translateY(6px) scale(1.05,.94)}
+  100%{transform:translateY(-70px) scale(1.02)}}
+@keyframes ascendImg{
+  0%{filter:brightness(.58) sepia(1) hue-rotate(228deg) saturate(2.3) contrast(1.05)
+    drop-shadow(0 8px 6px rgba(30,20,40,.45));opacity:1}
+  35%{filter:none drop-shadow(0 0 28px #ffe98a);opacity:1}
+  100%{filter:none drop-shadow(0 0 40px #ffe98a) brightness(1.5);opacity:0}}
+.halo{position:absolute;left:50%;top:44%;width:20px;height:20px;margin:-10px 0 0 -10px;border-radius:50%;
+  border:4px solid #ffe98a;pointer-events:none;z-index:14;animation:halo 1.5s ease-out forwards}
+@keyframes halo{0%{transform:scale(.4);opacity:0}20%{opacity:.95}
+  100%{transform:scale(13);opacity:0;border-width:1px}}
+.sparkle{position:absolute;font-size:26px;pointer-events:none;z-index:15;animation:spk 1.6s ease-out forwards}
+@keyframes spk{0%{transform:translate(0,0) scale(.4);opacity:0}
+  25%{opacity:1}100%{transform:translate(var(--dx),-120px) scale(1.1);opacity:0}}
+/* ===== 敵の攻撃 =====
+   まず敵が踏み込み、当たってから こちらが仰け反る。同時に出さない。 */
+#foeBox.lunge{animation:lunge .34s ease-in-out}
+@keyframes lunge{0%,100%{transform:translateX(0) scale(1)}
+  45%{transform:translateX(-34px) scale(1.1)}}
+#heroBox.flinch{animation:flinch .42s ease-out}
+@keyframes flinch{0%{transform:translateX(0) rotate(0)}
+  25%{transform:translateX(-16px) rotate(-5deg)}
+  55%{transform:translateX(8px) rotate(3deg)}
+  100%{transform:translateX(0) rotate(0)}}
+/* 終わり方の演出を はっきり分ける。
+   昇天=金色にふわっと明るくなる／撃破=赤く一瞬たたきつけて画面が揺れる */
+#flash{position:absolute;inset:0;pointer-events:none;z-index:18;opacity:0}
+#flash.asc{animation:flashAsc 1.6s ease-out forwards;
+  background:radial-gradient(circle at 72% 52%,#fff8dc 0%,#ffd23e55 38%,transparent 70%)}
+#flash.down{animation:flashDown .55s ease-out forwards;
+  background:radial-gradient(circle at 72% 52%,#ff4d6a 0%,#8b0f2288 45%,transparent 75%)}
+@keyframes flashAsc{0%{opacity:0}22%{opacity:.85}100%{opacity:0}}
+@keyframes flashDown{0%{opacity:0}10%{opacity:.9}100%{opacity:0}}
+#field.quake{animation:quake .5s}
+@keyframes quake{0%,100%{transform:translate(0,0)}
+  15%{transform:translate(-9px,4px)}35%{transform:translate(8px,-5px)}
+  55%{transform:translate(-6px,-3px)}78%{transform:translate(4px,3px)}}
+#slash{position:absolute;left:0;right:0;top:0;bottom:0;pointer-events:none;z-index:16;opacity:0}
+#slash.on{animation:slash .38s ease-out}
+@keyframes slash{0%{opacity:0}25%{opacity:.85;background:linear-gradient(105deg,transparent 42%,#fff 47%,#ffd23e 50%,#fff 53%,transparent 58%)}
+  100%{opacity:0}}
+
+/* 敵の台詞は<b>戦場の上の吹き出し</b>に出す。下の窓は戦闘の結果だけ。
+   ひとつにまとめたら、台詞と数字が混ざって かえって読みにくかった。 */
+/* 吹き出しは<b>戦場に重ねず、独立した段</b>に置く。
+   絵の上に浮かせていたので、画面の縦横比が変わるたびに
+   敵の名前や「つぎの攻撃」と当たって読めなくなった。
+   vh で大きさを調整して回避しようとしたが、比率を変えれば必ずどこかで壊れる。
+   <b>重ならない場所に置けば、どの比率でも当たりようがない。</b>
+   高さは2行ぶんで固定して、喋る長さで下がガタつかないようにする。 */
+#bubble{position:relative;width:1160px;margin:10px auto 0;
+  background:rgba(255,253,246,.98);
+  border:3px solid #2e2536;border-radius:16px;padding:9px 15px 10px;
+  box-shadow:0 5px 0 rgba(30,20,40,.3);height:120px;z-index:14;flex:0 0 auto;
+  display:flex;align-items:center;transition:opacity .2s}
+#bubble.off{opacity:0;pointer-events:none}
+#bubble::after{content:"";position:absolute;left:50%;margin-left:-11px;bottom:-14px;width:0;height:0;
+  border:11px solid transparent;border-top-color:#2e2536;border-bottom:0;z-index:1}
+#bubble .btxt{width:100%;max-height:100%;overflow:hidden;font-size:21px;font-weight:800;line-height:1.6;color:#241f26;white-space:pre-wrap}
+#bubble .btxt b{color:#a4415c}
+#bubble.calm{background:#f3fbf4;border-color:#2f7a52;box-shadow:0 5px 0 rgba(47,122,82,.35)}
+#bubble.calm::after{border-top-color:#2f7a52}
+#bubble .cur{display:inline-block;width:.6em;animation:blink .7s steps(1) infinite}
+#bubble .nx{position:absolute;right:12px;bottom:6px;font-size:15px;color:#a4415c;
+  animation:blink .9s steps(1) infinite}
+
+/* 主人公。左手前に背を向けて立つ */
+#heroBox{position:absolute;left:430px;bottom:6px;
+  /* 敵と同じく<b>高さで決める</b>。幅で決めると高さが絵の比率任せになり、
+     背の低い戦場で上にはみ出して切れる。 */
+  height:250px;width:auto;cursor:pointer;transition:transform .15s}
+#heroBox.hit{animation:shake .32s}
+#heroBox img{height:100%;width:auto;display:block;transform:scaleX(-1);
+  filter:drop-shadow(0 8px 6px rgba(30,20,40,.4))}
+/* 「じぶん」札は<b>出さない</b>。左下の「じぶん HP」と同じことを言っているうえ、
+   主人公の上に置くと背の低い画面で戦場の外へはみ出す。重複を消せば問題も消える。 */
+#heroTag{display:none}
+/* ドラッグ中に出る「ここに落とせる」表示 */
+/* ===== 狙いの矢印 =====
+   スレスパと同じで、<b>札からカーソルまで曲線を引いて</b>どこに使うかを見せる。
+   ドロップ先の枠が光るだけでは、どっちに使うのか分からなかった。
+   #app は scale で拡縮しているので、viewBox 1920x1080 の内部座標で描く。 */
+#aim{position:absolute;inset:0;width:1920px;height:1080px;z-index:9000;
+  pointer-events:none;opacity:0;transition:opacity .12s}
+#aim.on{opacity:1}
+#aimPath{fill:none;stroke:#9aa3b2;stroke-width:11;stroke-linecap:round;
+  filter:drop-shadow(0 3px 6px rgba(10,6,16,.55))}
+#aim.hit #aimPath{stroke:#ffd23e;stroke-width:14}
+#foeBox .drop,#heroBox .drop{position:absolute;inset:-8px;border:3px dashed transparent;border-radius:16px;
+  transition:.12s;pointer-events:none}
+#foeBox.zon .drop,#heroBox.zon .drop{border-color:rgba(255,255,255,.7);background:rgba(255,255,255,.12)}
+#foeBox.hot .drop,#heroBox.hot .drop{border-color:#ffd23e;background:rgba(255,210,62,.28);
+  box-shadow:0 0 22px rgba(255,210,62,.6)}
+/* 自分のゲージ */
+#myBars{position:absolute;left:8px;bottom:6px;width:min(44%,240px);background:rgba(30,22,38,.62);
+  border:1.5px solid rgba(255,255,255,.32);border-radius:12px;padding:6px 9px;backdrop-filter:blur(3px);z-index:9}
+#myBars .grow{display:flex;align-items:center;gap:5px;margin-bottom:2px}
+#myNum .gd{color:#9fd0ff;margin-left:6px} #myNum .rg{color:#ffc79a;margin-left:6px}
+.gname{font-size:10.5px;font-weight:900;color:#fff;text-shadow:0 1px 2px rgba(0,0,0,.6);white-space:nowrap}
+.gnum{font-size:10.5px;font-weight:800;color:#fff;opacity:.9;font-variant-numeric:tabular-nums;margin-left:auto}
+.bar.warn{animation:pulse .8s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.45}}
+/* ダメージ表示 */
+.pop{position:absolute;z-index:30;font-size:24px;font-weight:900;pointer-events:none;
+  -webkit-text-stroke:5px #fff;paint-order:stroke fill;animation:popUp 1.05s ease-out forwards;white-space:nowrap}
+.pop.dmg{color:var(--hp)} .pop.sat{color:var(--sat)} .pop.heal{color:var(--ok)} .pop.bad{color:var(--dual)}
+@keyframes popUp{0%{transform:translateY(0) scale(.55);opacity:0}14%{opacity:1}
+  100%{transform:translateY(-72px) scale(1.06);opacity:0}}
+
+/* ===== メッセージ欄 =====
+   <b>敵の台詞も戦闘の結果もここ1か所に出す。</b>
+   吹き出しと別枠のログに分かれていて、目が行き来して読みにくかった。
+   ドラクエ風に、戦場の下の窓へ上から順に積む。台詞だけ1文字ずつ出る。 */
+/* <b>中身の高さぴったりにする</b>。以前は min-height:96px を敷いていて、
+   1行しか出ない手番では<b>69pxが真っ黒に空いた</b>。
+   さらに 900px の枠の中で文字だけ 660px に絞って中央に置いていたので、
+   左に120pxの意味のない字下げまで出ていた。<b>どちらも やめる</b>。
+   画面そのものが 900px に収まっているので、これ以上せまくする理由が無い。 */
+/* 吹き出しも下の窓も<b>高さを固定で確保</b>する。行数で伸び縮みさせていたので、
+   喋る長さが変わるたびに戦場が上下に動いて<b>毎ターン画面が揺れていた</b>。
+   固定キャンバスなのだから、場所は最初に取り分けておくのが正しい。
+   吹き出し=3行ぶん / 下の窓=3行ぶん。溢れたら中でスクロールさせる。 */
+#msg{flex:0 0 auto;height:104px;overflow-y:auto;overscroll-behavior:contain;
+  background:#1d1822;color:#f4eee6;border-top:3px solid #0f0c14;
+  padding:10px 20px 11px;font-size:19px;line-height:1.7;position:relative}
+#msg .wrap{text-align:left;width:1160px;margin:0 auto}
+#msg .ln{padding:1px 0}
+#msg .ln b{color:#ffd23e}
+#msg .ln.crit{color:#ffe98a;font-weight:bold}
+#msg .ln.bad{color:#ff9db4}
+#msg .ln.say{color:#fff;font-weight:bold;font-size:15px}
+#msg .ln.say.calm{color:#9ff0c0}
+#msg .ln.say.rage{color:#ff9db4}
+#msg .cur{display:inline-block;width:.6em;animation:blink .7s steps(1) infinite}
+#msg .nx{position:absolute;right:14px;bottom:8px;font-size:16px;color:#ffd23e;
+  animation:blink .9s steps(1) infinite}
+@keyframes blink{50%{opacity:0}}
+
+/* ===== 手札 =====
+   カードの意匠とドラッグは箱庭(lexicopia-hakoniwa.html)の実装をそのまま持ってきた。
+   独自に作り直すと手ざわりが別物になる。63:88のトレカ比率、語根クラン色、
+   星のレア度、アート窓、下段の説明枠まで箱庭と同じ構造。 */
+#handWrap{flex:1 1 auto;background:
+  linear-gradient(rgba(255,235,200,.10),rgba(30,12,0,.22)),
+  repeating-linear-gradient(90deg,#8a6440 0 178px,#7d5a39 178px 184px,#916b45 184px 366px,#7a5836 366px 372px),
+  #8a6440;
+  padding:6px 9px 4px;display:flex;flex-direction:column;gap:4px;
+  /* 持ち上げた札は<b>上にはみ出して当然</b>なので切らない。切っていたせいで
+     下の窓や引き直しボタンの<b>裏に潜って読めなかった</b>。
+     板張りの模様は背景なので、切らなくてもはみ出さない。 */
+  position:relative;overflow:visible;z-index:30;flex:0 0 auto}
+#hand{display:flex;align-items:flex-end;justify-content:center;height:332px;pointer-events:none}
+/* 極端に背の低い画面(横長のタブレットを寝かせた形など)では、固定の余白を削る。
+   ここを削らないと、上下の枠の合計だけで画面を超えて<b>下がはみ出す</b>。 */
+
+/* 箱庭と同じ:実カードは大きく作って scale で縮める。だから線も影も潰れない */
+.handCard{position:relative;flex:0 0 152px;width:152px;height:244px;margin:0;cursor:grab;
+  touch-action:none;user-select:none;pointer-events:auto;z-index:1}
+.handCard:active{cursor:grabbing}
+.handCard .hcInner{position:absolute;left:50%;bottom:0;width:352px;margin-left:-176px;
+  transform-origin:50% 100%;transition:transform .16s ease,filter .16s ease}
+.handCard:hover,.handCard.dragging{z-index:9000}
+#hand{position:relative;z-index:40}
+.handCard:hover .hcInner{filter:drop-shadow(0 16px 12px rgba(20,14,28,.4))}
+.handCard.dragging .hcInner{opacity:.28}
+.dragGhost{position:fixed;left:0;top:0;width:352px;z-index:9000;pointer-events:none;transform-origin:50% 50%;
+  filter:drop-shadow(0 18px 16px rgba(20,14,28,.45))}
+
+/* ===== 英単語カード(箱庭と同じ 63:88 トレーディングカード) ===== */
+.wordCard{position:relative;width:352px;aspect-ratio:63/88;border-radius:16px;text-align:left;
+  background:linear-gradient(160deg,color-mix(in srgb,var(--cc,#e8875a) 30%,#f5e9d2),#efe0c4 55%,
+    color-mix(in srgb,var(--cc,#e8875a) 18%,#e9dabb));
+  border:3px solid #2e2536;box-shadow:0 14px 30px rgba(30,20,40,.35),inset 0 0 0 2px #fff8;
+  padding:12px 13px 11px;overflow:hidden;display:flex;flex-direction:column}
+.wordCard::before{content:"";position:absolute;inset:0;pointer-events:none;opacity:.5;
+  background:repeating-linear-gradient(115deg,transparent 0 7px,rgba(255,255,255,.16) 7px 8px)}
+.wordCard .wcHead{position:relative;display:flex;align-items:center;gap:8px;
+  background:linear-gradient(#fffef8,#f1e6cf);border:2px solid #4a3c50;border-radius:9px;padding:5px 10px;
+  box-shadow:0 2px 0 rgba(46,37,54,.25)}
+/* 見出しは<b>英単語の下に語義を大きく</b>。横に並べていたので、
+   長い単語だと語義が ellipsis で消え、残っても縮小後は7px で読めなかった。
+   プレイヤーが読むのは語義のほうなので、そちらを主役の大きさにする。 */
+.wordCard .wcHead{display:flex;align-items:center;gap:9px;padding:5px 10px 6px}
+.wordCard .wcTxt{display:flex;flex-direction:column;gap:1px;min-width:0;flex:1 1 auto}
+.wordCard .wcEn{font-size:21px;font-weight:900;color:#6a5c74;line-height:1.15;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;letter-spacing:.01em}
+.wordCard .wcDef{font-size:27px;font-weight:900;color:#2c2233;line-height:1.2;
+  overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
+.wordCard .wcClan{width:44px;height:44px;flex:0 0 auto;border-radius:50%;background:#fff;
+  border:2.5px solid var(--cc,#e8875a);display:flex;align-items:center;justify-content:center;overflow:hidden}
+.wordCard .wcClan img{width:86%;height:86%;object-fit:contain}
+
+/* 祖先の帯。<b>この日本語が答えそのもの</b> ―― 敵が「見てほしい」と言っていたら、
+   帯に「見る」と書いてある札が一撃になる。だから語根の綴りより<b>意味を大きく</b>出す。 */
+/* ===== 祖先の場 =====
+   <b>単語の絵とは別に、祖先だけの場所を持たせる</b>。
+   祖先ごとに 顔メダル ＋ 綴り ＋ 意味。効くかどうかはここで決まるので、
+   絵の窓を削らずに ここを厚くする。 */
+/* ===== 上段：語根の顔（ジェムと同じ重み）=====
+   顔が小さくて何のキャラか分からなかった。数値のジェムと同じ大きさにする。
+   意味は<b>顔の真下</b>に札で出すので、顔と字が離れない。 */
+.wordCard .wcTop{display:flex;align-items:flex-start;gap:8px;padding:9px 10px 0;
+  min-height:118px;padding-right:116px}
+.wordCard .rb{display:flex;flex-direction:column;align-items:center;gap:0;min-width:0;flex:0 0 auto}
+.wordCard .rb img,.wordCard .rb .nf{width:100px;height:100px;border-radius:50%;object-fit:contain;
+  background:#fffdf6;border:5px solid var(--cc,#e8875a);box-shadow:0 4px 8px rgba(30,20,40,.4)}
+.wordCard .rb .nf{display:flex;align-items:center;justify-content:center;text-align:center;
+  font-size:29px;font-weight:900;color:#3b3145;line-height:1.12;padding:0 6px;
+  word-break:auto-phrase;overflow:hidden}
+/* 絵の無い語根は円の中に意味を書くので、下の札は出さない(二重になる) */
+.wordCard .rb.txt em{display:none}
+/* 長い意味は円に収まらないので段階的に縮める(「野生動物」がはみ出していた) */
+.wordCard .rb.txt .nf.s2{font-size:23px}
+.wordCard .rb.txt .nf.s3{font-size:19px}
+.wordCard.two .rb.txt .nf{font-size:21px}
+.wordCard.two .rb.txt .nf.s2{font-size:17px}
+.wordCard.two .rb.txt .nf.s3{font-size:14px}
+.wordCard .rb em{margin-top:-13px;font-style:normal;font-size:23px;font-weight:900;color:#fff;
+  background:color-mix(in srgb,var(--cc,#e8875a) 62%,#241f26);border:3px solid #fff;
+  border-radius:99px;padding:1px 11px;line-height:1.32;white-space:nowrap;
+  box-shadow:0 3px 6px rgba(30,20,40,.45)}
+.wordCard.two .rb img,.wordCard.two .rb .nf{width:78px;height:78px;border-width:4px}
+.wordCard.two .rb em{font-size:18px;margin-top:-11px;padding:1px 8px}
+.wordCard .rbMore{align-self:center;font-size:19px;font-weight:900;color:#6a5c74}
+/* ===== 見出し ===== */
+.wordCard .wcHead{display:flex;flex-direction:column;gap:0;padding:4px 12px 6px}
+.wordCard .wcEn{font-size:25px;font-weight:900;color:#6a5c74;line-height:1.1;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.wordCard .wcDef{font-size:36px;font-weight:900;color:#241d2b;line-height:1.14;
+  overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
+/* ===== 本文：英単語のアイコン＋定義 ===== */
+.wordCard .wcBody{display:flex;align-items:flex-start;gap:10px;flex:1;min-height:0;margin-top:2px;
+  background:linear-gradient(#fffdf4,#f7eedc);border:3px solid #4a3c50;border-radius:10px;
+  padding:9px 11px;overflow:hidden}
+.wordCard .wicon{flex:0 0 auto;width:92px;height:92px;display:flex;align-items:center;justify-content:center;
+  background:radial-gradient(circle at 50% 42%,#fff 0 40%,color-mix(in srgb,var(--cc,#e8875a) 26%,#fff) 100%);
+  border:3px solid #4a3c50;border-radius:10px;overflow:hidden}
+.wordCard .wicon img{width:88%;height:88%;object-fit:contain}
+.wordCard .wicon i{font-style:normal;font-size:52px;line-height:1}
+.wordCard .wcBody p{font-size:22px;font-weight:800;line-height:1.36;color:#3f3548;
+  display:-webkit-box;-webkit-line-clamp:5;-webkit-box-orient:vertical;overflow:hidden}
+.wordCard .wcRoot{margin-top:8px;display:flex;align-items:center;gap:7px;font-weight:900;color:#fff;
+  background:linear-gradient(90deg,var(--cc,#e8875a),color-mix(in srgb,var(--cc,#e8875a) 55%,#241f26));
+  border:2.5px solid #4a3c50;border-radius:9px;padding:5px 9px;
+  white-space:nowrap;overflow:hidden;box-shadow:0 3px 0 rgba(46,37,54,.32);min-height:56px}
+.wordCard .wcRoot .rt{display:flex;align-items:center;gap:7px;min-width:0}
+/* 祖先が1つの札は帯の中で<b>中央に寄せる</b>。左に寄せると右半分が空いて見える */
+.wordCard:not(.two) .wcRoot{justify-content:center}
+.wordCard.two .wcRoot .rt{flex:1 1 0;min-width:0}
+.wordCard .wcRoot .face{flex:0 0 auto;width:42px;height:42px;border-radius:50%;background:#fffdf6;
+  border:2.5px solid #fff;object-fit:contain;box-shadow:0 2px 5px rgba(30,20,40,.4)}
+.wordCard .wcRoot .face.nf{display:flex;align-items:center;justify-content:center;
+  font-size:20px;color:#8d8093;font-style:italic}
+.wordCard .wcRoot .rtx{display:flex;flex-direction:column;min-width:0;line-height:1.15}
+.wordCard .wcRoot .rtx i{font-style:italic;font-size:12px;opacity:.82;letter-spacing:.02em;
+  overflow:hidden;text-overflow:ellipsis}
+.wordCard .wcRoot .rtx b{font-size:24px;overflow:hidden;text-overflow:ellipsis}
+.wordCard .wcRoot .rt i{font-size:17px;opacity:.9;font-style:italic}
+.wordCard .wcRoot .pl{opacity:.75;font-size:15px;flex:0 0 auto}
+.wordCard.two .wcRoot .rtx b{font-size:17px}
+.wordCard.two .wcRoot .face{width:34px;height:34px}
+.wordCard .wcStarsRow{display:flex;justify-content:center;align-items:center;gap:2px;margin-top:5px;
+  color:#c99f3a;font-size:18px}
+.wordCard .wcStarsRow img{width:26px;height:26px;object-fit:contain;filter:drop-shadow(0 1px 0 #fff8)}
+.wordCard .wcStarsRow img.off{filter:grayscale(1);opacity:.2}
+
+.wordCard .wcEff{font-size:18px;font-weight:900;color:#7a3f2c;line-height:1.3}
+.wordCard .wcEff .none{color:#8d8093}
+.wordCard .wcFoot{display:flex;align-items:center;justify-content:space-between;margin-top:5px;padding:0 2px}
+.wordCard .wcNo{font-size:11px;font-weight:900;color:#7d7186;letter-spacing:.08em}
+.wordCard .wcSide{font-size:14px;font-weight:900;border-radius:7px;padding:1px 9px;border:2px solid #4a3c50;
+  background:#efeaf6;color:#4a3c50;width:100%;text-align:center}
+.wordCard.rare{border-color:#8a6b1f;
+  box-shadow:0 14px 30px rgba(30,20,40,.35),inset 0 0 0 2px #f6d879,0 0 22px rgba(246,216,121,.35)}
+.wordCard.rare .wcHead{background:linear-gradient(#fffbe2,#f3e1a6)}
+/* ===== 札の種別 =====
+   「攻撃なのか満足なのか分からない」を潰すため、枠の色・帯・記号を種別ごとに変える。
+   ⚔ こうげき … HPを削る。効くかどうかは相手に関係ない(安全だが遅い)
+   🎁 さしだす … 相手に差し出す。<b>当たれば一撃で終わる。外れれば激怒する</b>
+   🍖 どうぐ  … 自分に使う。満腹/回復/強化 */
+.wordCard.k-atk{background:linear-gradient(160deg,#d9c3bd,#efe0d6 55%,#d3bcb4)}
+.wordCard.k-atk .wcHead{background:linear-gradient(#fff4ef,#f0d9cf)}
+.wordCard.k-def{background:linear-gradient(160deg,#bcc9de,#e2eaf5 55%,#b8c6dc)}
+.wordCard.k-def .wcHead{background:linear-gradient(#f3f7ff,#d8e2f0)}
+.wordCard.k-heal{background:linear-gradient(160deg,#bfdfc6,#e6f3e2 55%,#bcdcc4)}
+.wordCard.k-heal .wcHead{background:linear-gradient(#f4fff5,#dcf0dd)}
+.wordCard.k-food{background:linear-gradient(160deg,#e2d5a6,#f6efcf 55%,#ded09f)}
+.wordCard.k-food .wcHead{background:linear-gradient(#fffbe8,#efe4bb)}
+.wordCard.k-mind{background:linear-gradient(160deg,#e8c9b4,#f8ebdf 55%,#e2bfa8)}
+.wordCard.k-mind .wcHead{background:linear-gradient(#fff6ee,#f2ddca)}
+/* ===== 数値はジェム1つ =====
+   横いっぱいの帯ではなく、<b>右上に食い込む1個のジェム</b>にする。
+   帯だと絵の面積を食うし、数字が主役に見えてしまう。 */
+.wordCard .gem{position:absolute;top:6px;right:6px;z-index:6;width:104px;height:112px;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:0;
+  color:#fff;filter:drop-shadow(0 3px 5px rgba(20,12,28,.55));
+  clip-path:polygon(50% 0,100% 26%,100% 74%,50% 100%,0 74%,0 26%)}
+.wordCard .gem i{font-style:normal;font-size:26px;line-height:1;margin-top:9px;
+  text-shadow:0 1px 2px rgba(0,0,0,.5)}
+.wordCard .gem b{font-size:46px;line-height:1;font-variant-numeric:tabular-nums;
+  text-shadow:0 2px 3px rgba(0,0,0,.55)}
+.wordCard .gem.a{background:linear-gradient(160deg,#e0685c,#8e3229)}
+.wordCard .gem.g{background:linear-gradient(160deg,#6a94d8,#2f4a7d)}
+.wordCard .gem.h{background:linear-gradient(160deg,#5fb886,#276042)}
+.wordCard .gem.f{background:linear-gradient(160deg,#d8a248,#7d571c)}
+.wordCard .gem.u{background:linear-gradient(160deg,#e08a4c,#7d3a1c)}
+/* ===== 属性アイコン（語根）=====
+   <b>効くかどうかを決めるのは語根</b>なので、絵の窓の左下に丸く重ねて常に見せる。 */
+
+/* デバッグ透視。通常は隠す ― 見えたらゲームにならない */
+.wordCard .xray{position:absolute;top:8px;left:8px;z-index:6;font-size:17px;font-weight:900;
+  border-radius:8px;padding:1px 9px;color:#fff;border:2px solid #2e2536}
+.xray.dual{background:var(--dual)} .xray.crit{background:var(--gold)}
+.xray.good{background:var(--ok)} .xray.bad{background:var(--ng)} .xray.none{background:#9a90a5}
+
+/* ===== 操作バー ===== */
+#bar{display:flex;gap:7px;align-items:center;flex-wrap:wrap;justify-content:center;position:relative;z-index:20}
+.abtn{background:#fffdf6;border:2.5px solid #3b2f22;border-radius:11px;padding:7px 13px;
+  font-size:12.5px;font-weight:900;box-shadow:0 3px 0 #2a2018}
+.abtn:active{transform:translateY(2px);box-shadow:0 1px 0 #2a2018}
+.abtn.rl{background:#ffe9a8}
+.abtn.dbg{background:#2f2833;color:#fff;border-color:#000}
+#deckN{font-size:11.5px;color:#ffe9c9;font-weight:bold}
+
+/* ===== 結果 ===== */
+#over{position:fixed;inset:0;background:rgba(20,14,26,.86);display:none;align-items:center;justify-content:center;
+  z-index:60;padding:20px}
+#over.on{display:flex}
+#over .box{background:var(--paper);border:4px solid var(--ink);border-radius:22px;padding:22px 20px;
+  max-width:440px;width:100%;box-shadow:9px 9px 0 rgba(0,0,0,.4)}
+#over .box.calm{background:linear-gradient(#fffdf0,#f3fbf4);border-color:#2f7a52;
+  box-shadow:9px 9px 0 rgba(47,122,82,.45),0 0 40px rgba(255,233,138,.5)}
+#over .box.calm h2{color:#2f7a52}
+#over .box.kill{background:linear-gradient(#fff4f6,#f6e6ea);border-color:#a4415c;
+  box-shadow:9px 9px 0 rgba(164,65,92,.45)}
+#over .box.kill h2{color:#a4415c}
+#over .box.dead{background:#efeaf2;border-color:#4a4054}
+#over .box.dead h2{color:#4a4054}
+#over h2{font-size:26px;margin-bottom:8px}
+#over p{font-size:13px;line-height:1.75;color:var(--soft);font-weight:bold;margin-bottom:14px}
+#over .box b{color:var(--ink)}
+
+/* ===== 敵えらび ===== */
+/* 相手の一覧と遊びかたは<b>ふだん畳んでおく</b>。20体ぶんのボタンと5行の説明が
+   常に画面の上3分の1を占めていて、戦っている場所が押し下げられていた。 */
+#pick{padding:5px 10px;background:#f7f1e6;border-bottom:2px solid var(--line)}
+#pickBar,#ruleBody,#pickBody{width:1160px;margin-left:auto;margin-right:auto}
+#pickBar{display:flex;align-items:center;gap:7px;flex-wrap:wrap}
+.pgt{background:#fff;border:2px solid var(--line);border-radius:9px;padding:4px 10px;
+  font-size:12px;font-weight:bold;color:var(--soft);cursor:pointer}
+.pgt.on{border-color:var(--ink);background:#fff8d8;color:var(--ink)}
+#nowFoe{font-size:12px;font-weight:bold;color:var(--ink)}
+#nowFoe small{color:var(--soft);font-weight:normal;margin-left:5px}
+.fold{display:none;margin-top:8px}
+.fold.open{display:block}
+#rule{margin-top:8px;font-size:11.5px;line-height:1.65;color:var(--soft);font-weight:bold;
+  border-top:1px dashed var(--line);padding-top:7px}
+#rule b{color:var(--ink)}
+.plist{display:flex;gap:6px;flex-wrap:wrap}
+.pbtn{background:#fff;border:2px solid var(--line);border-radius:10px;padding:5px 9px;font-size:11.5px;
+  font-weight:bold;text-align:left;max-width:230px;line-height:1.35}
+.pbtn.on{border-color:var(--ink);background:#fff8d8}
+.pbtn small{color:var(--soft);font-weight:normal}
+
+/* ===== デバッグパネル ===== */
+#dbg{position:fixed;right:0;top:0;bottom:0;width:min(420px,100%);background:#1d1822;color:#e8e2ee;
+  z-index:70;overflow-y:auto;padding:12px 13px 40px;display:none;font-size:12px;box-shadow:-8px 0 30px rgba(0,0,0,.5)}
+#dbg.on{display:block}
+#dbg h3{font-size:13px;color:#ffd23e;margin:13px 0 6px;border-bottom:1px solid #3a3145;padding-bottom:3px}
+#dbg h3:first-child{margin-top:0}
+#dbg label{display:flex;align-items:center;gap:6px;margin:4px 0;line-height:1.5}
+#dbg input[type=number]{width:62px;background:#2b2434;border:1px solid #4a4058;color:#fff;border-radius:6px;padding:2px 5px}
+#dbg select,#dbg input[type=text]{background:#2b2434;border:1px solid #4a4058;color:#fff;border-radius:6px;padding:3px 6px;font-family:inherit}
+#dbg .db{background:#3a3145;border:1px solid #574a6b;color:#fff;border-radius:7px;padding:4px 9px;font-size:11.5px;
+  font-weight:bold;margin:2px 3px 2px 0}
+#dbg .db:hover{background:#4c4160}
+#dbg .db.hot{background:#8a3d5a;border-color:#b8557a}
+#dbg pre{background:#141019;border:1px solid #332c40;border-radius:8px;padding:7px;font-size:10.5px;
+  line-height:1.55;max-height:210px;overflow:auto;white-space:pre-wrap;word-break:break-all}
+#dbg .kv{display:flex;justify-content:space-between;gap:8px;padding:1px 0;border-bottom:1px dotted #332c40}
+#dbg .kv span:last-child{color:#ffd23e;font-weight:bold;font-variant-numeric:tabular-nums}
+#dbgClose{position:sticky;top:0;float:right;background:#8a3d5a;border:none;color:#fff;border-radius:7px;
+  padding:3px 9px;font-weight:bold}
+.tinyw{display:inline-block;border:1px solid #4a4058;border-radius:6px;padding:0 5px;margin:1px 2px 1px 0;font-size:10.5px}
+.tinyw.dual{border-color:var(--dual);color:#ff8ab5} .tinyw.crit{border-color:var(--gold);color:#ffd23e}
+.tinyw.good{border-color:var(--ok);color:#8ee0b0} .tinyw.bad{border-color:var(--ng);color:#ff9db4}
+.tinyw.none{opacity:.5}
+#loading{padding:40px 20px;text-align:center;color:var(--soft);font-weight:bold}
+</style>
+</head>
+<body>
+<div id="wrap">
+<div id="app">
+  <svg id="aim" viewBox="0 0 1920 1080" preserveAspectRatio="none"><defs>
+    <marker id="aimHead" viewBox="0 0 12 12" refX="9" refY="6" markerWidth="7" markerHeight="7"
+      orient="auto-start-reverse"><path d="M0,0 L12,6 L0,12 z" fill="context-stroke"></path></marker>
+  </defs><path id="aimPath" marker-end="url(#aimHead)"></path></svg>
+<header>
+  <h1>⚔ 対話戦闘</h1>
+  <span class="sp"></span>
+  <a class="hbtn" href="index.html">← 入口</a>
+  <a class="hbtn" href="event-lab.html">🧪 検証ラボ</a>
+  <button class="hbtn" id="btnDbg">🐞 デバッグ</button>
+</header>
+
+<div id="loading">データを読み込んでいます…</div>
+
+<div id="game" style="display:none;flex:1;display:none;flex-direction:column">
+  <div id="pick">
+    <div id="pickBar">
+      <button class="pgt" id="btnFoes">▸ あいてを かえる（<b id="foeN">20</b>体）</button>
+      <button class="pgt" id="btnRule">▸ あそびかた</button>
+      <span id="nowFoe"></span>
+    </div>
+    <div id="pickBody" class="fold"><div class="plist" id="plist"></div></div>
+    <div id="ruleBody" class="fold">
+    <p id="rule">カードの数値は<b>1枚に1つだけ</b>。レア度（★）が高いほど大きい。<br>
+    <b>⚔攻撃</b>＝敵に出して削る　<b>🛡守り</b>＝自分に使うと次の被弾を肩代わり
+    <b>♡回復</b>＝自分のHP　<b>🍖糧</b>＝自分の満腹（自分に使う札）
+    <b>🔥気合</b>＝次の⚔が強くなる<br>
+    <b>次の攻撃の数字は敵の頭上に出ている。</b>🛡で ちょうど相殺できる。
+    攻撃は手番が進むほど強くなるので、早く当てるほど軽傷で済む。引き直しは無傷。<br>
+    <b>外したときの裏目は3つ。</b>♡は相手を回復させて攻撃を上げ、🛡は<b>相手の防御力を上げ</b>、
+    🔥は自分にしか効かない。<br>
+    <b>どの相手にも「弱点の祖先」が必ずある。</b>名前と台詞がその概念を指している。
+    カードの<b>祖先の帯</b>（顔＋意味）がその札の祖先 ―― <b>合う祖先を出せば一撃。</b></p>
+    </div>
+  </div>
+
+  <div id="bubble"><div class="btxt" id="btxt"></div></div>
+  <div id="field">
+    <div id="bg"></div>
+    <div id="fg"></div>
+    <div id="myBars">
+      <div class="grow"><span class="gname">じぶん HP</span><span class="gnum" id="nHp"></span>
+        <span class="gnum" id="nGuard" style="color:#9fd0ff"></span><span class="gnum" id="myNum"></span></div>
+      <div class="bar b-hp" id="barHp"><i></i></div>
+      <div class="grow" style="margin-top:4px"><span class="gname">満腹度</span><span class="gnum" id="nFood"></span></div>
+      <div class="bar b-food" id="barFood"><i></i></div>
+    </div>
+    <div id="slash"></div>
+    <div id="flash"></div>
+    <div id="foeMeta"><span id="foeInt"></span><span id="foeHp"><i></i><em id="foeNum"></em></span><span id="foeTag"></span></div>
+    <div id="foeBox"><img id="foeImg" alt=""><span class="drop"></span></div>
+    <div id="heroBox"><span id="heroTag">じぶん</span><img id="heroImg" alt=""><span class="drop"></span></div>
+  </div>
+  <div id="msg"></div>
+
+  <div id="handWrap">
+    <div id="bar">
+      <button class="abtn rl" id="btnReload" style="position:relative;z-index:1">🔄 引き直す</button>
+      <button class="abtn" id="btnRestart">やり直す</button>
+      <span id="deckN"></span>
+    </div>
+    <div id="hand"></div>
+  </div>
+</div>
+</div>
+
+<div id="over"><div class="box">
+  <h2 id="ovT"></h2><p id="ovP"></p>
+  <button class="abtn" id="ovBtn">もう一度</button>
+</div></div>
+
+<div id="dbg">
+  <button id="dbgClose">閉じる</button>
+  <h3>🐞 デバッグ</h3>
+  <div id="dbgBody"></div>
+</div>
+
+</div>
+<script>
+'use strict';
+const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
+const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const A='../assets/';
+/* 素の {} を辞書に使うと、constructor / toString / valueOf のような
+   Object.prototype のキーが「入っている」ことになってしまう。
+   実際 constructor(建設者)のカードが「⚔こうげき function Object() {…}」と表示された。
+   英単語の辞書は必ずこれで作る。 */
+const dict=o=>Object.assign(Object.create(null),o||{});
+// シミュレーション中は描画も台詞も止める。100戦×400手ぶんやると固まるため。
+let simMode=false;
+
+/* ===========================================================================
+   乱数。デバッグでシードを固定できるようにするため Math.random は直に使わない。
+   同じシードなら手札も敵の攻撃も完全に再現する ― 不具合を追うのに要る。
+   =========================================================================== */
+let seed=1;
+function srand(s){seed=(s>>>0)||1;}
+function rnd(){ // xorshift32
+  seed^=seed<<13; seed>>>=0; seed^=seed>>17; seed^=seed<<5; seed>>>=0;
+  return seed/4294967296;
+}
+const ri=n=>Math.floor(rnd()*n);
+function shuffle(a){for(let i=a.length-1;i>0;i--){const j=ri(i+1);[a[i],a[j]]=[a[j],a[i]];}return a;}
+
+/* ===========================================================================
+   初期装備(原始の行為)。event-lab の STARTER と同じ91語。
+   エティモンを持っていなくても最初から使える。ここが「切る/殴る/食べる」。
+   =========================================================================== */
+const STARTER=`eat bite chew swallow taste drink feed cook boil bake
+cut break tear split pierce grind beat strike crack
+push throw turn carry bear take give hold catch lift drag
+go come run walk climb fall fly swim leap ride
+see hear feel watch listen
+say speak call sing laugh weep shout whisper name
+make build weave sew bind tie dig plant sow reap wash burn
+sleep wake rest sit stand lie live die grow
+wear cover fill empty open close hide wrap
+know think learn count choose want fear love`.split(/\s+/).filter(Boolean);
+
+/* ===========================================================================
+   カードの効果は<b>落とした相手に適用される</b>。「自分用/敵用」の区別は無い。
+     dmg  … 対象にダメージ。<b>敵に投げれば敵が、自分に使えば自分が</b>痛い(ice など)
+     heal … 対象のHPを回復。<b>敵に食わせれば敵が回復してしまう</b>
+     food … 満腹度。自分にしか無い概念なので、敵に渡すと heal と同じ扱いになる
+     buff … 次のこうげきを強める。これだけは自分にしか効かない
+   「回復アイテムを敵に使ったら敵も回復する」を、例外ではなく<b>表の当然の帰結</b>にした。
+
+   ここに入れてよいのは、DBが画面に出す日本語語義だけで納得できる語だけ。
+   最初は英語の語感で並べたので、cheese が「重要人物」で満腹+14、rest が「残り」で
+   HP回復、medicine が「医学」…と噛み合っていなかった。打つ前に必ず語義を確かめる。
+   =========================================================================== */
+const EFFECT=dict({
+  // 打撃・刃物・炎
+  strike:{dmg:24},pierce:{dmg:24},break:{dmg:22},burn:{dmg:22},cut:{dmg:22},beat:{dmg:19},
+  split:{dmg:17},tear:{dmg:17},grind:{dmg:14},crack:{dmg:14},bite:{dmg:14},throw:{dmg:14},
+  push:{dmg:12},drag:{dmg:9},dig:{dmg:9},catch:{dmg:9},
+  sword:{dmg:24},blade:{dmg:22},knife:{dmg:19},spear:{dmg:22},arrow:{dmg:19},shield:{dmg:9},
+  fire:{dmg:22},flame:{dmg:19},scythe:{dmg:19},hammer:{dmg:22},stone:{dmg:14},
+  thunder:{dmg:24},storm:{dmg:22},plough:{dmg:16},hoe:{dmg:14},spade:{dmg:14},rake:{dmg:10},
+  // 冷たいもの・毒。<b>自分に使っても同じだけ痛い</b>
+  ice:{dmg:11},snow:{dmg:9},frost:{dmg:11},cold:{dmg:9},poison:{dmg:16},
+  thorn:{dmg:12},
+  // salt / ash / smoke / vinegar の微小ダメージは廃止した。
+  // 刃物が22なのに塩が5では、出す意味がまったく無い(「攻撃より弱い」)。
+  // 塩は料理の語として、答え側で昇天させる。
+  // 食べもの。自分なら満腹、敵に渡せば敵が回復する
+  eat:{food:14},drink:{food:9},taste:{food:5},chew:{food:8},swallow:{food:8},
+  cook:{food:12},boil:{food:9},bake:{food:11},feed:{food:16},
+  bread:{food:18},milk:{food:13},meat:{food:20},honey:{food:15},soup:{food:16},
+  broth:{food:14},grain:{food:12},nut:{food:9},berry:{food:8},apple:{food:11},
+  fruit:{food:11},egg:{food:12},fish:{food:15},butter:{food:10},wine:{food:9,heal:4},
+  ale:{food:9},oil:{food:7},dinner:{food:22},feast:{food:30},banquet:{food:28},stew:{food:18},
+  // 手当て。敵に使えば敵が回復する
+  sleep:{heal:14},health:{heal:15},cure:{heal:20},remedy:{heal:16},recovery:{heal:14},
+  repose:{heal:12},warmth:{heal:8},peace:{heal:10},shelter:{heal:9},blanket:{heal:8},
+  hearth:{heal:9},relief:{heal:12},cover:{heal:5},wear:{heal:5},wrap:{heal:5},hide:{heal:4},
+  // 育つもの。植物にも人にも少し効く(畑の主に陽を渡すと元気になる、が成立する)
+  sun:{heal:7},water:{heal:5},rain:{heal:5},light:{heal:5},spring:{heal:6},
+  // 気を強める。これだけは自分にしか効かない
+  courage:{buff:1},confidence:{buff:1},strength:{buff:1},energy:{buff:1},
+  pride:{buff:1},vitality:{buff:1},
+});
+const ATK=dict(); const SELF=dict();      // 旧2表の互換。中身は EFFECT から引く
+for(const k in EFFECT){
+  if(EFFECT[k].dmg)ATK[k]=EFFECT[k].dmg;
+  if(EFFECT[k].heal||EFFECT[k].food||EFFECT[k].buff)SELF[k]=EFFECT[k];
+}
+
+/* ===========================================================================
+   カードの数値 ―― <b>全札が 攻・守・癒・糧 の4つを持つ</b>
+   ---------------------------------------------------------------------------
+   以前は上の EFFECT 表に載っている語だけが数字を持ち、残りは
+   「この相手には何も起きない」だった。つまり<b>デッキの大半が死に札</b>で、
+   引いた瞬間に捨てるしかなかった。トレーディングカードとして成立していない。
+
+   そこで数字を<b>2つの材料から必ず作る</b>。
+     ① レア度  … 語根の順位から出る ★1〜★10。珍しい語ほど数字が大きい
+     ② イメージ … その語の<b>画面に出る日本語の語義</b>と<b>語根の意味</b>から、
+                   攻・守・癒・糧・気 のどれに寄るかを決める
+   何にも寄らない語は「万能型」として 攻7割・守5割・癒2.5割を持つ。
+   <b>だから数字が全部ゼロの札は存在しない。</b>
+
+   照合に使うのは<b>画面に出る日本語の語義だけ</b>。
+   ・語根の意味は使わない。shield(盾) の語根は *skel-「切る」なので、
+     語根で寄りを決めると<b>盾が攻撃札になった</b>。まさに答え側で禁じた
+     「語源が同じだけの語をこじつける」やつで、同じ間違いを数値側でやっていた。
+   ・語義の<b>どこかに</b>その字がある、では拾いすぎる。
+     antidote は「解毒剤」なので「毒」が当たって<b>解毒剤が攻撃札になった</b>。
+     allowance「割当量」も「割」で攻撃札。どちらも読んで意味が通らない。
+   そこで<b>語義の頭だけを見る</b>。日本語の語義は
+     ・動詞/形容詞(「切る」「眠る」「甘い」) … 意味は<b>先頭</b>にある
+     ・名詞(「解毒剤」「割当量」)             … 意味は<b>末尾</b>にある
+   ので、その1字だけを表と突き合わせる。頭が表に無ければ寄りを主張しない。
+
+   <b>数値は1枚につき1つだけ</b>。⚔18 とか 🛡12 とか ♡9 とか、それだけ。
+   前は 攻/守/癒/糧 の4つを並べていたが、4つ読ませた時点で
+   「この札は何をする札か」が一目で分からない。<b>アイコン1つと数字1つ</b>にする。
+     ⚔ 攻撃 … 敵に出す。そのぶん削る
+     🛡 守り … 自分に使う。次に受けるダメージを肩代わり
+     ♡ 回復 … 自分に使う。HPが戻る
+     🍖 糧  … 自分に使うと満腹。敵に出すと かじりつく
+     🔥 気合 … 自分に使う。次の⚔が そのぶん強くなる
+   寄りが決まらない語は<b>⚔ 攻撃</b>にする。ことばを投げつける、が既定。
+   だから<b>数字を持たない札は1枚も無い</b>。
+
+   なお EFFECT で手打ちした数字は<b>下限</b>として残す。sword が24なのは
+   意図した数字なので、レア度から出た数字がそれより低くても下げない。
+
+   一撃昇天と弱点は<b>この数値には出さない</b>。相手ごとのマスクデータで、
+   台詞と名前を読んで当てるもの。カードを見ただけで分かってはゲームにならない。
+   =========================================================================== */
+const tbl=s=>{const t=dict();for(const p of s.split(' ')){const k=p.slice(0,p.indexOf(':'));
+  for(const c of p.slice(p.indexOf(':')+1))t[c]=k;}return t;};
+/* ① 動作の字。<b>動詞の頭</b>にあるときだけ見る。
+   「切る」「食べる」「破壊する」の先頭は、その語の意味そのもの。 */
+const LEAN_ACT=tbl(
+  'atk:切裂割砕折打殴叩撃射刺突殺焼燃爆奪壊破滅噛咬狩襲討傷 '+
+  'def:守護覆囲隠閉固耐結縛留包 '+
+  'heal:癒治寝眠休安和暖温清洗浄救助愛喜笑輝照乾 '+
+  'food:食飲煮炊');
+/* ② ものの字。<b>名詞の末尾</b>にあるときだけ見る。
+   ここに入れてよいのは<b>それ自体が具体物である字</b>だけ。
+   家・師・屋・者・院・器・服・門・品・性 のような<b>接尾辞</b>は入れない ―
+   入れたせいで artist(芸術家)が盾に、conquest(征服)が守りに、
+   mountebank(ぺてん師)が薬になった。字が同じだけで意味は無関係だった。 */
+const LEAN_THING=tbl(
+  'atk:剣槍矢斧鎚刀弾爪牙棘雷嵐銃砲鞭罠毒 '+
+  'def:盾壁柵城塀扉錠鎧皮殻巣靴帽袋箱蓋柱縄綱紐幕垣堤砦塔傘鍵 '+
+  'heal:薬剤湯泉灯花春 '+
+  'food:飯米麦穀粉肉魚卵乳菓塩汁粥酒茶蜜油豆菜膳宴糧餌 '+
+  'mind:勇気心魂志誇望力');
+/* 語義から寄りを1つ返す。決まらなければ '' (=万能型)。
+   打ち消しの語は必ず万能型にする ―「切られていない」「食欲のない」を
+   切る・食べるの仲間にしてはいけない。 */
+function leanOf(ja){
+  let s=String(ja||'').replace(/[（(].*$/,'').trim();
+  if(!s||/ない|不|無|非|未|反/.test(s))return '';
+  const suru=s.replace(/(する|させる|られる)$/,'');
+  if(suru!==s){                       // 漢語動詞。字のどれかが動作なら それ
+    for(const c of suru)if(LEAN_ACT[c])return LEAN_ACT[c];
+    return '';
+  }
+  if(/[るうくすつぬむぶぐいた]$/.test(s)&&s.length>1) // 和語の動詞・形容詞は頭
+    return LEAN_ACT[s[0]]||'';
+  return LEAN_THING[s[s.length-1]]||'';              // 名詞は末尾
+}
+/* 寄りごとの倍率。レア度の基礎値に これを掛けた<b>1つの数</b>が札の値。
+   アイコン・呼び名・札の枠色も ここで決まる。 */
+const KIND={
+  atk :{m:1.35,ic:'⚔',ja:'攻撃',cls:'a'},
+  def :{m:1.20,ic:'🛡',ja:'守り',cls:'g'},
+  heal:{m:1.15,ic:'♡',ja:'回復',cls:'h'},
+  food:{m:1.10,ic:'🍖',ja:'糧', cls:'f'},
+  mind:{m:0.55,ic:'🔥',ja:'気合',cls:'u'},
+};
+/* <b>触ると自分も痛い</b>札。自分に使うと攻の半分を食らう。
+   氷を自分にかければ冷たい、毒をあおれば毒。ここは語義から機械的に決めず、
+   「手で持っただけで痛いか」で選んだ小さな一覧にする(剣は持っても切れない)。 */
+const SHARP=new Set(['ice','snow','frost','cold','poison','venom','toxin','thorn','nettle',
+  'sting','acid','fire','flame','burn','blaze','ember','lava','thunder','storm','smoke']);
+let STAT_CACHE=dict();
+function stats(w){
+  const l=String(w||'').toLowerCase();
+  if(STAT_CACHE[l])return STAT_CACHE[l];
+  const x=rec(l), r=rootOf(l);
+  const star=starOf(x.r);
+  const B=6+star*1.4;                       // ★1→7.4 ★10→20
+  // 手打ちの EFFECT があるなら、それが寄りを決める(表に載せた時点で意図がある)。
+  // 無ければ語義の頭から。どちらも決まらなければ万能型。
+  const fx=EFFECT[l];
+  // 寄りが決まらなければ<b>攻撃</b>。ことばを投げつける、が既定の使い道。
+  const lean=fx?(fx.dmg?'atk':fx.food?'food':fx.heal?'heal':fx.buff?'mind':'atk')
+               :(leanOf(jaOf(l))||'atk');
+  const k=KIND[lean];
+  const s={lean,star,ic:k.ic,kja:k.ja,cls:k.cls,v:Math.max(1,Math.round(B*k.m))};
+  if(fx){   // 手打ちの数字は<b>下限</b>。sword が24なのは意図した数字なので下げない
+    const hand=fx.dmg||fx.heal||fx.food||0;
+    if(hand)s.v=Math.max(s.v,hand);
+  }
+  s.sharp=SHARP.has(l);
+  // <b>敵に出すと裏目に出る札</b>。♡は相手を回復させ、🛡は相手の防御を上げ、
+  // 🔥は自分にしか効かない。弱点だと思って外したときの代償はこの3種。
+  s.balm=lean==='heal'; s.ward=lean==='def'; s.selfOnly=lean==='mind';
+  return STAT_CACHE[l]=s;
+}
+
+/* ===========================================================================
+   データ
+   =========================================================================== */
+let WORDS=[],TAGS=dict(),GLOSS=dict(),ENEMIES=[],WBY=dict(),ALLW=[],ROOTS=dict();
+// 単語レコードは必ずこれで引く。WBY は小文字キーなので直に WBY[w] とすると
+// Capital 始まりや大文字混じりの語で undefined になる(実際それで落ちた)。
+const rec=w=>WBY[String(w||'').toLowerCase()]||dict();
+/* 語義がカタカナだけで<b>別の日本語と紛れる語</b>だけ、表示を補う。
+   ale の語義は「エール」だが、日本語のエールは普通「応援」の意味で読まれる。
+   実際「アイドルにエールを送ったのに倒せない」という取り違えが起きた。
+   (応援したいときの正解は cheer。ホシノ・ミミの答えに入っている) */
+const JA_FIX=dict({ale:'エール（麦酒）',bolt:'ボルト（ねじ）',dial:'ダイヤル（文字盤）',
+  crank:'クランク（回す取っ手）',pin:'ピン（留め具）',bonus:'ボーナス（賞与）'});
+const jaOf=w=>JA_FIX[String(w||'').toLowerCase()]||rec(w).ja||'';
+async function load(){
+  const [w,t,g,e,rt]=await Promise.all([
+    fetch('data/pie/words.json').then(r=>r.json()),
+    fetch('data/pie/tags.json').then(r=>r.json()),
+    fetch('data/pie/gloss.json').then(r=>r.json()).catch(()=>({})),
+    fetch('data/pie/enemies.json').then(r=>r.json()),
+    fetch('data/pie/roots.json').then(r=>r.json()).catch(()=>[]),
+  ]);
+  WORDS=w;TAGS=dict(t);GLOSS=dict(g);ENEMIES=e;
+  rt.forEach(r=>{ROOTS[r.key]=r;});
+  STAT_CACHE=dict();   // 語根が入る前に作った数値は捨てる(レア度と語根の意味が入らない)
+  const seen=new Set();
+  for(const x of WORDS){
+    const k=x.w.toLowerCase();
+    if(seen.has(k))continue; seen.add(k); WBY[k]=x; ALLW.push(x);
+  }
+  ENEMIES.forEach(prep);
+}
+
+/* ===========================================================================
+   効果の判定。event-lab.html の tierOf と同じ規則。
+     dual … 2つ以上の属性に一撃で刺さる
+     crit … その属性の答えに載っている
+     good … その属性の意味タグ/語根に合う
+     bad  … 逆効果。敵が激怒する
+     none … 無効
+   =========================================================================== */
+/* 概念(con)を<b>同じ意味の語根 全部</b>に広げる。
+   「見る」の語根は *weid- だけではない ― *okʷ-(見る) *spek-(観察する)
+   *derk-(見る) *dheiə-(見る) もある。1本だけ選ぶと、
+   派生語20語しかないマイナー語根になって<b>手札にまず来ない</b>。
+   束ねると300語規模になり、<b>誰でも知っている単語</b>が必ず混ざる。 */
+const CON_CACHE=dict();
+function conRoots(con){
+  if(CON_CACHE[con])return CON_CACHE[con];
+  const re=new RegExp(con), out=new Set();
+  for(const k in ROOTS)if(re.test(ROOTS[k].ja||''))out.add(k);
+  return CON_CACHE[con]=out;
+}
+function prep(e){
+  const S=t=>new Set((t||'').split(/[\s,、,\/]+/).filter(Boolean).map(v=>v.toLowerCase()));
+  e._bad=S(e.bad);
+  (e.asp||[]).forEach(a=>{
+    a._ans=S(a.ans);
+    a._roots=a.con?conRoots(a.con):(a.root?new Set([a.root]):null);
+    // <b>接頭辞そのもの</b>が弱点の相手。com- を持つ語ならどれでも一撃。
+    // 語の綴りに com/con/col/cor が見えているので、これがいちばん推測しやすい。
+    a._pre=a.pre?new RegExp('(^|,\\s*)('+a.pre+')'):null;
+    // DBの pre 欄は空の語がある(common / country / court は com- なのに未記入)。
+    // <b>綴りがその接頭辞で始まり、かつ その接頭辞を持つ祖先を実際に含む</b>なら拾う。
+    // 綴りだけで拾うと color や come まで入るので、祖先の裏取りを必ず要る条件にする。
+    a._preSp=a.pre?new RegExp('^('+a.pre.replace(/-/g,'')+')'):null;
+  });
+}
+function aspHits(w,e){
+  const lc=w.toLowerCase(),h=[];
+  (e.asp||[]).forEach((a,i)=>{
+    if(a._ans.has(lc)){h.push({i,k:'crit'});return;}
+    // <b>祖先が答え</b>の相手。その概念の祖先から生まれた語なら どれでも一撃。
+    // カードの下の帯に「*weid- ― 見る」と出ているので、名前と台詞で概念を掴めば、
+    // 手札のどれが効くかは<b>札の顔を見れば分かる</b>。語源クイズとして成立する。
+    if(a._roots&&(rec(lc).p||[]).some(k=>a._roots.has(k))){h.push({i,k:'crit'});return;}
+    if(a._pre&&(a._pre.test(rec(lc).pre||'')
+      ||(a._preSp.test(lc)&&(rec(lc).p||[]).some(k=>
+           ((ROOTS[k]||{}).aff||[]).some(f=>a._pre.test(f))))
+    )){h.push({i,k:'crit'});return;}
+    const g=a.good;
+    if(g&&(g.t==='tag'?g.v.includes(TAGS[w]):(rec(lc).p||[]).includes(g.v)))h.push({i,k:'good'});
+  });
+  return h;
+}
+function tierOf(w,e){
+  if(e._bad.has(w.toLowerCase()))return 'bad';
+  const h=aspHits(w,e);
+  if(!h.length)return 'none';
+  if(h.filter(v=>v.k==='crit').length>=2)return 'dual';
+  return h.some(v=>v.k==='crit')?'crit':'good';
+}
+/* カードを差し出した結果は<b>4つだけ</b>。激怒は廃止した。
+     昇天 … その相手の答え。読ませてから戦闘が終わる
+     弱点 … 痛いところを突く。<b>必ず一撃で撃破</b>(旧「逆効果」の語をそのまま流用した ―
+            毒を野菜に、冷水を濡れネズミに渡すのは、怒らせるのではなく<b>効く</b>)
+     回復 … 回復・食べ物の札。<b>渡した相手が</b>回復する
+     ダメージ … 刃物や氷など。相手が誰でも同じだけ痛い
+     効果なし … 上のどれでもない */
+const TIER_JA=dict({dual:'昇天',crit:'昇天',good:'—',bad:'弱点',none:'—'});
+// 弱点は一撃。ダメージ値は使わない
+/* 数値。一撃と二重で決着がつくが、有効も無駄にはならない ―
+   「どんな英単語でも多少は効果がある」を数字にしたところ。 */
+/* <b>正しい札を差し出したら、その場で終わる。</b>
+   満足度をこつこつ貯めるのではなく、一撃で満タンにして戦闘を終わらせる。
+   だからこのゲームで探すのは「その一枚」だけになる。 */
+const FX=dict({
+  dual:{sat:100}, crit:{sat:100}, good:{sat:18}, bad:{sat:-30}, none:{sat:0},
+});
+
+/* ===========================================================================
+   デッキ構築
+   「無効ばかりのランダム戦闘にしない」ため、内訳を決め打ちで混ぜる。
+   原始カードは常に入る。敵の弱点(一撃)も、罠(逆効果)も、あらかじめ混ぜる。
+   罠を見抜いて避けるのがこのゲームの肝なので、罠は必ず入れる。
+   =========================================================================== */
+const DECK=30;
+/* デッキ30枚。<b>間違いの罰は「激怒」ではなく、空振りと 相手の回復</b>。
+     根源の2枚 … <b>eat と sleep は必ず入る</b>。どの相手にも意味がある
+     🎁 昇天    5 … その相手の答え。読ませてから終わる
+     🎁 弱点    3 … 急所。こちらも一撃で終わる
+     🎁 効果なし 6 … <b>ほかの敵の答え</b>。この相手には何も起きず、1手むだになる
+   <b>当たりを8枚に増やした。</b>4枚だと30枚中4.5枚しか無く、
+   <b>手札5枚にまず来ない</b>ため「何を出しても不正解」になっていた。
+   8枚あれば、たいていの手札に1〜2枚は当たりが混ざる。
+   決めるのは「有るか無いか」ではなく<b>「どれが当たりか」</b>になる。
+     ⚔ ダメージ 8 … 刃物・氷など。相手が誰でも同じだけ効く
+     🍖 回復    8 … 食べ物・手当て。<b>自分に使えば回復、敵に渡せば敵が回復する</b>
+   台詞を読まずに差し出すと7割は空振りする。回復札を敵に投げれば逆に助けてしまう。 */
+function buildDeck(e){
+  const pick=(pool,n)=>shuffle(pool.slice()).slice(0,n);
+  const ok=x=>x.ja&&!/^[A-Z]/.test(x.w)&&!/\s/.test(x.w)&&(x.r??9999)<=1600;
+  // 山札は<b>寄りで組む</b>。攻めだけ・癒しだけに偏ると、
+  // 「答えが分からないときに打てる手」が無くなって、ただの当てものになる。
+  const atk=[],def=[],balm=[],chow=[],mind=[],rare=[],hit=[],weak=[];
+  for(const x of ALLW){
+    if(!ok(x))continue;
+    const w=x.w, t=tierOf(w,e);
+    if(t==='dual'||t==='crit'){hit.push(w);continue;}
+    if(t==='bad'){weak.push(w);continue;}
+    const s=stats(w);
+    if(s.star>=8){rare.push(w);continue;}      // ★8以上は数字が大きい当たり枠
+    if(s.lean==='heal')balm.push(w);            // ♡ 敵に渡すと回復させてしまう罠
+    else if(s.lean==='def')def.push(w);         // 🛡 自分に使えば守り／敵に出すと裏目
+    else if(s.lean==='food')chow.push(w);       // 🍖
+    else if(s.lean==='mind')mind.push(w);       // 🔥 気合
+    else atk.push(w);                           // ⚔
+  }
+  // 「この相手には当たらない」札は<b>ほかの敵の答え</b>から採る。
+  // もっともらしく見えて外れる、という迷いを作る枠。
+  // (以前と違って外れても空振りではない ― どの札にも攻と守がある)
+  const other=[];
+  for(const o of ENEMIES){
+    if(o.ttl===e.ttl)continue;
+    prep(o);
+    for(const a of (o.asp||[]))for(const w of (a.ans||'').split(' ')){
+      const l=w.toLowerCase();
+      if(!l||!rec(l).ja)continue;
+      const t=tierOf(rec(l).w,e);
+      if(t==='crit'||t==='dual'||t==='bad')continue;
+      other.push(rec(l).w);
+    }
+  }
+  // <b>eat と sleep は必ず入れる根源の2枚</b>。
+  // 食べる=自分の腹を満たす／相手が食い物なら昇天。
+  // 寝る  =相手が眠りを求めていれば昇天、そうでなくても<b>1ターン眠らせる</b>。
+  //        引き直しのクールが1手戻るので、札を探す時間が作れる。
+  const BASE=['eat','sleep'].filter(w=>rec(w).w);
+  // 当たり札(一撃+弱点)は<b>7枚前後</b>。5枚の手札に1枚以上ある確率が約75%で、
+  // 引き直し(2手に1回・無傷)を足せば、読めている人はまず手が無くならない。
+  // 昔ここを4枚にして「手札が全部ハズレ」になり、10枚にしたら
+  // でたらめに全部出す人まで勝ってしまった。その中間がこの枚数。
+  const deck=[...BASE,...pick(hit,4),...pick(weak,3),...pick([...new Set(other)],5),
+              ...pick(atk,6),...pick(def,4),...pick(chow,2),...pick(balm,2),
+              ...pick(mind,1),...pick(rare,1)].filter(Boolean);
+  const uniq=[...new Set(deck)];
+  for(const pool of [atk,def,other,chow]){
+    for(const w of pool){if(uniq.length>=DECK)break;if(!uniq.includes(w))uniq.push(w);}
+    if(uniq.length>=DECK)break;
+  }
+  return shuffle(uniq).slice(0,DECK);
+}
+
+/* ===========================================================================
+   ゲーム状態。敵は<b>1体</b>。
+   <b>満足メーターは廃止した。</b>正しい札はその場で決着するので、
+   0か100しか取らない目盛りに意味が無かった。残るのは
+   自分HP / 満腹度 / 敵HP の3本だけ。
+   =========================================================================== */
+/* 全札にダメージが乗るようになったので、HPは両側とも厚くした。
+   薄いままだと<b>殴るだけで勝ててしまい</b>、言葉を選ぶ意味が消える。
+   厚くしたぶん、敵の攻撃が手番ごとに上がる仕掛け(foeAtk)で決着を急がせる。 */
+const MAXHP=85,MAXFOOD=20,HAND=5,RELOAD_CD=2;
+let S=null, HIST=[];
+function newGame(idx){
+  const e=ENEMIES[idx]; prep(e);
+  clearTimers(); clearInterval(typeTimer); typeTimer=null; pending=null; pendingPanel='msg';
+  $('#bubble').className=''; $('#btxt').innerHTML='';
+  $('#over').classList.remove('on');          // 前の戦闘の結果が残らないように
+  // asc(昇天)は opacity:0 で終わる forwards アニメなので、消し忘れると
+  // 次の戦闘で敵が透明のまま見えなくなる。クラスも style もここで戻す。
+  const fb=$('#foeBox');
+  fb.classList.remove('calm','hit','rage','asc','down','lunge','zon','hot','sleeping');
+  fb.style.opacity=''; fb.style.transform='';
+  const fi=$('#foeImg'); if(fi){fi.style.opacity='';fi.style.filter='';}
+  $$('.halo,.sparkle').forEach(x=>x.remove());
+  $('#heroBox').classList.remove('hit','flinch','zon','hot');
+  $('#slash').classList.remove('on');
+  $('#flash').className='';
+  $('#field').classList.remove('quake');
+  pending=null; busy=false;
+  S={
+    ei:idx, e,
+    hp:MAXHP, food:MAXFOOD,
+    ehp:e.lv===10?95:145, ehpMax:e.lv===10?95:145,
+    atk:e.lv===10?7:9, grow:e.lv===10?4:5, rage:0,
+    buff:0, guard:0, edef:0, turn:0, reloads:0, rlCd:0, over:0, li:0, asleep:0,
+    deck:[], hand:[], disc:[], log:[], all:[],
+  };
+  S.deck=buildDeck(e);
+  draw(); lastHand='';
+  HIST=[];
+  say(`<b>${esc(e.ttl)}</b> が あらわれた。`);
+  bubble(L(e).intro||e.scene);
+  render();
+}
+const L=e=>(e&&e.lines)||{};
+function snapshot(){
+  return {hp:S.hp,food:S.food,ehp:S.ehp,atk:S.atk,grow:S.grow,rage:S.rage,buff:S.buff,guard:S.guard,edef:S.edef,turn:S.turn,
+    reloads:S.reloads,rlCd:S.rlCd,over:S.over,li:S.li,asleep:S.asleep,
+    deck:S.deck.slice(),hand:S.hand.slice(),disc:S.disc.slice(),log:S.log.slice()};
+}
+function pushHist(){HIST.push({s:snapshot(),seed});if(HIST.length>40)HIST.shift();}
+function undo(){
+  if(!HIST.length)return;
+  const h=HIST.pop();
+  Object.assign(S,h.s); seed=h.seed; lastHand=''; render();
+  say('（デバッグ）1手戻した。');
+}
+function draw(){
+  S.disc.push(...S.hand); S.hand=[];
+  for(let i=0;i<HAND;i++){
+    if(!S.deck.length){ S.deck=shuffle(S.disc); S.disc=[]; }
+    if(!S.deck.length)break;
+    S.hand.push(S.deck.pop());
+  }
+  lastHand='';
+}
+/* 画面に出すのは<b>いまの手番のことだけ</b>。
+   前のターンの文が残っていると、何がいま起きたのか読めなくなる。
+   全履歴は S.all に貯めて、デバッグの「全ログ」でだけ見る。 */
+function say(h,cls){
+  S.log.push({h,cls:cls||''}); S.all.push({h,cls:cls||''});
+  if(S.all.length>200)S.all.shift();
+  paintMsg();
+}
+function newTurn(){ S.log=[]; paintMsg(); }
+
+/* ===== 文字の出しわけ =====
+   <b>敵の台詞 → 戦場の上の吹き出し（1文字ずつ）
+     戦闘の結果 → 戦場の下の窓（即座に）</b>
+   ひとつの窓にまとめたら、台詞と数字が混ざって読みにくかったので分けた。 */
+let typeTimer=null, pendingPanel='msg';
+function paintMsg(){
+  const _m=$('#msg'); if(_m)requestAnimationFrame(()=>{_m.scrollTop=_m.scrollHeight;});
+  if(simMode)return;
+  const el=$('#msg'); if(!el)return;
+  el.innerHTML='<div class="wrap">'+S.log.map(l=>`<div class="ln ${l.cls||''}">${l.h}</div>`).join('')+'</div>'
+    + (pending&&pendingPanel==='msg'?'<span class="nx">▼</span>':'');
+}
+/* 敵の台詞。吹き出しに1文字ずつ打つ */
+function sayType(text,cls,done){
+  const raw=String(text||'');
+  if(simMode){ S.all.push({h:raw,cls:'say'}); if(done)done(); return; }
+  S.all.push({h:raw,cls:'say'}); if(S.all.length>200)S.all.shift();
+  const bub=$('#bubble'), tx=$('#btxt');
+  bub.className=cls||'';
+  clearInterval(typeTimer);
+  const parts=raw.split(/(<[^>]+>)/g);
+  const plain=parts.filter(p=>!p.startsWith('<')).join('');
+  let n=0;
+  const paint=()=>{
+    let left=n,out='';
+    for(const p of parts){
+      if(p.startsWith('<')){out+=p;continue;}
+      if(left<=0)continue;
+      out+=p.slice(0,left); left-=p.length;
+    }
+    tx.innerHTML=out+(n<plain.length?'<span class="cur">▌</span>':'')
+      +(n>=plain.length&&pending&&pendingPanel==='bubble'?'<span class="nx">▼</span>':'');
+  };
+  paint();
+  typeTimer=setInterval(()=>{
+    n++; paint();
+    if(n>=plain.length){clearInterval(typeTimer);typeTimer=null;if(done)setTimeout(done,180);}
+  },28);
+}
+function repaintBubbleTail(){
+  if(simMode||typeTimer!==null)return;
+  const tx=$('#btxt'); if(!tx||tx.querySelector('.nx'))return;
+  if(pending&&pendingPanel==='bubble')tx.insertAdjacentHTML('beforeend','<span class="nx">▼</span>');
+}
+const bubble=(t,c)=>sayType(t,c);
+/* 敵の毎ターンの台詞。順に回して、同じ戦闘で同じ台詞が続かないようにする */
+function foeLine(){
+  const t=L(S.e).turns||[];
+  if(!t.length)return S.e.scene;
+  const s=t[S.li%t.length]; S.li++;
+  return s;
+}
+
+/* ===== 1手の処理 =====
+   1枚打つたびに、敵が<b>台詞を言いながら</b>攻撃してくる。
+   だから毎ターン新しいヒントが1つ増える。粘るほど弱点が絞れる、という作り。 */
+let busy=false, pending=null;
+/* 予約したタイマーは全部ここに貯める。
+   戦闘をやり直すと、前の戦闘の「1.5秒後に結果を出す」が新しい戦闘で発火して、
+   始まった直後に前回の結果画面が出ていた。newGame で必ず全部止める。 */
+let timers=[];
+function later(fn,ms){ const id=setTimeout(fn,ms); timers.push(id); return id; }
+function clearTimers(){ timers.forEach(clearTimeout); timers=[]; }
+function playCard(w,tgt){
+  if(S.over||busy||!S.hand.includes(w))return;
+  const ja=jaOf(w), l=w.toLowerCase(), e=S.e, s=stats(l);
+  pushHist();
+  S.hand.splice(S.hand.indexOf(w),1); S.disc.push(w);
+  S.turn++; if(S.rlCd>0)S.rlCd--;
+  newTurn();          // この手番のログだけを残す
+  busy=true;
+
+  // ── ① カードの効果だけを解決する。敵はまだ動かない ──
+  const t=tierOf(w,e);
+  if(tgt==='self'){
+    // 自分に使ったとき。札の種類ごとに<b>ひとつだけ</b>起きる。
+    let msg='',cls='';
+    if(s.lean==='def'){ S.guard+=s.v; msg=`守り+${s.v}（次に受けるダメージを肩代わり）`;
+      pop('#heroBox','🛡+'+s.v,'heal'); }
+    else if(s.lean==='heal'){ S.hp=Math.min(MAXHP,S.hp+s.v); msg=`HP+${s.v}`;
+      pop('#heroBox','+'+s.v,'heal'); }
+    else if(s.lean==='food'){ S.food=Math.min(MAXFOOD,S.food+s.v);
+      const h=Math.round(s.v*0.5); S.hp=Math.min(MAXHP,S.hp+h);
+      msg=`満腹度+${s.v}・HP+${h}`; pop('#heroBox','+'+s.v,'heal'); }
+    else if(s.lean==='mind'){ S.buff+=s.v; msg=`<b>気合+${s.v}</b>（次の⚔がそのぶん強くなる。いま ${S.buff}）`;
+      pop('#heroBox','🔥+'+s.v,'heal'); }
+    else { // ⚔ を自分に向けたら自分が斬られる。攻めの札は敵に出すもの
+      S.hp=Math.max(0,S.hp-s.v); msg=`<b>攻撃の札を自分に向けた。${s.v}のダメージ。</b>`;
+      cls='bad'; pop('#heroBox','-'+s.v,'dmg'); hitFx('#heroBox'); }
+    say(`<b>${esc(w)}</b>（${esc(ja)}）を自分に使った。${msg}。`,cls);
+    render();
+  }else{
+    /* 🍖で決着したら<b>自分も食べる</b>。たべごろ野菜を eat で倒したなら、
+       倒したうえで腹も満たされているのが自然。決着の演出より先に効かせる。 */
+    const ate=()=>{
+      if(s.lean!=='food')return '';
+      S.food=Math.min(MAXFOOD,S.food+s.v);
+      const h=Math.round(s.v*0.5); S.hp=Math.min(MAXHP,S.hp+h);
+      pop('#heroBox','+'+s.v,'heal');
+      return `<br><b>そのまま いただいた。</b>満腹度+${s.v}・HP+${h}。`;
+    };
+    if(t==='crit'||t==='dual'){
+      // ★ 昇天。<b>台詞を読み終えてから</b>結果を出す
+      // 昇天。<b>殴った時とは別の演出</b>にする ― 揺らさず、光って浮かんで消える
+      S.over=1; ascendFx(); pop('#foeBox','昇天 ✧','sat');
+      say(`<b>${esc(w)}</b>（${esc(ja)}）を差し出した ― <b>まさにそれだった。</b>`+ate(),'crit');
+      render();
+      bubbleThen(calmLine(w,e),'calm',()=>finish(true));
+      busy=false; return;
+    }
+    if(t==='bad'){
+      // ★弱点も<b>一撃で終わる</b>。昇天(わかりあう)と撃破(急所を突く)の二択。
+      S.ehp=0; S.over=1; downFx(); pop('#foeBox','弱点 ✖','dmg');
+      say(`<b>${esc(w)}</b>（${esc(ja)}）― <b>弱点をついた。一撃でたおした。</b>`+ate(),'crit');
+      render();
+      later(()=>waitTap(()=>finish(false)), simMode?0:1400);
+      busy=false; return;
+    }
+    // <b>sleep は眠りを求めていない相手も1ターン眠らせる</b>。
+    // 眠っているあいだ攻撃が来ないので、引き直しのクールを稼げる。
+    if(l==='sleep'){
+      S.asleep=1;
+      say(`<b>${esc(w)}</b>（${esc(ja)}）― ${esc(e.ttl)}は <b>眠ってしまった</b>。`,'crit');
+      render(); if(simMode){afterCard();return;} later(afterCard,900); return;
+    }
+    // ── 敵に使ったとき ──
+    // 外したときの<b>裏目は3種類</b>。どれも「弱点だと思って出した」ときに起きる。
+    //   ♡ 回復の札 … 相手が回復して 勢いづく（攻撃+6）
+    //   🛡 守りの札 … <b>相手の防御力が上がる</b>。以後こちらの攻めが通りにくくなる
+    //   🔥 気合の札 … 自分にしか効かない。手番を捨てることになる
+    // ⚔ と 🍖 は そのままダメージ。<b>数字を持たない札は無い</b>ので空振りは起きない。
+    // 🍖 は<b>相手に食べさせるのではなく、こちらがかじりつく</b>。
+    // 毒キノコに eat を出して<b>相手が回復する</b>のは、どう読んでも通らなかった。
+    let bit='',cls='bad';
+    if(s.balm){
+      S.ehp=Math.min(S.ehpMax,S.ehp+s.v); S.rage++;
+      bit=`<b>しくじった。♡回復の札だ。相手を ${s.v} 回復させ、勢いづかせてしまった（攻撃+6）</b>`;
+      pop('#foeBox','+'+s.v,'heal');
+    }else if(s.ward){
+      S.edef+=s.v;
+      bit=`<b>しくじった。🛡守りの札だ。相手の防御力が ${s.v} 上がってしまった（守り ${S.edef}）</b>`;
+      pop('#foeBox','🛡+'+s.v,'heal');
+    }else if(s.selfOnly||s.lean==='food'){
+      // 🍖と🔥は<b>自分に使う札</b>。相手に出しても何も起きない。
+      // 「相手に食べさせる」は毒キノコが回復して意味が通らず、
+      // 「こちらがかじりつく」は<b>たべごろ野菜にパンでダメージ</b>になって、
+      // やはり通らなかった。食べ物は自分の腹に入れるもの、で統一する。
+      bit=`<b>しくじった。${s.ic}${s.kja}の札は 自分に使うもの</b>`;
+    }else{
+      let d=s.v;
+      if(S.buff){d+=S.buff;bit=`気合+${S.buff}が乗って `;S.buff=0;}
+      // 相手の防御力ぶんは通らない。守りの札を出しつづけると自分の首をしめる
+      const cut=Math.min(S.edef,d-1>0?d-1:0);
+      d-=cut;
+      S.ehp=Math.max(0,S.ehp-d);
+      pop('#foeBox','-'+d,'dmg'); hitFx('#foeBox');
+      bit+=(cut?`守りに <b>${cut}</b> 削られて `:'')+`<b>${d}</b>のダメージ`;
+      cls='';
+    }
+    say(`<b>${esc(w)}</b>（${esc(ja)}）。${bit}。`,cls);
+    render();
+    if(!S.ehp){ S.over=1; render(); downFx();
+      later(()=>waitTap(()=>finish(false)), simMode?0:1200); busy=false; return; }
+    // <b>昇天のときだけ</b>相手に喋らせる。弱点・回復・無効・ダメージは
+    // 結果の1行で足りる。1手ごとに台詞を書き分けると際限がない。
+  }
+  checkEnd();
+  if(S.over){busy=false;return;}
+  if(simMode){ afterCard(); return; }
+  later(afterCard, 900);
+}
+function afterCard(){
+  const done=()=>{
+    busy=false;
+    if(!S.over&&!S.hand.length)draw();   // 手札が尽きたら黙って配り直す
+    render();
+  };
+  // 敵が台詞を言い終えて殴るまで、こちらは手を出せない
+  if(S.over){done();return;}
+  enemyTurn(done);
+}
+/* 決着は<b>必ず ▼ を押してから</b>結果画面へ進む。
+   読み終わる前に暗転すると、何で終わったのか分からないため。
+   台詞があるとき(昇天)は打ち切ってから、無いとき(撃破・敗北)はすぐ ▼ を出す。 */
+function bubbleThen(text,cls,done){
+  if(simMode){done();return;}
+  sayType(text,cls,()=>{ pending=done; pendingPanel='bubble'; repaintBubbleTail(); });
+}
+function waitTap(done){                 // 台詞が無い決着(撃破・敗北)は下の窓に ▼
+  if(simMode){done();return;}
+  pending=done; pendingPanel='msg'; paintMsg();
+}
+/* 撃破の演出。倒れて色が抜けて沈む。昇天(浮上して光る)とは逆向きにする */
+function downFx(){
+  if(simMode)return;
+  const box=$('#foeBox');
+  box.classList.remove('hit','rage','lunge','asc','calm');
+  void box.offsetWidth; box.classList.add('down');
+  const fl=$('#flash'); fl.className=''; void fl.offsetWidth; fl.classList.add('down');
+  // 揺れは<b>戦場に掛ける</b>。#app に掛けると transform が scale を上書きして、
+  // キャンバス全体が跳ねて<b>画面がブレて</b>いた。
+  const ap=$('#field'); ap.classList.remove('quake'); void ap.offsetWidth; ap.classList.add('quake');
+  later(()=>ap.classList.remove('quake'),600);
+}
+/* 昇天の演出。光の輪＋きらめき＋浮上。ダメージのシェイクは一切使わない */
+function ascendFx(){
+  if(simMode)return;
+  const box=$('#foeBox'), f=$('#field');
+  box.classList.remove('hit','rage','lunge','down'); box.classList.add('calm','asc');
+  const fl=$('#flash'); fl.className=''; void fl.offsetWidth; fl.classList.add('asc');
+  const br=box.getBoundingClientRect(), fr=f.getBoundingClientRect();
+  const cx=br.left-fr.left+br.width/2, cy=br.top-fr.top+br.height*0.44;
+  const h=document.createElement('div'); h.className='halo';
+  h.style.left=cx+'px'; h.style.top=cy+'px'; f.appendChild(h);
+  later(()=>h.remove(),1600);
+  for(let i=0;i<9;i++){
+    const s=document.createElement('div'); s.className='sparkle'; s.textContent='✧';
+    s.style.left=(cx-14+(i-4)*13)+'px'; s.style.top=cy+'px';
+    s.style.setProperty('--dx',((i-4)*16)+'px');
+    s.style.animationDelay=(i*70)+'ms';
+    f.appendChild(s); setTimeout(()=>s.remove(),1800+i*70);
+  }
+}
+function hitFx(sel){
+  const el=$(sel); if(!el)return;
+  el.classList.remove('hit'); void el.offsetWidth; el.classList.add('hit');
+}
+/* 敵のターン。<b>台詞を言ってから殴る</b>。カードの効果とは別の手番として起きる */
+/* 敵の攻撃力は<b>手番が進むほど上がる</b>。
+   当たり札はデッキに10枚前後あるので、台詞を読めば1〜2手で当たり、軽傷で済む。
+   逆に読まずに全部出していくと、5手目あたりで押し切られる。
+   ―― 当たり札を減らして「手札が全部ハズレ」にする調整は二度としない。
+   選ぶ意味は<b>札の少なさ</b>ではなく<b>遅れることの高さ</b>で作る。
+   罠(相手を回復させる札)を踏むと、そのぶん さらに上がる。 */
+function foeAtk(){ return S.atk + (S.grow||0)*Math.max(0,S.turn-1) + (S.rage||0)*6; }
+/* 敵のターン。<b>台詞 → 踏み込み → 命中 → 被弾</b>の順に見せる。同時に出さない。 */
+function enemyTurn(done){
+  done=done||(()=>{});
+  if(S.over){done();return;}
+  if(S.asleep>0){                      // 眠っているあいだは殴ってこない
+    S.asleep--;
+    say(`${esc(S.e.ttl)}は <b>眠っている</b>。`);
+    tick(); checkEnd(); render(); done(); return;
+  }
+  // <b>ぶれさせない</b>。上に出している「つぎの攻撃 N」がそのまま来る。
+  // 乱数で±25%動かしていたが、それだと予告した数字を守りで受けきれず、
+  // 守りの札を何枚積むかを決められなかった。
+  const raw=Math.max(1,foeAtk());
+  // 守りは<b>先に肩代わりして減っていく</b>。守りの札を自分に使って稼いだぶんだけ、
+  // 答えを探す手番が伸びる。攻めの札しか無い手札でも、待つ手が打てるように。
+  const soak=Math.min(S.guard,raw), d=raw-soak;
+  const dmgLine=()=>`${esc(S.e.ttl)}の攻撃。<b>${raw}</b>`
+    +(soak?`のうち <b>${soak}</b> を守りが受け、<b>${d}</b>`:'')+`のダメージ。`;
+  if(simMode){ S.guard-=soak; S.hp=Math.max(0,S.hp-d); say(dmgLine(),'bad');
+    tick(); checkEnd(); done(); return; }
+  // <b>台詞を打ち終えてから</b>踏み込む。同時だと何を言われたのか読めない
+  afterType(foeLine(),()=>{
+    S.guard-=soak; S.hp=Math.max(0,S.hp-d);
+    say(dmgLine(),'bad');
+    const box=$('#foeBox');
+    box.classList.remove('lunge'); void box.offsetWidth; box.classList.add('lunge');
+    later(()=>{                   // 踏み込みが当たる瞬間
+      const sl=$('#slash'); sl.classList.remove('on'); void sl.offsetWidth; sl.classList.add('on');
+      const h=$('#heroBox'); h.classList.remove('flinch'); void h.offsetWidth; h.classList.add('flinch');
+      if(soak)pop('#heroBox','🛡-'+soak,'heal');
+      if(d)pop('#heroBox','-'+d,'dmg');
+      tick(); checkEnd(); render(); done();
+    },190);
+  });
+}
+/* 台詞を打ち切ってから done を呼ぶ。タップ待ちはしない(敵の攻撃は自動で続く) */
+function afterType(text,done){ sayType(text,'',done); }
+/* 満足したときの台詞。語ごとの特別台詞があればそれ、無ければ属性ごとの型。
+   {ja} にその単語の日本語語義が入るので、<b>何を渡したから満足したのか</b>が必ず文になる。 */
+function calmLine(w,e){
+  const li=L(e), ja=jaOf(w)||w;
+  const sp=(li.calmWord||{})[w.toLowerCase()];
+  if(sp)return sp.replace(/\{ja\}/g,ja);
+  const h=aspHits(w,e).find(v=>v.k==='crit');
+  const key=h?(e.asp[h.i].n||''):'';
+  const tpl=(li.calm||{})[key]||(li.calm||{})[''];
+  if(tpl)return tpl.replace(/\{ja\}/g,ja);
+  return `「${ja}」…… <b>それだった。</b>`;
+}
+/* ===== 引き直し =====
+   <b>攻撃は受けない。かわりに3手のあいだ使えない。</b>
+   目的の札を探して回すのを咎めない作りにしてある ―
+   殴られる仕様だと「引き直すのが損」になり、手札を眺めるだけの遊びになった。 */
+function reload(){
+  if(S.over||S.rlCd>0)return;
+  pushHist(); newTurn();
+  S.reloads++; S.rlCd=RELOAD_CD;
+  draw();
+  say(`引き直した。<b>攻撃は受けない</b>が、あと${RELOAD_CD}手は引き直せない。`);
+  render();
+}
+function tick(){
+  S.food=Math.max(0,S.food-1);
+  if(S.food<=0){ S.hp=Math.max(0,S.hp-3); say('空腹でHPが3減った。','bad'); }
+  checkEnd();
+}
+function checkEnd(){
+  if(!S.over&&S.hp<=0){
+    S.over=2; say('<b>力尽きた。</b>','bad'); render();
+    if(simMode){finish(false);return;}
+    later(()=>waitTap(()=>finish(false)),700);
+  }
+}
+function finish(calm){
+  const win=S.hp>0;
+  $('#ovT').textContent=!win?'💀 たおれた':calm?'🕊 わかりあえた':'⚔ たおした';
+  $('#ovP').innerHTML=!win
+    ? `${S.turn}手で敗れた。最後の攻撃力は<b>${foeAtk()}</b>だった。<br>${
+        S.rage?`<b>罠を${S.rage}回踏んで、そのたびに攻撃が5上がっていた。</b>相手を回復させる札は渡さないこと。`
+        :S.food<=0?'<b>満腹度が尽きていた。</b>🍖食べ物の札は自分に使える。'
+        :'<b>敵の攻撃は手番ごとに強くなる。</b>台詞をよく読んで、早く当てるほど軽傷で済む。'}`
+    : calm
+    ? `<b>${esc(S.e.ttl)}</b> は満足して去った。${S.turn}手・引き直し${S.reloads}回。<br>
+       台詞のとおりのものを渡せた。<b>読めば分かる相手だった。</b>`
+    : `<b>${esc(S.e.ttl)}</b> を力ずくで黙らせた。${S.turn}手。<br>
+       たおしても終わるが、<b>相手が何を欲しがっていたかは 分からずじまいになる。</b>`;
+  $('#over .box').className='box '+(!win?'dead':calm?'calm':'kill');
+  $('#over').classList.add('on');
+}
+
+/* ===========================================================================
+   カード。箱庭の cardHTML と同じ構造で組む。
+   語根キャラの絵が50体ぶんしか無いので、無い語根は色だけ決めて絵文字で代用する。
+   =========================================================================== */
+const STAR=A+'ui/word_et_star.png';
+/* 語根キャラの絵は50体ぶんしか無い。無い語は<b>意味タグで絵文字を出し分ける</b> ―
+   全部同じ記号だと札の見分けがつかず、めくる楽しみが消えるので。 */
+const TAG_ICON=dict({
+  'noun.food':'🍞','noun.plant':'🌿','noun.animal':'🐑','noun.body':'🖐','noun.person':'🧑',
+  'noun.possession':'💰','noun.quantity':'🔢','noun.time':'⏳','noun.event':'✨','noun.act':'🏃',
+  'noun.artifact':'🔧','noun.substance':'⚗️','noun.location':'🗺','noun.feeling':'💗','noun.attribute':'🎀',
+  'noun.state':'🛏','noun.communication':'🎵','noun.group':'👑','noun.cognition':'💡','noun.motive':'🔥',
+  'noun.phenomenon':'🌪','noun.process':'🌀','noun.object':'🪨','noun.shape':'🔷','noun.relation':'🔗',
+  'verb.consumption':'🍽','verb.contact':'✊','verb.motion':'💨','verb.emotion':'💞','verb.change':'🔄',
+  'verb.communication':'💬','verb.cognition':'🧠','verb.creation':'🛠','verb.possession':'🎁',
+  'verb.body':'🫀','verb.perception':'👁','verb.social':'🤝','verb.stative':'⚖️','verb.competition':'⚔️',
+  'verb.weather':'☔','adj.all':'🎨','adj.pert':'🎨','adv.all':'➰',
+});
+function iconOf(w){
+  // <b>数字を持つ札は役割の絵</b>にする。意味タグは当てにならず、
+  // arrow(矢)が noun.communication で🎵、cure(治療)が noun.artifact で🔧 になった。
+  // 数字を持たない「ことば」札だけ、意味タグで絵を出し分ける。
+  return stats(w).ic||TAG_ICON[TAGS[rec(w).w]]||'💬';
+}
+function hueOf(k){let h=0;for(let i=0;i<k.length;i++)h=(h*31+k.charCodeAt(i))%360;return h;}
+/* <b>前置詞の祖先</b>。purveyor は *per1(前へ) と *weid-(見る) の2つから出来ていて、
+   効くのは「見る」のほう。なのに札には「前へ」しか出ていなかった ―
+   これでは<b>どう見ても推測できない</b>。
+   ・札の帯は<b>祖先を全部</b>並べる(下の rootsOf)
+   ・絵と色は<b>中身のほうの祖先</b>から採る(前置詞は飛ばす) */
+const GRAM=new Set(['per1','kom','en','re-','ne','eghs','ad-','de-','apo-','upo','epi',
+  'ambhi','uper','s(w)e-','dwis-','n̥dher-','i-','sem-1','ko-','al-1','au-3','ambhi-']);
+function rootsOf(w){
+  return (rec(w).p||[]).map(k=>ROOTS[k]||{key:k,pie:k,ja:''});
+}
+function rootOf(w){
+  const p=(rec(w).p||[]);
+  const body=p.filter(k=>!GRAM.has(k));          // 中身の祖先を優先する
+  for(const k of body){if(ROOTS[k]&&ROOTS[k].img)return ROOTS[k];}
+  if(body.length)return ROOTS[body[0]]||{key:body[0],pie:body[0],ja:''};
+  for(const k of p){if(ROOTS[k]&&ROOTS[k].img)return ROOTS[k];}
+  return ROOTS[p[0]]||(p[0]?{key:p[0],pie:p[0],ja:''}:null);
+}
+function clanColor(r){
+  if(!r)return '#c9bcd4';
+  return r.color||`hsl(${hueOf(r.key)} 52% 62%)`;
+}
+/* レア度1〜10。元データの r は 1(最頻)〜2288 なので段階に丸める */
+function starOf(r){
+  const t=[100,220,360,520,720,1000,1350,1750,2150];
+  let n=1; for(const v of t){ if((r??9999)>v)n++; }
+  return Math.min(10,n);
+}
+/* カードに書くのは<b>数字だけ</b>。
+   「ことば」「どうぐ」のような札種は作らない ― <b>全部ことばなので分類に意味が無い</b>。
+   数字を持つ札は数字を出す。持たない札は何も出さない。
+   「相手の欲しいものなら昇天／弱点なら一撃で撃破」は<b>全札に共通の規則</b>なので、
+   カードには書かない(画面上部の見出しに1回だけ書く)。 */
+function kindOf(w){ return stats(w).lean; }
+/* 札に出すのは<b>アイコン1つと数字1つ</b>だけ。4つ並べるのをやめた ―
+   数字が4つあると「この札は何をする札か」が一目で分からなかった。 */
+function statLine(w){
+  const s=stats(w);
+  return `<span class="st ${s.cls}"><i>${s.ic}</i>${s.kja} <b>${s.v}</b></span>`
+    +(s.sharp?`<span class="st s" title="自分に使うと半分はね返る">危</span>`:'');
+}
+function cardHTML(w,e){
+  const x=rec(w), r=rootOf(w), col=clanColor(r), st=starOf(x.r), xja=jaOf(w);
+  const t=e?tierOf(w,e):null, k=kindOf(w), rs=rootsOf(w), sv=stats(w);
+  /* ===== 札の並び =====
+       上段  … 左に<b>語根の顔（ジェムと同じ大きさ）</b>、右に<b>数値のジェム</b>
+       見出し… 英単語＋語義（全幅なので大きく置ける）
+       本文  … 左に<b>英単語のアイコン</b>、右にその単語の定義
+       ★    … レア度
+     印欧祖語の再構成形(*ghwer- など)は<b>一切出さない</b>。カジュアルな遊びに要らない。
+     顔の下に意味を札で出すので、顔と意味が離れることもない。 */
+  /* 絵のある語根は50本だけ。<b>絵が無い語根は円の中に意味そのものを書く</b>。
+     「祖」だけの空円を出していたので、大半の札が中身の無い丸で埋まっていた。 */
+  const roots=rs.slice(0,2).map(y=>{const ja=esc(y.ja||'？');
+    return y.img
+      ? `<span class="rb"><img src="${A}${esc(y.img)}" alt=""`
+        +` onerror="this.parentNode.classList.add('txt');this.replaceWith(Object.assign(`
+        +`document.createElement('span'),{className:'nf',textContent:'${ja}'}))">`
+        +`<em>${ja}</em></span>`
+      : `<span class="rb txt"><span class="nf ${y.ja&&y.ja.length>=6?'s3':y.ja&&y.ja.length>=4?'s2':''}">${ja}</span></span>`;}).join('')
+    +(rs.length>2?`<span class="rbMore">+${rs.length-2}</span>`:'');
+  const def=GLOSS[x.w]||GLOSS[w]||xja;
+  // 英単語のアイコン。絵があればそれ、無ければ札の記号(⚔🛡♡🍖🔥)
+  const wicon=`<span class="wicon"><img src="${A}word/${encodeURIComponent(w)}.png" alt=""`
+    +` onerror="this.replaceWith(Object.assign(document.createElement('i'),`
+    +`{textContent:'${iconOf(w)}'}))"></span>`;
+  const stars=Array.from({length:5},(_,i)=>
+    `<img src="${STAR}" class="${i<Math.round(st/2)?'':'off'}" alt="">`).join('');
+  return `<div class="wordCard k-${k}${st>=8?' rare':''}${rs.length>1?' two':''}" style="--cc:${col}">
+    ${xray&&t?`<span class="xray ${t}">${TIER_JA[t]}</span>`:''}
+    <span class="gem ${sv.cls}"><i>${sv.ic}</i><b>${sv.v}</b></span>
+    <div class="wcTop">${roots}</div>
+    <div class="wcHead"><span class="wcEn">${esc(w)}</span><span class="wcDef">${esc(xja)}</span></div>
+    <div class="wcBody">${wicon}<p>${esc(def)}</p></div>
+    <div class="wcStarsRow" title="レア度 ${st}/10">${stars}</div>
+  </div>`;
+}
+
+/* ===========================================================================
+   描画
+   =========================================================================== */
+let xray=false;
+let lastHand='';
+function cardSide(w){
+  // ⚔と🍖は敵向き、🛡♡🔥は自分向きが既定（ドロップ先の初期値）
+  return /^(heal|def|mind|food)$/.test(stats(w).lean)?'self':'enemy';
+}
+function render(){
+  if(!S||simMode)return;
+  const g=(id,v,m)=>{$(id+' i').style.width=Math.max(0,Math.min(100,v/m*100))+'%';};
+  g('#barHp',S.hp,MAXHP); g('#barFood',S.food,MAXFOOD);
+  $('#barFood').classList.toggle('warn',S.food<=5);
+  $('#barHp').classList.toggle('warn',S.hp<=15);
+  $('#nHp').textContent=`${S.hp}/${MAXHP}`;
+  $('#nFood').textContent=`${S.food}/${MAXFOOD}`;
+  $('#nGuard').textContent=S.guard>0?`🛡${S.guard}`:'';
+  renderFoe();
+
+  paintMsg();
+  const rb=$('#btnReload');
+  rb.disabled=S.rlCd>0;
+  rb.style.opacity=S.rlCd>0?.45:1;
+  rb.textContent=S.rlCd>0?`🔄 引き直す（あと${S.rlCd}手）`:'🔄 引き直す（攻撃なし）';
+  $('#deckN').textContent=`山札 ${S.deck.length} ／ 捨札 ${S.disc.length} ／ ${S.turn}手 ／ 引き直し${S.reloads}`;
+  $('#hand').innerHTML=S.hand.map(w=>
+    `<div class="handCard" data-w="${esc(w)}"><div class="hcInner">${cardHTML(w,null)}</div></div>`).join('');
+  fanHand();
+  // 引き直した時だけ、下から配る演出を出す(毎回やるとうるさい)
+  const sig=S.hand.join(',');
+  if(sig!==lastHand){ if(S.hand.length===HAND)dealHand(); lastHand=sig; }
+  if(dbgOpen)renderDbg();
+}
+function pop(sel,txt,cls){
+  const b=document.querySelector(sel); if(!b)return;
+  const d=document.createElement('div');
+  d.className='pop '+cls; d.textContent=txt;
+  const fr=$('#field').getBoundingClientRect(), br=b.getBoundingClientRect();
+  d.style.left=(br.left-fr.left+br.width/2-24)+'px';
+  d.style.top=(br.top-fr.top-6)+'px';
+  $('#field').appendChild(d);
+  setTimeout(()=>d.remove(),1100);
+}
+
+function foeImg(e){return A+(e.lv===10?'chara/T_ch_enemy_01.png':'enemy/T_ch_stage1_boss.png');}
+function renderFoe(){
+  const e=S.e;
+  $('#foeBox').classList.toggle('sleeping',S.asleep>0&&!S.over);
+  $('#foeTag').innerHTML=esc(e.ttl)+(e.want?`<br><span style="opacity:.85;font-weight:700;font-size:10.5px">${esc(e.want)}</span>`:'');
+  $('#foeHp i').style.width=Math.max(0,S.ehp/S.ehpMax*100)+'%';
+  // 次にいくつ殴ってくるか、と 相手の防御力。どちらも先に見せる
+  $('#foeInt').innerHTML=S.over?''
+    :S.asleep>0?'<span>💤 眠っている</span>'
+    :`<span>⚔ つぎの攻撃 <b>${foeAtk()}</b></span>`
+     +(S.edef?`<span class="gd">🛡 守り <b>${S.edef}</b></span>`:'')
+     +(S.rage?`<span class="rg">🔥 勢い <b>+${S.rage*6}</b></span>`:'');
+  $('#foeNum').textContent=`${S.ehp} / ${S.ehpMax}`;
+  $('#myNum').innerHTML=(S.guard?`<span class="gd">🛡${S.guard}</span>`:'')
+    +(S.buff?`<span class="rg">🔥+${S.buff}</span>`:'');
+  const img=$('#foeImg');
+  const src=foeImg(e);
+  if(img.getAttribute('src')!==src){
+    img.src=src;
+    img.onerror=function(){this.onerror=null;this.src=A+'chara/T_ch_kaput_head.png';};
+  }
+}
+
+/* ===== カード操作 =====
+   箱庭の startInvCardDrag と同じ作り。実カードを持ち上げたゴーストが
+   カーソルに追従し、<b>離した相手</b>に使う。タップでも使える。 */
+/* 札の大きさは<b>手札の幅から決める</b>。固定倍率にすると、広い画面では
+   豆粒になり、狭い画面でははみ出して両端が切れる。どちらも起きないように、
+   置ける幅いっぱい(上限0.46)まで大きくする。 */
+let fanSc=.455;
+function fitHand(){
+  const el=$('#hand'); if(!el)return;
+  /* キャンバスが 1920x1080 固定なので、札の大きさも<b>固定</b>。
+     画面から計算するのをやめたので、ウィンドウの形で変わることが無い。
+     板張りの場が左右500pxずつ・上123px 空いていたので、横に広げて上を詰めた。 */
+  fanSc=.66;                 // 見た目 352x492 → 232x325
+  const w=286, h=330;        // 5枚で 1430px。場(1920)の3/4を占める
+  document.querySelectorAll('#hand .handCard').forEach(c=>{
+    c.style.flex=`0 0 ${w}px`; c.style.width=w+'px'; c.style.height=h+'px';
+  });
+}
+function fanT(i,c){
+  const d=i-c;
+  return `translateY(${-Math.abs(d)*13}px) rotate(${d*4.5}deg) scale(${fanSc})`;
+}
+function fanHand(){
+  fitHand();
+  const cs=[...document.querySelectorAll('#hand .handCard')];
+  const c=(cs.length-1)/2;
+  cs.forEach((el,i)=>{
+    const inner=el.querySelector('.hcInner');
+    inner.style.transform=fanT(i,c);
+    el.onpointerenter=()=>{inner.style.transform=`translateY(-96px) rotate(0deg) scale(.82)`;};
+    el.onpointerleave=()=>{inner.style.transform=fanT(i,c);};
+    el.addEventListener('pointerdown',ev=>startDrag(ev,el));
+  });
+}
+function dealHand(){
+  const cs=[...document.querySelectorAll('#hand .handCard')];
+  const c=(cs.length-1)/2;
+  cs.forEach(el=>{const n=el.querySelector('.hcInner');n.style.transition='none';
+    n.style.transform='translateY(300px) rotate(0deg) scale(.40)';});
+  if(cs[0])void cs[0].offsetWidth;
+  cs.forEach((el,i)=>setTimeout(()=>{
+    const n=el.querySelector('.hcInner');n.style.transition='';n.style.transform=fanT(i,c);
+  },70*i+40));
+}
+/* 落とせる先 = 生きている敵ぜんぶ + 自分 */
+function targets(){ return [['#heroBox','self'],['#foeBox','foe']]; }
+function zoneAt(x,y){
+  for(const [sel,side] of targets()){
+    const el=$(sel); if(!el)continue;
+    const b=el.getBoundingClientRect();
+    if(x>=b.left&&x<=b.right&&y>=b.top&&y<=b.bottom)return {sel,side};
+  }
+  return null;
+}
+function showZones(on){
+  $$('#foeBox,#heroBox').forEach(el=>el.classList.remove('zon','hot'));
+  if(on)targets().forEach(([sel])=>{const el=$(sel);if(el)el.classList.add('zon');});
+}
+function startDrag(e,card){
+  if(e.button!==undefined&&e.button!==0)return;
+  const w=card.dataset.w;
+  if(!w||!S||S.over||!S.hand.includes(w))return;
+  e.preventDefault();
+  card.classList.add('dragging');
+  const ghost=document.createElement('div');
+  ghost.className='dragGhost';
+  ghost.innerHTML=cardHTML(w,null);
+  document.body.appendChild(ghost);
+  showZones(true);
+  const start={x:e.clientX,y:e.clientY};
+  // クライアント座標 → キャンバス(1920x1080)内部座標
+  const toLocal=(cx,cy)=>{const r=$('#app').getBoundingClientRect();
+    const k=r.width/1920; return {x:(cx-r.left)/k, y:(cy-r.top)/k};};
+  const aim=$('#aim'), path=$('#aimPath');
+  const a0=toLocal(start.x,start.y);
+  aim.classList.add('on');
+  const move=ev=>{
+    ghost.style.transform=`translate(${ev.clientX}px,${ev.clientY}px) translate(-50%,-56%) scale(.42)`;
+    const z=zoneAt(ev.clientX,ev.clientY);
+    $$('#foeBox,#heroBox').forEach(el=>el.classList.remove('hot'));
+    if(z)$(z.sel).classList.add('hot');
+    // 札の位置から狙い先へ、たわんだ曲線を引く
+    const a1=toLocal(ev.clientX,ev.clientY);
+    const cx=(a0.x+a1.x)/2, cy=Math.min(a0.y,a1.y)-Math.abs(a1.x-a0.x)*.28-90;
+    path.setAttribute('d',`M${a0.x.toFixed(0)},${a0.y.toFixed(0)} Q${cx.toFixed(0)},${cy.toFixed(0)} ${a1.x.toFixed(0)},${a1.y.toFixed(0)}`);
+    aim.classList.toggle('hit',!!z);
+  };
+  const cleanup=()=>{
+    card.classList.remove('dragging'); ghost.remove(); showZones(false);
+    aim.classList.remove('on','hit'); path.removeAttribute('d');
+    window.removeEventListener('pointermove',move);
+    window.removeEventListener('pointerup',up);
+    window.removeEventListener('pointercancel',cleanup);
+  };
+  const up=ev=>{
+    const z=zoneAt(ev.clientX,ev.clientY);
+    cleanup();
+    if(z)playCard(w,z.side);
+    else toast('相手か自分の上で離してください');
+  };
+  move(e);
+  window.addEventListener('pointermove',move);
+  window.addEventListener('pointerup',up,{once:true});
+  window.addEventListener('pointercancel',cleanup,{once:true});
+}
+function toast(t){
+  const d=document.createElement('div');
+  d.textContent=t;
+  d.style.cssText='position:fixed;left:50%;bottom:30%;transform:translateX(-50%);z-index:9500;'+
+    'background:rgba(30,22,38,.92);color:#fff;font-weight:bold;font-size:13px;padding:8px 16px;border-radius:12px';
+  document.body.appendChild(d); setTimeout(()=>d.remove(),1400);
+}
+/* ===========================================================================
+   デバッグ
+   =========================================================================== */
+let dbgOpen=false;
+function renderDbg(){
+  // 敵が複数いるので「どの敵に対して何か」を全部出す
+  const foes=[{e:S.e}];
+  const best=w=>{const r={dual:0,crit:1,good:2,bad:3,none:4};
+    return foes.map(f=>tierOf(w,f.e)).sort((a,b)=>r[a]-r[b])[0];};
+  const cnt={dual:0,crit:0,good:0,bad:0,none:0};
+  S.deck.concat(S.hand,S.disc).forEach(w=>cnt[best(w)]++);
+  const tw=w=>`<span class="tinyw ${best(w)}" title="${foes.map(f=>f.e.ttl+':'+TIER_JA[tierOf(w,f.e)]).join(' / ')}">${esc(w)}</span>`;
+  $('#dbgBody').innerHTML=`
+  <h3>透視</h3>
+  <label><input type="checkbox" id="dXray" ${xray?'checked':''}> 手札に効果段階を表示（<b>通常はゲームにならないのでOFF</b>）</label>
+  <div><button class="db" id="dPeekAll">デッキ30枚の内訳を出す</button></div>
+
+  <h3>いまの数値（直接いじれる）</h3>
+  <label>自分HP <input type="number" id="dHp" value="${S.hp}"> / ${MAXHP}</label>
+  <label>満腹度 <input type="number" id="dFood" value="${S.food}"> / ${MAXFOOD}</label>
+  <label>一撃強化 <input type="number" id="dBuff" value="${S.buff}"></label>
+  <label>敵HP <input type="number" id="dEhp" value="${S.ehp}"> / ${S.ehpMax}</label>
+  <label>自分の守り <input type="number" id="dGuard" value="${S.guard}"></label>
+  <label>敵の防御力 <input type="number" id="dEdef" value="${S.edef}"></label>
+  <label>敵の攻撃力（素）<input type="number" id="dAtk" value="${S.atk}"></label>
+  <div class="kv"><span>いまの実際の攻撃力</span><span><b>${foeAtk()}</b>　素${S.atk} + 手番${S.grow}×${Math.max(0,S.turn-1)} + 罠${S.rage}×5</span></div>
+  <div><button class="db" id="dApply">反映</button>
+       <button class="db" id="dWin">勝ち</button>
+       <button class="db" id="dLose">負け</button></div>
+
+  <h3>手番</h3>
+  <div><button class="db" id="dUndo">◀ 1手戻す（${HIST.length}）</button>
+       <button class="db" id="dRedraw">手札を引き直す（無償）</button>
+       <button class="db" id="dAtk1">敵に1回殴らせる</button>
+       <button class="db" id="dNext">次の台詞を出す</button>
+       <button class="db" id="dCd">引き直しのクールを0に</button></div>
+
+  <h3>手札の差し替え</h3>
+  <label>単語 <input type="text" id="dWord" placeholder="capital" style="flex:1">
+    <button class="db" id="dAdd">手札に足す</button></label>
+  <div id="dWordInfo" style="color:#9a90a5;line-height:1.6"></div>
+  <div><button class="db" id="dFillCrit">手札を一撃で埋める</button>
+       <button class="db" id="dFillBad">手札を逆効果で埋める</button></div>
+
+  <h3>乱数</h3>
+  <label>シード <input type="number" id="dSeed" value="${seed}">
+    <button class="db" id="dSeedSet">固定して再戦</button></label>
+  <div style="color:#9a90a5">同じシードなら手札も敵の攻撃も完全に同じ順で再現する。</div>
+
+  <h3>デッキの内訳（${S.deck.length+S.hand.length+S.disc.length}枚）</h3>
+  <div class="kv"><span>二重</span><span>${cnt.dual}</span></div>
+  <div class="kv"><span>一撃</span><span>${cnt.crit}</span></div>
+  <div class="kv"><span>有効</span><span>${cnt.good}</span></div>
+  <div class="kv"><span>逆効果（罠）</span><span>${cnt.bad}</span></div>
+  <div class="kv"><span>無効</span><span>${cnt.none}</span></div>
+  ${(()=>{const all=S.deck.concat(S.hand,S.disc),n=k=>all.filter(w=>stats(w).lean===k).length;
+    const dead=all.filter(w=>!(stats(w).v>0)).length;
+    return `<div class="kv"><span>⚔ / 🛡 / ♡ / 🍖 / 🔥</span><span>${
+      n('atk')} / ${n('def')} / ${n('heal')} / ${n('food')} / ${n('mind')}</span></div>
+    <div class="kv"><span>敵に出すと裏目の札（🛡♡🔥）</span><span>${
+      all.filter(w=>{const s=stats(w);return s.balm||s.ward||s.selfOnly;}).length}</span></div>
+    <div class="kv"><span><b>数値ゼロの死に札</b></span><span><b>${dead}</b>（0であること）</span></div>
+    <div class="kv"><span>数値の平均</span><span>${
+      (all.reduce((a,w)=>a+stats(w).v,0)/all.length).toFixed(1)}</span></div>`;})()}
+  <div style="margin-top:5px">手札 ${S.hand.map(tw).join('')}</div>
+  <div style="margin-top:4px;opacity:.75">山札 ${S.deck.map(tw).join('')}</div>
+
+  <h3>自動プレイ</h3>
+  <div><button class="db" id="dStep">最善手を1つ打つ</button>
+       <button class="db" id="dAuto">決着まで自動</button></div>
+  <div><button class="db hot" id="dSim">100回×2 で勝率を出す（上手／でたらめ）</button></div>
+  <div style="color:#9a90a5">「上手」は効果段階を見て打つ。「でたらめ」は手札から無作為に打つ。
+  <b>この差がゲームの成立条件</b> ― 差が無いなら、単語を選ぶ意味が無い。</div>
+  <div id="dSimOut" style="color:#9a90a5;line-height:1.6"></div>
+
+  <h3>全ログ（${S.all.length}）</h3>
+  <pre id="dLog">${S.all.map(l=>l.h.replace(/<[^>]+>/g,'')).join('\n')}</pre>`;
+
+  const num=id=>+($('#'+id).value||0);
+  $('#dXray').onchange=ev=>{xray=ev.target.checked;render();};
+  $('#dApply').onclick=()=>{
+    S.hp=num('dHp');S.food=num('dFood');S.buff=num('dBuff');
+    S.ehp=num('dEhp');S.atk=num('dAtk');
+    S.guard=num('dGuard');S.edef=num('dEdef');checkEnd();render();
+  };
+  $('#dWin').onclick=()=>{S.over=1;finish(true);render();};
+  $('#dLose').onclick=()=>{S.hp=0;checkEnd();render();};
+  $('#dUndo').onclick=()=>undo();
+  $('#dRedraw').onclick=()=>{pushHist();draw();render();};
+  $('#dCd').onclick=()=>{S.rlCd=0;render();};
+  $('#dNext').onclick=()=>bubble(foeLine());
+  $('#dAtk1').onclick=()=>{pushHist();enemyTurn(()=>render());};
+  $('#dSeedSet').onclick=()=>{srand(num('dSeed'));newGame(S.ei);};
+  $('#dPeekAll').onclick=()=>{
+    const all=S.deck.concat(S.hand,S.disc);
+    $('#dLog').textContent=all.map(w=>
+      `${foes.map(f=>TIER_JA[tierOf(w,f.e)]).join('/')}\t${w}\t${rec(w).ja||''}`).join('\n');
+  };
+  $('#dAdd').onclick=()=>{
+    const w=$('#dWord').value.trim().toLowerCase();
+    if(!rec(w).w){$('#dWordInfo').textContent='その語はDBに無い。';return;}
+    pushHist(); S.hand.push(rec(w).w);
+    $('#dWordInfo').innerHTML=`${esc(w)} = ${esc(WBY[w].ja||'')} → <b>${TIER_JA[tierOf(w,e)]}</b>`;
+    render();
+  };
+  $('#dWord').oninput=ev=>{
+    const w=ev.target.value.trim().toLowerCase();
+    $('#dWordInfo').innerHTML=rec(w).w
+      ? `${esc(w)} = ${esc(rec(w).ja||'')} ${statLine(w).replace(/<[^>]+>/g,' ')}<br>`+
+        foes.map(f=>`${esc(f.e.ttl)}:<b>${TIER_JA[tierOf(w,f.e)]}</b>`).join(' ／ ')
+      : (w?'DBに無い':'');
+  };
+  const fill=t=>{
+    pushHist();
+    const pool=ALLW.filter(x=>x.ja&&tierOf(x.w,S.e)===t).map(x=>x.w);
+    S.hand=shuffle(pool).slice(0,HAND); lastHand=''; render();
+  };
+  $('#dFillCrit').onclick=()=>fill('crit');
+  $('#dFillBad').onclick=()=>fill('bad');
+  $('#dStep').onclick=()=>{autoStep();};
+  $('#dAuto').onclick=()=>{let n=0;while(!S.over&&n++<300)autoStep();render();};
+  $('#dSim').onclick=()=>simulate();
+}
+/* 最善手。①満腹/HPが危なければ道具 ②一撃が手札にあればそれ ③⚔で削る ④引き直す */
+function bestMove(){
+  if(!S||S.over)return null;
+  const by=k=>S.hand.filter(w=>stats(w).lean===k).sort((a,b)=>stats(b).v-stats(a).v)[0];
+  // ① 昇天・弱点の一枚があれば迷わずそれ。これが読めている人の手
+  const hit=S.hand.find(w=>{const t=tierOf(w,S.e);return t==='crit'||t==='dual';});
+  if(hit)return{w:hit,t:'foe'};
+  const weak=S.hand.find(w=>tierOf(w,S.e)==='bad');
+  if(weak)return{w:weak,t:'foe'};
+  // ② 当たりが無い。まず自分の立て直し
+  if(S.food<=6){ const f=by('food'); if(f)return{w:f,t:'self'}; }
+  if(S.hp<=MAXHP*0.4){ const h=by('heal'); if(h)return{w:h,t:'self'}; }
+  // 予告された次の攻撃を守りで受けきれないなら、守りの札を自分に積む
+  if(S.guard<foeAtk()){ const g=by('def'); if(g)return{w:g,t:'self'}; }
+  if(!S.rlCd)return{reload:true};                          // ③ 探す
+  if(S.hand.includes('sleep'))return{w:'sleep',t:'foe'};   // 眠らせてクールを稼ぐ
+  const m=by('mind'); if(m)return{w:m,t:'self'};           // 🔥は先に積んでおく
+  // ④ 探せないなら削る。<b>♡と🛡は敵に投げない</b>(回復させる／防御を上げる罠)
+  const a=by('atk');
+  if(a)return{w:a,t:'foe'};
+  return{w:S.hand[0],t:'self'};   // 残りは裏目の札しかない。自分に使う
+}
+function autoStep(){
+  const m=bestMove(); if(!m)return;
+  busy=false;                       // 自動戦闘は待ち時間を挟まない
+  if(m.reload)reload(); else playCard(m.w,m.t);
+}
+/* でたらめプレイ。台詞も効果段階も一切読まず、無作為に打つ。
+   これと「上手」の勝率差が、台詞を読む行為の価値そのもの。 */
+function randStep(){
+  if(!S||S.over)return;
+  busy=false;
+  if(!S.hand.length){draw();return;}
+  if(!S.rlCd&&rnd()<0.15){reload();return;}
+  playCard(S.hand[ri(S.hand.length)], rnd()<0.25?'self':'foe');
+}
+function simulate(){
+  $('#dSimOut').textContent='計算中…';
+  setTimeout(()=>{
+    const saveS=S,saveSeed=seed,saveH=HIST,ei=saveS.ei;
+    const run=(step)=>{
+      let win=0,sat=0,kill=0,turns=0,reloads=0,dead=0,foodDead=0;
+      const N=100; simMode=true;
+      for(let i=0;i<N;i++){
+        srand(1000+i); newGame(ei);
+        let n=0; while(!S.over&&n++<400)step();
+        if(S.over===1&&S.hp>0){win++;turns+=S.turn;reloads+=S.reloads;
+          if(S.ehp>0)sat++;else kill++;}
+        else {dead++;if(S.food<=0)foodDead++;}
+      }
+      simMode=false;
+      return {win,sat,kill,dead,foodDead,
+        t:win?Math.round(turns/win):0, r:win?(reloads/win).toFixed(1):0};
+    };
+    const A=run(autoStep), B=run(randStep);
+    const r=`100回×2（${saveS.e.ttl}）
+ 上手  勝率 ${A.win}%  鎮めた${A.sat}/たおした${A.kill}  平均${A.t}手・引き直し${A.r}回
+ でたらめ 勝率 ${B.win}%  鎮めた${B.sat}/たおした${B.kill}  平均${B.t}手・引き直し${B.r}回
+ 敗北 上手${A.dead}（空腹${A.foodDead}） でたらめ${B.dead}（空腹${B.foodDead}）
+ ─────────────
+ <b>差 ${A.win-B.win}ポイント</b> ${A.win-B.win>=35?'← 選ぶ意味がある'
+   :A.win-B.win>=15?'← 差はあるが薄い':'← 選んでも選ばなくても同じ。調整が要る'}`;
+    S=saveS;seed=saveSeed;HIST=saveH;render();
+    $('#dSimOut').innerHTML=r.replace(/\n/g,'<br>');
+  },20);
+}
+/* ===========================================================================
+   起動
+   =========================================================================== */
+const BGS=['ground/T_BG_base_expedition.png','ground/T_BG_base_ruin.png','ground/T_BG_base_ground.png'];
+function paintScene(i){
+  const e=ENEMIES[i];
+  $('#bg').style.backgroundImage=`url(${A}${BGS[i%BGS.length]})`;
+  $('#fg').style.backgroundImage=`url(${A}ground/T_BG_base_expedition_rock.png)`;
+  $('#field').classList.toggle('night',/ゾンビ|詩人|迷子|古時計/.test(e.ttl));
+  $('#heroImg').src=A+'chara/T_ch_kaput_head.png';
+}
+function renderPick(){
+  $('#plist').innerHTML=ENEMIES.map((e,i)=>{
+    const asp=(e.asp||[]).map(a=>a.n).filter(Boolean).join('×')||'単属性';
+    return `<button class="pbtn${S&&S.ei===i?' on':''}" data-i="${i}">${esc(e.ttl)}<br>`+
+      `<small>${esc(e.want||asp)}</small></button>`;
+  }).join('');
+  $$('#plist .pbtn[data-i]').forEach(b=>b.onclick=()=>{
+    $('#over').classList.remove('on');paintScene(+b.dataset.i);newGame(+b.dataset.i);
+    $('#pickBody').classList.remove('open'); $('#btnFoes').classList.remove('on');
+    renderPick();});
+  $('#foeN').textContent=ENEMIES.length;
+  // 畳んでいる間も「いまの相手」だけは出しておく
+  $('#nowFoe').innerHTML=S?`いま: <b>${esc(S.e.ttl)}</b><small>${esc(S.e.want||'')}</small>`:'';
+}
+(async()=>{
+  try{ await load(); }catch(err){ $('#loading').textContent='読み込みに失敗: '+err; return; }
+  $('#loading').style.display='none';
+  $('#game').style.display='flex';
+  srand(Date.now()&0xffff);
+  paintScene(0); newGame(0); renderPick();
+  const fold=(btn,body)=>{ $(btn).onclick=()=>{
+    const o=$(body).classList.toggle('open');
+    $(btn).classList.toggle('on',o);
+    $(btn).innerHTML=$(btn).innerHTML.replace(o?'▸':'▾',o?'▾':'▸'); }; };
+  fold('#btnFoes','#pickBody'); fold('#btnRule','#ruleBody');
+  /* 箱庭と同じ拡縮。1920x1080 のキャンバスをウィンドウに収める */
+  const fitStage=()=>{
+    const vw=(visualViewport&&visualViewport.width)||innerWidth;
+    const vh=(visualViewport&&visualViewport.height)||innerHeight;
+    $('#app').style.transform=
+      `translate(-50%,-50%) scale(${Math.min(vw/1920,vh/1080)})`;
+  };
+  fitStage();
+  addEventListener('resize',fitStage);
+  addEventListener('orientationchange',fitStage);
+  if(window.visualViewport)visualViewport.addEventListener('resize',fitStage);
+  $('#btnReload').onclick=()=>reload();
+  $('#btnRestart').onclick=()=>{$('#over').classList.remove('on');paintScene(S.ei);newGame(S.ei);};
+  $('#ovBtn').onclick=()=>{$('#over').classList.remove('on');paintScene(S.ei);newGame(S.ei);};
+  $('#heroBox').onclick=()=>{};
+  $('#btnDbg').onclick=()=>{dbgOpen=!dbgOpen;$('#dbg').classList.toggle('on',dbgOpen);if(dbgOpen)renderDbg();};
+  // 台詞を読み終えたら、どこを触っても先へ進む
+  const go=ev=>{ if(!pending)return; if($('#dbg').contains(ev.target))return;
+    const f=pending; pending=null; f(); };
+  document.addEventListener('click',go);
+  document.addEventListener('keydown',ev=>{if(pending&&(ev.key===' '||ev.key==='Enter')){ev.preventDefault();go(ev);}});
+  $('#dbgClose').onclick=()=>{dbgOpen=false;$('#dbg').classList.remove('on');};
+  document.addEventListener('keydown',ev=>{
+    if(ev.key==='r'&&!ev.metaKey&&!ev.ctrlKey)reload();
+    if(ev.key==='d')$('#btnDbg').click();
+    if(ev.key==='z')undo();
+    if(/^[1-5]$/.test(ev.key)){
+      const w=S.hand[+ev.key-1];
+      if(w)playCard(w, cardSide(w)==='self'?'self':'foe');
+    }
+  });
+})();
+</script>
+</body>
+</html>

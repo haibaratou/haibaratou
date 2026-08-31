@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>エティモン 3にんチーム</title>
+<style>
+:root{
+  --bg:#1a2438; --bg2:#26365a; --panel:#2e3d61; --line:#4a5c86;
+  --fg:#f2f6ff; --dim:#a6b5d4; --gold:#f5c542; --ok:#7cd98a; --ng:#ef7f8f;
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;height:100%;overflow:hidden}
+body{background:radial-gradient(130% 90% at 50% 0%,var(--bg2),var(--bg));color:var(--fg);
+  font-family:"Hiragino Maru Gothic ProN","Hiragino Sans","Noto Sans JP",system-ui,sans-serif;
+  font-size:15px;user-select:none;display:flex;flex-direction:column}
+.top{flex:0 0 auto;display:flex;align-items:center;gap:10px;padding:9px 13px;
+  background:rgba(255,255,255,.06);border-bottom:2px solid var(--line)}
+.top h1{font-size:16px;margin:0}
+.top .r{margin-left:auto;font-size:13px;color:var(--dim)}
+.wrap{flex:1 1 auto;overflow-y:auto;padding:14px 12px 40px}
+.hide{display:none!important}
+h2{font-size:20px;margin:0 0 3px;text-wrap:balance}
+.sub{color:var(--dim);font-size:13px;margin:0 0 14px}
+.big{background:var(--gold);border:0;border-radius:18px;padding:15px;width:100%;
+  font:inherit;font-size:18px;font-weight:700;color:#3a2b05;box-shadow:0 5px 0 #b8901c;cursor:pointer}
+.big:active{transform:translateY(4px);box-shadow:0 1px 0 #b8901c}
+.big:disabled{opacity:.4;box-shadow:none}
+.big.ghost{background:transparent;color:var(--fg);border:2px solid var(--line);box-shadow:none}
+
+/* ---- チームえらび ---- */
+.pool{display:grid;grid-template-columns:repeat(auto-fill,minmax(86px,1fr));gap:8px;margin-bottom:14px}
+.pk{background:var(--panel);border:3px solid var(--line);border-radius:15px;padding:6px 3px 7px;
+  text-align:center;cursor:pointer;transition:.12s}
+.pk:active{transform:scale(.95)}
+.pk.on{border-color:var(--pc);background:#3c4f7d;transform:translateY(-4px)}
+.pk img{width:100%;height:62px;object-fit:contain}
+.pk .jp{font-size:12px;font-weight:700;margin-top:2px;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pk .n{font-size:10px;color:var(--dim)}
+.fixed{position:sticky;bottom:0;background:linear-gradient(transparent,var(--bg) 30%);
+  padding:14px 0 4px}
+.chosen{display:flex;gap:8px;justify-content:center;margin-bottom:10px;min-height:56px}
+.chosen img{width:56px;height:56px;object-fit:contain}
+.chosen .ph{width:56px;height:56px;border:2px dashed var(--line);border-radius:14px}
+
+/* ---- ぼうけん ---- */
+.scene{background:var(--panel);border:3px solid var(--line);border-radius:20px;
+  padding:16px;text-align:center;margin-bottom:14px}
+.scene .ic{font-size:52px;line-height:1.1}
+.scene .t{font-size:19px;font-weight:700;margin-top:4px;text-wrap:balance}
+.scene .need{display:flex;gap:5px;justify-content:center;flex-wrap:wrap;margin-top:9px}
+.scene .need span{font-size:12px;border:1px solid var(--gold);color:var(--gold);
+  border-radius:999px;padding:2px 11px}
+
+.team{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:12px}
+.mem{background:var(--panel);border:3px solid var(--line);border-radius:16px;padding:7px 4px;
+  text-align:center;cursor:pointer;transition:.12s;position:relative}
+.mem.can{border-color:var(--gold);box-shadow:0 0 0 3px rgba(245,197,66,.22)}
+.mem.sel{background:#3c4f7d;transform:translateY(-4px)}
+.mem img{width:100%;height:66px;object-fit:contain}
+.mem .jp{font-size:12.5px;font-weight:700}
+.mem .bang{position:absolute;top:-8px;right:-4px;background:var(--gold);color:#3a2b05;
+  border-radius:50%;width:22px;height:22px;font-size:14px;font-weight:700;line-height:22px}
+
+.moves{display:grid;gap:7px;margin-bottom:12px}
+.mv{background:var(--panel);border:2px solid var(--line);border-radius:13px;padding:9px 12px;
+  display:flex;align-items:center;gap:9px;cursor:pointer;transition:.12s}
+.mv.can{border-color:var(--gold)}
+.mv:active{transform:scale(.98)}
+.mv img{width:34px;height:34px;object-fit:contain}
+.mv .w{font-size:16px;font-weight:700}
+.mv .j{font-size:11.5px;color:var(--dim)}
+.mv .t{margin-left:auto;font-size:11px;color:var(--dim);text-align:right}
+.mv.can .t{color:var(--gold)}
+
+.log{margin-top:6px}
+.ent{border-left:4px solid var(--line);padding:8px 0 8px 11px;margin-bottom:9px;font-size:14px}
+.ent.ok{border-color:var(--ok)} .ent.ng{border-color:var(--ng)}
+.ent b{font-size:15px}
+.ent .s{font-size:12px;color:var(--dim);display:block;margin-top:2px}
+
+/* ---- けっか ---- */
+.card{background:var(--panel);border:3px solid var(--line);border-radius:18px;padding:14px;margin-bottom:12px}
+.card h3{margin:0 0 8px;font-size:15px}
+.bars div{display:flex;align-items:center;gap:8px;margin-bottom:5px;font-size:13px}
+.bars i{font-style:normal;width:66px;color:var(--dim)}
+.bars u{text-decoration:none;height:11px;border-radius:6px;background:var(--gold);display:block}
+</style>
+</head>
+<body>
+
+<div class="top"><h1>エティモン 3にんチーム</h1><div class="r" id="rn"></div></div>
+<div class="wrap">
+
+<section id="sel">
+  <h2>3にん えらんで ぼうけんへ</h2>
+  <p class="sub">だれを つれていくかで、できることが まるごと 変わります。</p>
+  <div class="pool" id="pool"></div>
+  <div class="fixed">
+    <div class="chosen" id="chosen"></div>
+    <button class="big" id="start" disabled>ぼうけんに でる</button>
+  </div>
+</section>
+
+<section id="run" class="hide">
+  <div class="scene" id="sceneBox"></div>
+  <div class="team" id="team"></div>
+  <div class="moves" id="moves"></div>
+  <div class="log" id="log"></div>
+</section>
+
+<section id="end" class="hide">
+  <h2 id="endT"></h2>
+  <p class="sub" id="endS"></p>
+  <div id="endBody"></div>
+  <button class="big" id="again">べつの 3にんで もういちど</button>
+</section>
+
+</div>
+
+<script id="etydata" type="application/json">{"etymons":[]}</script>
+<script>
+const A='../assets/', $=s=>document.querySelector(s);
+let E=(JSON.parse(document.getElementById('etydata').textContent).etymons)||[];
+const chImg=c=>A+'chara/'+c.img, wImg=w=>A+'word/'+w+'.png';
+
+/* 場面。ほしいのは「わざの種類」だけ。理屈は要らない ── 見るの子だから見破れる */
+const SC=[
+ {ic:'🌫️',t:'きりで まえが みえない',need:['みる','てらす','しる'],
+  ok:'{W}で きりの むこうが 見えた!',ng:'{W}を つかったが、きりは そのまま。'},
+ {ic:'🐺',t:'おおかみが うなっている',need:['まもる','こわす','はなす','ならす'],
+  ok:'{W}が きいた! おおかみは しっぽを まいて にげた。',ng:'{W}では おおかみは しずまらない。'},
+ {ic:'🌊',t:'かわを わたりたい',need:['はこぶ','とぶ','うかぶ','つなぐ','みず'],
+  ok:'{W}で むこう岸へ わたれた!',ng:'{W}では 川は こえられない。'},
+ {ic:'🍎',t:'おなかが ぺこぺこ',need:['たべる','あつめる'],
+  ok:'{W}で おなかが いっぱいに なった!',ng:'{W}では おなかは ふくれない。'},
+ {ic:'🪨',t:'おおきな いわが みちを ふさぐ',need:['こわす','おす','ひく','まわす','きる'],
+  ok:'{W}で いわが どいた!',ng:'{W}では いわは びくとも しない。'},
+ {ic:'😴',t:'みんな ねむくて あるけない',need:['ならす','はなす','あそぶ','いかす'],
+  ok:'{W}で 目が さめた! また あるきだせる。',ng:'{W}では ねむけは とれない。'},
+ {ic:'🤕',t:'ころんで けがを した',need:['なおす','いかす','つつむ'],
+  ok:'{W}で いたみが ひいた!',ng:'{W}では きずは なおらない。'},
+ {ic:'🔥',t:'たきびの ひが きえた',need:['もやす','あたためる','てらす'],
+  ok:'{W}で ひが ついた! あたたかい。',ng:'{W}では ひは つかない。'},
+ {ic:'👻',t:'すがたの ない なにかが いる',need:['みる','しる','かくす','てらす'],
+  ok:'{W}で しょうたいが 見えた!',ng:'{W}では すがたを つかめない。'},
+ {ic:'⛩️',t:'ばんにんが とおしてくれない',need:['おかね','はなす','あそぶ','おくる','しる'],
+  ok:'{W}で ばんにんが みちを あけた!',ng:'{W}では ばんにんは うごかない。'},
+ {ic:'🐝',t:'はちの むれが とんでくる',need:['つつむ','まもる','かくす','ならす'],
+  ok:'{W}で はちを やりすごせた!',ng:'{W}では はちは とまらない。'},
+ {ic:'🌑',t:'まっくらで なにも 見えない',need:['てらす','もやす','みる'],
+  ok:'{W}で あたりが 明るくなった!',ng:'{W}では くらいまま。'},
+];
+const N=5;
+let party=[], sc=null, order=[], step=0, hist=[], memSel=-1, runs=0;
+
+/* ---- チームえらび ---- */
+function showSel(){
+  $('#sel').classList.remove('hide'); $('#run').classList.add('hide'); $('#end').classList.add('hide');
+  party=[]; drawPool();
+}
+function drawPool(){
+  $('#pool').innerHTML=E.map((c,i)=>`
+    <div class="pk${party.includes(i)?' on':''}" data-i="${i}" style="--pc:${c.color}">
+      <img src="${chImg(c)}" alt=""><div class="jp">${c.jp}</div>
+      <div class="n">わざ${c.moves.length}</div></div>`).join('');
+  $('#chosen').innerHTML=[0,1,2].map(k=>party[k]!=null
+    ? `<img src="${chImg(E[party[k]])}" alt="">` : '<div class="ph"></div>').join('');
+  $('#start').disabled=party.length!==3;
+}
+$('#pool').addEventListener('click',ev=>{
+  const el=ev.target.closest('.pk'); if(!el)return;
+  const i=+el.dataset.i, at=party.indexOf(i);
+  if(at>=0) party.splice(at,1); else if(party.length<3) party.push(i);
+  drawPool();
+});
+$('#start').addEventListener('click',()=>{
+  order=[...SC].sort(()=>Math.random()-.5).slice(0,N);
+  step=0; hist=[]; runs++;
+  $('#sel').classList.add('hide'); $('#run').classList.remove('hide');
+  nextScene();
+});
+
+/* ---- ぼうけん ---- */
+const canDo=(c,s)=>c.moves.some(m=>m.t.some(t=>s.need.includes(t)));
+function nextScene(){
+  if(step>=order.length){ showEnd(); return; }
+  sc=order[step]; memSel=-1;
+  $('#rn').textContent=`${step+1} / ${order.length}`;
+  $('#sceneBox').innerHTML=`<div class="ic">${sc.ic}</div><div class="t">${sc.t}</div>
+    <div class="need">${sc.need.map(t=>`<span>${t}</span>`).join('')}</div>`;
+  drawTeam(); $('#moves').innerHTML='';
+}
+function drawTeam(){
+  $('#team').innerHTML=party.map((i,k)=>{
+    const c=E[i], can=canDo(c,sc);
+    return `<div class="mem${can?' can':''}${memSel===k?' sel':''}" data-k="${k}">
+      ${can?'<div class="bang">!</div>':''}
+      <img src="${chImg(c)}" alt=""><div class="jp">${c.jp}</div></div>`;
+  }).join('');
+}
+$('#team').addEventListener('click',ev=>{
+  const el=ev.target.closest('.mem'); if(!el)return;
+  memSel=+el.dataset.k; drawTeam(); drawMoves();
+});
+function drawMoves(){
+  const c=E[party[memSel]];
+  const ms=[...c.moves].sort((a,b)=>
+    (b.t.some(t=>sc.need.includes(t))?1:0)-(a.t.some(t=>sc.need.includes(t))?1:0));
+  $('#moves').innerHTML=ms.slice(0,8).map((m,i)=>{
+    const can=m.t.some(t=>sc.need.includes(t));
+    return `<div class="mv${can?' can':''}" data-w="${m.w}">
+      <img src="${wImg(m.w)}" onerror="this.style.visibility='hidden'" alt="">
+      <div><div class="w">${m.w}</div><div class="j">${m.ja||''}</div></div>
+      <div class="t">${m.t.join('・')}</div></div>`;
+  }).join('');
+}
+$('#moves').addEventListener('click',ev=>{
+  const el=ev.target.closest('.mv'); if(!el)return;
+  const c=E[party[memSel]], m=c.moves.find(x=>x.w===el.dataset.w);
+  const ok=m.t.some(t=>sc.need.includes(t));
+  hist.push({sc,c,m,ok});
+  const ent=document.createElement('div');
+  ent.className='ent '+(ok?'ok':'ng');
+  ent.innerHTML=`${sc.ic} ${(ok?sc.ok:sc.ng).replace('{W}',`<b>${m.w}</b>(${m.ja})`)}
+    <span class="s">${c.jp} の子 ／ ${m.t.join('・')}</span>`;
+  $('#log').prepend(ent);
+  step++; nextScene();
+});
+
+/* ---- けっか ---- */
+function showEnd(){
+  $('#run').classList.add('hide'); $('#end').classList.remove('hide'); $('#rn').textContent='';
+  const n=hist.filter(h=>h.ok).length;
+  const names=party.map(i=>E[i].jp).join(' ＋ ');
+  $('#endT').textContent=`${n} / ${hist.length} かいけつ`;
+  $('#endS').textContent=names;
+  // このチームは何が得意で何ができないか
+  const have={}, all=new Set();
+  SC.forEach(s=>s.need.forEach(t=>all.add(t)));
+  party.forEach(i=>E[i].moves.forEach(m=>m.t.forEach(t=>have[t]=(have[t]||0)+1)));
+  const top=Object.entries(have).sort((a,b)=>b[1]-a[1]).slice(0,6);
+  const max=top.length?top[0][1]:1;
+  const none=[...all].filter(t=>!have[t]);
+  $('#endBody').innerHTML=`
+    <div class="card"><h3>このチームの とくい</h3><div class="bars">`
+    + top.map(([t,v])=>`<div><i>${t}</i><u style="width:${Math.round(v/max*62)}%"></u>
+        <span style="color:var(--dim);font-size:12px">${v}</span></div>`).join('')
+    + `</div></div>`
+    + (none.length?`<div class="card"><h3>このチームには できないこと</h3>
+        <div style="font-size:14px;color:var(--ng)">${none.join('・')}</div>
+        <div style="font-size:12.5px;color:var(--dim);margin-top:6px">
+        ここは べつの子を つれていくと 変わります。</div></div>`:'')
+    + `<div class="card"><h3>やったこと</h3>`
+    + hist.map(h=>`<div style="font-size:13.5px;padding:3px 0">
+        ${h.ok?'○':'×'} ${h.sc.ic} <b>${h.m.w}</b>
+        <span style="color:var(--dim)">(${h.m.ja}) ── ${h.c.jp}の子</span></div>`).join('')
+    + `</div>`;
+}
+$('#again').addEventListener('click',showSel);
+
+(async()=>{
+  if(location.protocol!=='file:'){
+    try{ const r=await fetch('data/pie/etymon.json');
+      if(r.ok){ const j=await r.json(); if(j.etymons&&j.etymons.length)E=j.etymons; } }catch(e){}
+  }
+  E=E.filter(c=>c.moves&&c.moves.length>=6);
+  if(!E.length){ $('#sel').innerHTML='<h2>データがありません</h2>'
+    +'<p class="sub">python3 app/build_etymon_data.py を実行してください。</p>'; return; }
+  showSel();
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,429 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<title>エティモリンゴ ― ことばの絵本</title>
+<style>
+:root{--ink:#33302b;--soft:#8a8072;--pane:#fffdf7;--line:#e3d9c2;--accent:#e8875a;--gold:#f0c14b}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;user-select:none}
+html,body{height:100%;overflow:hidden}
+body{font-family:"Hiragino Maru Gothic ProN","Meiryo",system-ui,sans-serif;color:var(--ink);
+  background:#1b1a16;display:flex;flex-direction:column}
+/* ===== 絵本のページ ===== */
+#book{flex:1 1 auto;position:relative;min-height:0;overflow:hidden;
+  box-shadow:inset 0 0 90px rgba(20,14,8,.55)}
+#bg{position:absolute;inset:0;background-size:cover;background-position:center;
+  transition:filter 1.2s ease,transform 8s linear;transform:scale(1.02)}
+#bg.dead{filter:grayscale(.92) brightness(.72) sepia(.35)}
+#bgFx{position:absolute;inset:0;pointer-events:none;opacity:0;transition:opacity .5s;
+  background:radial-gradient(circle at 50% 60%,rgba(255,255,220,.85),transparent 62%)}
+#bgFx.on{opacity:1}
+#bg.night{filter:brightness(.42) saturate(.75) hue-rotate(-14deg)}
+#bg.night.dead{filter:grayscale(.9) brightness(.32)}
+#stars{position:absolute;inset:0;pointer-events:none;opacity:0;transition:opacity 1.4s;
+  background-image:
+    radial-gradient(1.6px 1.6px at 12% 18%,#fff,transparent),
+    radial-gradient(1.4px 1.4px at 28% 9%,#fff,transparent),
+    radial-gradient(1.8px 1.8px at 44% 22%,#fff,transparent),
+    radial-gradient(1.3px 1.3px at 61% 12%,#fff,transparent),
+    radial-gradient(1.7px 1.7px at 76% 26%,#fff,transparent),
+    radial-gradient(1.4px 1.4px at 88% 14%,#fff,transparent),
+    radial-gradient(1.5px 1.5px at 34% 33%,#fff,transparent),
+    radial-gradient(1.2px 1.2px at 68% 37%,#fff,transparent)}
+#stars.on{opacity:1}
+#milky{position:absolute;left:-10%;right:-10%;top:8%;height:120px;pointer-events:none;opacity:0;
+  transform:rotate(-13deg);transition:opacity 1.8s;
+  background:linear-gradient(90deg,transparent,rgba(255,255,245,.30) 22%,rgba(226,240,255,.55) 50%,rgba(255,255,245,.28) 78%,transparent);
+  filter:blur(9px)}
+#milky.on{opacity:1}
+#scnChars{position:absolute;left:0;right:0;bottom:12%;display:flex;justify-content:center;align-items:flex-end;gap:26px;pointer-events:none}
+#scnChars .ch{width:min(30vw,190px);animation:sway 3.4s ease-in-out infinite}
+#scnChars .ch img{width:100%;object-fit:contain;filter:drop-shadow(0 8px 12px rgba(0,0,0,.45))}
+#scnChars .ch.fallen img{transform:rotate(-14deg);filter:grayscale(.8) drop-shadow(0 6px 10px rgba(0,0,0,.5))}
+@keyframes sway{50%{transform:translateY(-8px)}}
+/* ページ見出し */
+#pageTtl{position:absolute;left:14px;top:12px;color:#fff;text-shadow:0 2px 8px rgba(0,0,0,.8);z-index:4}
+#pageTtl b{font-size:19px}
+#pageTtl small{display:block;font-size:11px;opacity:.85}
+/* 物語テキスト(絵本の地の文) */
+#story{position:absolute;left:0;right:0;bottom:0;z-index:5;
+  background:linear-gradient(transparent,rgba(28,22,14,.86) 26%);padding:34px 18px 16px}
+#story .txt{color:#fff8ea;font-size:16px;line-height:1.75;text-shadow:0 2px 6px rgba(0,0,0,.7);
+  max-width:760px;margin:0 auto;min-height:56px}
+#story .who{color:var(--gold);font-weight:bold;font-size:13px;max-width:760px;margin:0 auto 2px}
+#story .tap{max-width:760px;margin:4px auto 0;text-align:right;font-size:11px;color:#ffe9c9;opacity:.8}
+/* 行き先(ページめくり) */
+#ways{position:absolute;right:12px;top:50%;transform:translateY(-50%);z-index:6;
+  display:flex;flex-direction:column;gap:8px;align-items:flex-end}
+.way{background:rgba(255,253,247,.94);border:3px solid #b99a6b;border-radius:14px;padding:7px 12px;
+  font-size:13px;font-weight:bold;box-shadow:0 4px 0 rgba(0,0,0,.28);cursor:pointer;white-space:nowrap}
+.way:active{transform:translateY(2px);box-shadow:0 2px 0 rgba(0,0,0,.28)}
+.way small{display:block;font-size:10px;color:var(--soft);font-weight:normal}
+.way.locked{opacity:.55;filter:grayscale(.6)}
+/* ===== 手札(カード) ===== */
+#hand{flex:0 0 auto;background:linear-gradient(#3b2f22,#241d15);padding:8px 10px 10px;
+  display:flex;gap:8px;overflow-x:auto;align-items:flex-end;min-height:132px}
+.handSlot{flex:0 0 auto;width:104px;cursor:pointer;transition:transform .18s}
+.handSlot.sel{transform:translateY(-12px) scale(1.06)}
+.handSlot .n{position:absolute;right:-4px;top:-6px;background:var(--gold);border:2px solid #4a3c50;
+  border-radius:50%;width:24px;height:24px;display:flex;align-items:center;justify-content:center;
+  font-size:12px;font-weight:900;z-index:2}
+.handWrap{position:relative}
+#handHint{position:absolute;left:50%;transform:translateX(-50%);bottom:142px;z-index:12;color:#fff;
+  background:rgba(0,0,0,.55);border-radius:12px;padding:5px 14px;font-size:12px;pointer-events:none}
+/* HUD */
+#hud{position:absolute;right:12px;top:10px;z-index:7;display:flex;gap:8px;align-items:center}
+.hbtn{background:rgba(255,253,247,.94);border:2px solid var(--line);border-radius:12px;padding:5px 11px;
+  font-family:inherit;font-size:12px;color:var(--ink)}
+/* 大きなカード演出 */
+#big{position:fixed;inset:0;background:rgba(20,14,8,.72);display:none;align-items:center;justify-content:center;z-index:40}
+#big.on{display:flex}
+#bigIn{width:min(88vw,330px)}
+#bigCap{position:absolute;bottom:16%;left:0;right:0;text-align:center;color:#fff;font-size:15px;
+  text-shadow:0 2px 8px #000}
+/* 図鑑 */
+#dex{position:fixed;inset:0;background:#f6f1e4;z-index:50;display:none;flex-direction:column}
+#dex.on{display:flex}
+#dexHead{display:flex;align-items:center;gap:10px;padding:10px 14px;border-bottom:2px solid var(--line)}
+#dexList{flex:1;overflow-y:auto;padding:12px;display:grid;gap:10px;
+  grid-template-columns:repeat(auto-fill,minmax(150px,1fr))}
+.wordCard.mini .wcArt .fallback{font-size:34px}
+.wordCard.mini .wcRoot{font-size:8.5px;line-height:1.25}
+.wordCard{position:relative; width:352px; aspect-ratio:63/88; border-radius:16px; text-align:left;
+  background:linear-gradient(160deg, color-mix(in srgb,var(--cc,#e8875a) 30%,#f5e9d2), #efe0c4 55%, color-mix(in srgb,var(--cc,#e8875a) 18%,#e9dabb));
+  border:3px solid #2e2536; box-shadow:0 14px 30px rgba(30,20,40,.35), inset 0 0 0 2px #fff8;
+  padding:12px 13px 11px; overflow:hidden; display:flex; flex-direction:column}
+.wordCard::before{content:""; position:absolute; inset:0; pointer-events:none; opacity:.5;
+  background:repeating-linear-gradient(115deg, transparent 0 7px, rgba(255,255,255,.16) 7px 8px)}
+.wordCard .wcHead{position:relative; display:flex; align-items:center; gap:8px; background:linear-gradient(#fffef8,#f1e6cf);
+  border:2px solid #4a3c50; border-radius:9px; padding:5px 10px; box-shadow:0 2px 0 rgba(46,37,54,.25)}
+.wordCard .wcEn{font-size:26px; font-weight:900; color:#33283c; letter-spacing:.01em; line-height:1.05; flex:1; min-width:0}
+.wordCard .wcJp{font-size:12.5px; font-weight:800; color:#8d8093; display:block; margin-top:1px}
+.wordCard .wcClan{width:44px; height:44px; flex:0 0 auto; border-radius:50%; background:#fff;
+  border:2.5px solid var(--cc,#e8875a); display:flex; align-items:center; justify-content:center; overflow:hidden}
+.wordCard .wcClan img{width:86%; height:86%; object-fit:contain}
+.wordCard .wcArt{position:relative; flex:1; min-height:0; margin-top:9px; border:2.5px solid #4a3c50; border-radius:8px;
+  background:radial-gradient(circle at 50% 42%, #fffdf2 0 34%, color-mix(in srgb,var(--cc,#e8875a) 32%,#fff) 100%);
+  display:flex; align-items:center; justify-content:center; overflow:hidden;
+  box-shadow:inset 0 0 18px rgba(46,37,54,.15)}
+.wordCard .wcArt::before{content:""; position:absolute; inset:-40%; opacity:.35; pointer-events:none;
+  background:repeating-conic-gradient(from 0deg, transparent 0 14deg, #ffffff88 14deg 17deg)}
+.wordCard .wcArt img{position:relative; max-width:78%; max-height:82%; object-fit:contain; filter:drop-shadow(0 6px 8px rgba(46,37,54,.3))}
+.wordCard .wcArt .fallback{font-size:110px; position:relative}
+.wordCard .wcRoot{margin-top:7px; font-family:"Shippori Mincho",serif; font-style:italic; font-weight:800; font-size:16px;
+  color:#fff; background:linear-gradient(90deg, var(--cc,#e8875a), color-mix(in srgb,var(--cc,#e8875a) 55%,#241f26));
+  border:2px solid #4a3c50; border-radius:6px; padding:2px 10px; letter-spacing:.06em}
+.wordCard .wcBox{margin-top:7px; background:linear-gradient(#fffdf4,#f6ecd8); border:2px solid #4a3c50; border-radius:8px;
+  padding:7px 10px 6px; min-height:74px}
+.wordCard .wcEff{font-size:17px; font-weight:900; color:#7a3f2c}
+.wordCard .wcDesc{font-size:16px; font-weight:700; color:#4e4254; line-height:1.42; margin-top:3px}
+.wordCard .wcStarsRow{display:flex; justify-content:center; align-items:center; gap:2.5px; margin-top:7px;
+  color:#c99f3a; font-size:18px; letter-spacing:2px}
+.wordCard .wcStarsRow img{width:23px; height:23px; object-fit:contain; filter:drop-shadow(0 1px 0 #fff8)}
+.wordCard .wcStarsRow img.off{filter:grayscale(1); opacity:.2}
+.wordCard .wcStarsRow .off{color:#00000022}
+.wordCard.mini .wcStarsRow{margin-top:4px; gap:1px; font-size:10px}
+.wordCard.mini .wcStarsRow img{width:12px; height:12px}
+.wordCard .wcFoot{display:flex; align-items:center; justify-content:flex-end; margin-top:5px; padding:0 2px}
+.wordCard .wcDef{font-size:19px;font-weight:900;color:#5c4f63;display:block;margin-top:1px}
+.wordCard.mini .wcDef{font-size:11px}
+.wordCard .wcNo{font-size:10px; font-weight:900; color:#7d7186; letter-spacing:.08em}
+.wordCard.rare{border-color:#8a6b1f;
+  box-shadow:0 14px 30px rgba(30,20,40,.35), inset 0 0 0 2px #f6d879, 0 0 22px rgba(246,216,121,.35)}
+.wordCard.rare .wcHead{background:linear-gradient(#fffbe2,#f3e1a6)}
+.wordCard.mini{width:100%; padding:7px 8px 6px; border-width:2px; border-radius:12px}
+.wordCard.mini .wcHead{padding:3px 7px; border-radius:6px; gap:5px}
+.wordCard.mini .wcEn{font-size:15px}
+.wordCard.mini .wcJp{font-size:9.5px}
+.wordCard.mini .wcClan{width:26px; height:26px; border-width:2px}
+.wordCard.mini .wcArt{margin-top:5px; border-radius:6px}
+.wordCard.mini .wcRoot{font-size:9px; margin-top:4px; padding:1px 7px}
+.wordCard.mini .wcBox{display:none}
+.wordCard.mini .wcFoot{margin-top:4px}
+.wordCard.mini .wcNo{font-size:8px}
+.wordCard{margin:0 auto; animation:cardIn .65s cubic-bezier(.2,1.3,.4,1) both}
+.wordCard::after{content:""; position:absolute; inset:0; pointer-events:none;
+  background:linear-gradient(115deg, transparent 30%, rgba(255,255,255,.65) 46%, rgba(255,255,255,.15) 54%, transparent 66%);
+  transform:translateX(-130%); animation:cardSheen 1s ease-out .55s forwards}
+@keyframes cardIn{0%{transform:translateY(36px) rotateY(70deg) scale(.7); opacity:0}100%{transform:translateY(0) rotateY(0) scale(1); opacity:1}}
+@keyframes cardSheen{to{transform:translateX(130%)}}
+</style>
+</head>
+<body>
+<div id="book">
+  <div id="bg"></div><div id="stars"></div><div id="milky"></div><div id="bgFx"></div>
+  <div id="scnChars"></div>
+  <div id="pageTtl"></div>
+  <div id="hud">
+    <button class="hbtn" id="btnDex">📖 ずかん</button>
+  </div>
+  <div id="ways"></div>
+  <div id="story"><div class="who" id="who"></div><div class="txt" id="txt"></div><div class="tap">タップでつづき ▶</div></div>
+</div>
+<div id="handHint"></div>
+<div id="hand"></div>
+<div id="big"><div id="bigIn"></div><div id="bigCap"></div></div>
+<div id="dex"><div id="dexHead"><button class="hbtn" id="dexClose">もどる</button><b>ことば図鑑</b><span id="dexCnt" style="color:var(--soft);font-size:12px"></span></div><div id="dexList"></div></div>
+<script>
+"use strict";
+const $=s=>document.querySelector(s);
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const A='../assets/';
+/* ===== ことば(カード) ===== */
+const W={
+ milk :{en:'milk',ja:'ミルク',def:'乳',r:4,clan:'melg',art:'',ic:'🥛',
+        desc:'メルグから しぼられた いのちの しずく。かれた ものに かけると 意味が もどる。'},
+ wood :{en:'wood',ja:'木材',def:'木',r:3,clan:'deru',ic:'🪵',
+        desc:'*widhu-「木」。切りたおされても なお 使われる、たくましい ことば。'},
+ stone:{en:'stone',ja:'石',def:'石',r:3,clan:'stai',ic:'🪨',
+        desc:'*stāi-「石」。かたく なったもの。stand とも 遠い 親せき。'},
+ grass:{en:'grass',ja:'草',def:'草',r:2,clan:'gwei',ic:'🌿',
+        desc:'*ghrē-「育つ」。grow・green と 同じ ねっこを もつ みどりの ことば。'},
+ tree :{en:'tree',ja:'木',def:'樹',r:3,clan:'deru',ic:'🌳',
+        desc:'*deru-「木・かたい」。true(まこと)や trust(信じる)も この木から 生まれた。'},
+ apple:{en:'apple',ja:'りんご',def:'林檎',r:2,clan:'melg',art:'word/apple.png',ic:'🍎',
+        desc:'木の実。かじると 元気が もどる。'},
+ lettuce:{en:'lettuce',ja:'レタス',def:'萵苣',r:6,clan:'melg',ic:'🥬',
+        desc:'切ると 白い しるが 出る。だから *melg-「乳」の 一族。'},
+ latte:{en:'latte',ja:'ラテ',def:'牛乳',r:7,clan:'melg',ic:'☕',
+        desc:'イタリア語の「牛乳」。カフェ・ラテは コーヒー入りの ミルク。'},
+ galaxy:{en:'galaxy',ja:'銀河',def:'天の川',r:8,clan:'melg',ic:'🌌',
+        desc:'ギリシャ語 gala「乳」から。夜空の 白い帯は ―― こぼれた ミルクの 道。'},
+ quick:{en:'quick',ja:'すばやい',def:'生きている',r:3,clan:'gwei',ic:'⚡',
+        desc:'*gwei-「生きる」。むかしの quick は「生きている」の意味だった。'},
+};
+const CLAN={
+ melg:{name:'メルグ',root:'*melg-',ja:'乳をしぼる',col:'#9fc6e8',img:'chara/T_ch_mori_water.png',
+       note:'ミルクの祖先。milk・lettuce・latte、そして 天の川 galaxy まで この子から。'},
+ gwei:{name:'グウェイ',root:'*gwei-',ja:'生きる',col:'#7cba62',img:'chara/T_ch_gwei_live.png',
+       note:'いのちの祖先。quick(=生きている)・vivid・survive・vitamin・biology。'},
+ deru:{name:'デルー',root:'*deru-',ja:'木・かたい',col:'#b98b56',img:'chara/T_ch_kaput_head.png',
+       note:'木の祖先。tree はもちろん、true(まこと)や trust(信じる)も この木の子。'},
+ stai:{name:'スタイ',root:'*stāi-',ja:'石',col:'#a9a29a',img:'chara/T_ch_reg_straight.png',
+       note:'石の祖先。かたまるもの、立つもの。'},
+ cat :{name:'キャットGPT',root:'',ja:'みちしるべ',col:'#c9a6e8',img:'chara/T_ch_merlin.png',note:''},
+};
+/* ===== 場面(絵本のページ) ===== */
+const PAGES={
+ ruin:{ttl:'第一まい ― 色を うしなった 廃墟',bg:'ground/T_BG_base_ruin.png',dead:1,
+   chars:[{clan:'cat'}],
+   story:[['キャットGPT','……目が さめたかい。'],
+          ['キャットGPT','ここは ことばの <b>意味</b>を すいとられた 世界。'],
+          ['キャットGPT','見て ごらん。色さえ 残っていない。'],
+          ['キャットGPT','きみは ことばを おぼえて つかえる、ただ ひとりの 存在だ。'],
+          ['','足もとに 木材と 石が ころがっている。ひろって みよう。']],
+   pick:['wood','stone'],
+   ways:[['forest','かれた森へ','東へ ページを めくる']]},
+ forest:{ttl:'第二まい ― かれた森',bg:'ground/T_BG_ruin_tree.png',dead:1,
+   chars:[{clan:'melg',fallen:1}],
+   story:[['','木も 草も、すっかり かれ果てている。'],
+          ['','その 木かげに ―― だれかが たおれている。'],
+          ['?','「…め……めるく…… <b>みるく</b>……」'],
+          ['','そのひびき。<b>*melg-</b>「乳をしぼる」。'],
+          ['','ひとつの ことばを、おもいだした。']],
+   give:['milk'],
+   use:{milk:'reviveMelg'},
+   ways:[['ruin','廃墟へ もどる',''],['field','かれ野原へ','東へ']]},
+ field:{ttl:'第三まい ― かれ野原',bg:'ground/T_BG_ruin_ground.png',dead:1,
+   chars:[],
+   story:[['','見わたすかぎり、灰色の 大地。'],
+          ['','<b>ミルクの カード</b>を えらんで、この 場面に つかってみよう。']],
+   use:{milk:'reviveField'},
+   ways:[['forest','森へ もどる',''],['lake','かれた みずうみへ','北へ']]},
+ lake:{ttl:'第四まい ― かれた みずうみ',bg:'ground/T_BG_ruin_lake.png',dead:1,
+   chars:[],
+   story:[['','水の 消えた みずうみ。底に 貝がらが 光っている。'],
+          ['','ミルクを そそげば、なにか 起きるかもしれない。']],
+   use:{milk:'reviveLake'},
+   ways:[['field','野原へ もどる',''],['sea','うみべへ','夜に なると…']]},
+ sea:{ttl:'第五まい ― 夜のうみべ',bg:'ground/T_BG_base_sea.png',dead:0,night:1,
+   chars:[],
+   story:[['','夜。空に 白い帯が かかっている。'],
+          ['メルグ','「あれも わたしの 一族……」'],
+          ['','ギリシャの人は あの帯を <b>gala</b>「乳」と よんだ。'],
+          ['','―― こぼれた ミルクの 道。<b>galaxy</b>。']],
+   use:{milk:'makeGalaxy'},
+   ways:[['lake','みずうみへ もどる','']]},
+};
+/* ===== 状態 ===== */
+let S={page:'ruin',inv:{},dex:{},mates:[],seen:{},revived:{}};
+try{Object.assign(S,JSON.parse(localStorage.getItem('etymobook-v1')||'{}'));}catch(e){}
+const save=()=>localStorage.setItem('etymobook-v1',JSON.stringify(S));
+let sel=null,queue=[],onEnd=null,busy=false;
+/* ===== カード(IP360の意匠) ===== */
+function cardHTML(id,mini){
+  const it=W[id];if(!it)return '';
+  const cl=CLAN[it.clan]||{};
+  const r=Math.max(1,Math.min(10,it.r||3));
+  const stars=Array.from({length:10},(_,i)=>
+    `<img src="${A}ui/word_et_star.png" class="${i<r?'':'off'}" alt="" onerror="this.replaceWith(document.createTextNode(''))">`).join('');
+  const no=String(Object.keys(W).indexOf(id)+1).padStart(3,'0');
+  const art=it.art?`<img src="${A}${it.art}" onerror="this.outerHTML='<div class=\\'fallback\\'>${it.ic}</div>'">`
+    :`<div class="fallback">${it.ic}</div>`;
+  return `<div class="wordCard${mini?' mini':''}${r>=8?' rare':''}" style="--cc:${cl.col||'#e8875a'}">
+    <div class="wcHead">
+      <div style="flex:1;min-width:0"><span class="wcEn">${esc(it.en)}</span><span class="wcDef">${esc(it.ja)}</span></div>
+      ${cl.img?`<div class="wcClan"><img src="${A}${cl.img}" onerror="this.remove()"></div>`:''}
+    </div>
+    <div class="wcArt">${art}</div>
+    ${cl.root?`<div class="wcRoot">${esc(cl.root)}「${esc(cl.ja)}」</div>`:''}
+    <div class="wcStarsRow">${stars}</div>
+    <div class="wcBox"><div class="wcDesc">${esc(it.desc)}</div></div>
+    <div class="wcFoot"><div class="wcNo">No.${no} / ETYMO-RINGO</div></div>
+  </div>`;
+}
+/* ===== ページ描画 ===== */
+function renderPage(){
+  const p=PAGES[S.page];
+  const dead=p.dead&&!S.revived[S.page];
+  $('#bg').style.backgroundImage=`url(${A}${p.bg})`;
+  $('#bg').classList.toggle('dead',!!dead);
+  $('#bg').classList.toggle('night',!!p.night);
+  $('#stars').classList.toggle('on',!!p.night);
+  $('#milky').classList.toggle('on',!!(p.night&&S.revived.sea));
+  $('#pageTtl').innerHTML=`<b>${esc(p.ttl)}</b><small>${dead?'意味が うしなわれている':'意味が もどっている'}</small>`;
+  $('#scnChars').innerHTML=(p.chars||[]).map(c=>{
+    const cl=CLAN[c.clan];
+    const fallen=c.fallen&&!S.mates.includes(c.clan);
+    return `<div class="ch${fallen?' fallen':''}"><img src="${A}${cl.img}" onerror="this.remove()"></div>`;
+  }).join('');
+  $('#ways').innerHTML=(p.ways||[]).map(([id,nm,sub])=>{
+    const locked=id==='sea'&&!S.mates.includes('melg');
+    return `<div class="way${locked?' locked':''}" data-w="${id}">${esc(nm)}${sub?`<small>${esc(sub)}</small>`:''}</div>`;
+  }).join('');
+  document.querySelectorAll('.way').forEach(el=>el.onclick=e=>{
+    e.stopPropagation();
+    if(el.classList.contains('locked'))return hint('まだ 行けない');
+    S.page=el.dataset.w;sel=null;save();enterPage();
+  });
+  renderHand();
+}
+function enterPage(){
+  const p=PAGES[S.page];
+  renderPage();
+  if(!S.seen[S.page]){
+    S.seen[S.page]=1;save();
+    tell(p.story,()=>{
+      if(p.pick)p.pick.forEach((id,i)=>setTimeout(()=>gain(id,1,'ひろった'),i*1500));
+      if(p.give)p.give.forEach((id,i)=>setTimeout(()=>gain(id,3,'ことばを おもいだした!'),i*1200));
+    });
+  }
+}
+/* ===== 物語テキスト ===== */
+function tell(lines,end){
+  queue=lines.map(x=>Array.isArray(x)?x:['',x]);onEnd=end||null;busy=true;
+  step(true);
+}
+function step(first){
+  if(!first)queue.shift();
+  if(!queue.length){
+    $('#who').textContent='';$('#txt').innerHTML='';busy=false;
+    const f=onEnd;onEnd=null;if(f)f();return;
+  }
+  const [who,t]=queue[0];
+  $('#who').textContent=who||'';
+  $('#txt').innerHTML=t;
+}
+$('#book').addEventListener('pointerdown',e=>{
+  if(e.target.closest('.way')||e.target.closest('.hbtn'))return;
+  if(busy){step();return;}
+  if(sel)useCard(sel);
+});
+/* ===== 手札 ===== */
+function renderHand(){
+  const ids=Object.keys(S.inv).filter(k=>S.inv[k]>0);
+  $('#hand').innerHTML=ids.map(id=>`<div class="handSlot${sel===id?' sel':''}" data-k="${id}">
+      <div class="handWrap"><span class="n">${S.inv[id]}</span>${cardHTML(id,true)}</div></div>`).join('')
+    ||'<div style="color:#c9bda0;font-size:12px;padding:10px">まだ ことばを もっていない</div>';
+  document.querySelectorAll('.handSlot').forEach(el=>el.onclick=e=>{
+    e.stopPropagation();
+    sel=(sel===el.dataset.k)?null:el.dataset.k;
+    renderHand();
+    hint(sel?`${sel} を えらんだ ― 絵を タップして つかう`:'');
+  });
+}
+let hintT=null;
+function hint(t){
+  $('#handHint').textContent=t;
+  clearTimeout(hintT);hintT=setTimeout(()=>$('#handHint').textContent='',2000);
+}
+/* ===== カードを つかう ===== */
+function useCard(id){
+  const p=PAGES[S.page];
+  const act=(p.use||{})[id];
+  if(!act)return hint('この ページでは 使い道が なさそうだ');
+  if(!S.inv[id])return hint('もう もっていない');
+  ({reviveMelg,reviveField,reviveLake,makeGalaxy})[act]();
+}
+function flash(){
+  $('#bgFx').classList.add('on');
+  setTimeout(()=>$('#bgFx').classList.remove('on'),700);
+}
+function reviveMelg(){
+  S.inv.milk--;flash();
+  S.mates.push('melg');S.revived.forest=1;save();
+  setTimeout(()=>{renderPage();
+    tell([['メルグ','「……ありがとう。目が さめた。」'],
+      ['メルグ',`「わたしは <b>*melg-</b>「乳をしぼる」。ミルクの 祖先。」`],
+      ['',CLAN.melg.note],
+      ['','<b>メルグ</b>が なかまに なった! かれた 場面に ミルクを かけて まわろう。']],()=>{
+        gain('milk',3,'メルグが ミルクを わけてくれた');
+      });},600);
+}
+function reviveField(){
+  S.inv.milk--;flash();S.revived.field=1;save();
+  setTimeout(()=>{renderPage();
+    if(!S.dex.grass)gain('grass',1,'かれ野原が よみがえった!');
+    else tell([['','大地に 緑が もどった。']]);},600);
+}
+function reviveLake(){
+  S.inv.milk--;flash();S.revived.lake=1;save();
+  setTimeout(()=>{renderPage();
+    if(!S.dex.quick)gain('quick',1,'みずうみが よみがえった!');
+    else tell([['','水が もどり、いのちが はねている。']]);},600);
+}
+function makeGalaxy(){
+  S.inv.milk--;flash();S.revived.sea=1;save();
+  setTimeout(()=>{renderPage();
+    tell([['','ミルクを 夜空へ ふりまいた。'],
+      ['','白い しずくが 星に なって ながれていく――']],()=>{
+        gain('galaxy',1,'ことばが うまれた!');
+      });},600);
+}
+/* ===== ことばを得る(大きなカード演出) ===== */
+function gain(id,n,cap){
+  S.inv[id]=(S.inv[id]||0)+(n||1);
+  const first=!S.dex[id];
+  S.dex[id]=1;save();
+  busy=true;
+  $('#bigIn').innerHTML=cardHTML(id);
+  $('#bigCap').innerHTML=`${esc(cap||'')}${first?'<br><span style="color:#ffe08a">はじめての ことば!</span>':''}`;
+  $('#big').classList.add('on');
+  say(id);
+  setTimeout(()=>{$('#big').classList.remove('on');busy=false;renderHand();},2100);
+}
+function say(t){
+  if(!('speechSynthesis'in window))return;
+  speechSynthesis.cancel();
+  const u=new SpeechSynthesisUtterance(t);u.lang='en-US';u.rate=.95;speechSynthesis.speak(u);
+}
+$('#big').addEventListener('pointerdown',()=>{$('#big').classList.remove('on');busy=false;renderHand();});
+/* ===== 図鑑 ===== */
+$('#btnDex').onclick=()=>{
+  const ids=Object.keys(W);
+  $('#dexList').innerHTML=ids.map(id=>S.dex[id]
+    ?cardHTML(id,true)
+    :`<div class="wordCard mini" style="--cc:#bbb;filter:grayscale(1);opacity:.45">
+        <div class="wcHead"><div style="flex:1"><span class="wcEn">???</span></div></div>
+        <div class="wcArt"><div class="fallback">❔</div></div><div class="wcStarsRow"></div>
+        <div class="wcFoot"><div class="wcNo">No.???</div></div></div>`).join('');
+  $('#dexCnt').textContent=`${Object.keys(S.dex).length} / ${ids.length}`;
+  $('#dex').classList.add('on');
+};
+$('#dexClose').onclick=()=>$('#dex').classList.remove('on');
+/* ===== 起動 ===== */
+enterPage();
+</script>
+</body>
+</html>

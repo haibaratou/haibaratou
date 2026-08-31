@@ -1,0 +1,562 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<title>エティモリンゴ ― ことばで よみがえる大地</title>
+<style>
+:root{--ink:#2f2a22;--soft:#8d8271;--pane:#fffdf7;--line:#e3d9c2;--accent:#e8875a;--gold:#f0c14b;--milk:#eaf1f8}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;user-select:none}
+html,body{height:100%;overflow:hidden}
+body{font-family:"Hiragino Maru Gothic ProN","Meiryo",system-ui,sans-serif;color:var(--ink);background:#20211c}
+#view{position:fixed;inset:0;overflow:hidden;touch-action:none}
+#world{position:absolute;left:0;top:0;transform-origin:0 0}
+.t{position:absolute;width:48px;height:48px;transition:background-color .5s,box-shadow .5s}
+.dead{background:#8a8070;box-shadow:inset 0 0 0 1px rgba(0,0,0,.05)}
+.alive{background:#74ad55;
+  background-image:radial-gradient(5px 7px at 12px 34px,rgba(255,255,255,.22),transparent 70%),
+    radial-gradient(5px 7px at 32px 16px,rgba(0,0,0,.10),transparent 70%)}
+.path{background:#c4ab84}
+.obj{position:absolute;width:48px;height:48px;display:flex;align-items:flex-end;justify-content:center;
+  font-size:34px;line-height:1;filter:drop-shadow(0 2px 2px rgba(0,0,0,.3));transition:transform .3s,opacity .3s}
+.obj.gone{opacity:0;transform:scale(.4)}
+.obj.grass{font-size:26px}
+.obj img{width:46px;height:46px;object-fit:contain}
+.spark{position:absolute;width:48px;height:48px;pointer-events:none;
+  background:radial-gradient(circle,rgba(255,255,255,.9),transparent 65%);animation:sp .6s forwards}
+@keyframes sp{to{opacity:0;transform:scale(2)}}
+#me{position:absolute;width:48px;height:64px;display:flex;align-items:flex-end;justify-content:center;z-index:500}
+#me img{width:50px;height:64px;object-fit:contain;filter:drop-shadow(0 3px 3px rgba(0,0,0,.35))}
+#me.flip img{transform:scaleX(-1)}
+#me.step img{transform:translateY(-3px)}
+#me.flip.step img{transform:scaleX(-1) translateY(-3px)}
+/* HUD */
+#hud{position:fixed;top:0;left:0;right:0;display:flex;align-items:center;gap:10px;padding:8px 12px;
+  color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.7);font-size:12px;z-index:20;pointer-events:none}
+#hud b{font-size:16px}
+#hp{letter-spacing:-1px;color:#ff8a8a;font-size:15px}
+#dexBtn{margin-left:auto;pointer-events:auto;background:rgba(255,253,247,.95);border:2px solid var(--line);
+  border-radius:12px;padding:5px 12px;font-family:inherit;font-size:13px;color:var(--ink)}
+/* 手札 */
+#bar{position:fixed;left:0;right:0;bottom:0;z-index:22;display:flex;gap:6px;padding:7px 10px;
+  background:rgba(30,26,18,.72);overflow-x:auto}
+.slot{flex:0 0 auto;width:66px;height:74px;background:var(--pane);border:3px solid #b99a6b;border-radius:12px;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;position:relative;cursor:pointer}
+.slot.sel{border-color:var(--accent);box-shadow:0 0 0 3px rgba(232,135,90,.45);transform:translateY(-4px)}
+.slot .ic{font-size:25px;line-height:1}
+.slot .w{font-size:11px;font-weight:bold}
+.slot .ja{font-size:9px;color:var(--soft)}
+.slot .n{position:absolute;right:3px;top:2px;font-size:10px;font-weight:bold;color:var(--accent)}
+#barHint{position:fixed;bottom:92px;left:50%;transform:translateX(-50%);z-index:21;color:#fff;font-size:12px;
+  background:rgba(0,0,0,.5);border-radius:12px;padding:4px 12px;pointer-events:none}
+/* 会話 */
+#talk{position:fixed;left:10px;right:10px;bottom:96px;z-index:30;background:var(--pane);
+  border:4px solid #b99a6b;border-radius:18px;padding:12px 14px;display:none;box-shadow:0 8px 20px rgba(0,0,0,.4)}
+#talk.on{display:block}
+#talk .who{font-size:12px;color:var(--accent);font-weight:bold;display:flex;align-items:center;gap:6px}
+#talk .who img{width:34px;height:34px;object-fit:contain}
+#talk .msg{font-size:15px;line-height:1.6;margin-top:4px;min-height:44px}
+#talk .next{text-align:right;font-size:12px;color:var(--soft)}
+/* カード演出 */
+#card{position:fixed;left:50%;top:42%;transform:translate(-50%,-50%) scale(.7);z-index:40;opacity:0;
+  transition:.25s cubic-bezier(.2,1.5,.4,1);pointer-events:none}
+#card.on{opacity:1;transform:translate(-50%,-50%) scale(1)}
+.cardIn{background:linear-gradient(160deg,#fffdf7,#f4ead4);border:5px solid var(--gold);border-radius:20px;
+  padding:16px 22px;text-align:center;box-shadow:0 14px 36px rgba(0,0,0,.5)}
+.cardIn .ck{font-size:11px;color:var(--accent);font-weight:bold}
+.cardIn .ci{font-size:56px}
+.cardIn .cw{font-size:30px;font-weight:bold}
+.cardIn .cja{font-size:14px}
+.cardIn .crt{font-size:11px;color:var(--soft);margin-top:4px}
+/* 図鑑 */
+#dex{position:fixed;inset:0;background:#f6f1e4;z-index:50;display:none;flex-direction:column}
+#dex.on{display:flex}
+#dexHead{display:flex;align-items:center;gap:10px;padding:10px 14px;border-bottom:2px solid var(--line)}
+#dexHead b{font-size:16px}
+#dexList{flex:1;overflow-y:auto;padding:12px 14px 30px}
+.dxE{display:flex;gap:10px;background:#fff;border:2px solid var(--line);border-radius:14px;padding:9px;margin-bottom:9px}
+.dxE img{width:56px;height:56px;object-fit:contain}
+.dxE .t b{font-size:15px}
+.dxE .t small{display:block;color:var(--soft);font-size:11px;line-height:1.5}
+.ws{display:flex;flex-wrap:wrap;gap:5px;margin-top:5px}
+.ws span{background:#f5efe1;border:1px solid var(--line);border-radius:8px;padding:1px 7px;font-size:11px}
+.ws span.no{opacity:.4}
+#goal{position:fixed;right:10px;top:44px;z-index:20;background:rgba(255,253,247,.92);border:2px solid var(--line);
+  border-radius:12px;padding:5px 10px;font-size:11px;max-width:170px;line-height:1.5}
+#pad{position:fixed;left:12px;bottom:92px;width:132px;height:132px;z-index:23;opacity:.92}
+#pad button{position:absolute;width:44px;height:44px;border:2px solid rgba(0,0,0,.15);
+  background:rgba(255,253,247,.92);border-radius:11px;font-size:17px;box-shadow:0 3px 0 rgba(0,0,0,.2)}
+#pu{left:44px;top:0}#pd{left:44px;top:88px}#pl{left:0;top:44px}#pr{left:88px;top:44px}
+</style>
+</head>
+<body>
+<div id="view"><div id="world"></div></div>
+<div id="hud">
+  <span id="hp"></span>
+  <span>ずかん <b id="dexN">0</b></span>
+  <span>なかま <b id="mateN">0</b></span>
+  <button id="dexBtn">ずかん</button>
+</div>
+<div id="goal"></div>
+<div id="pad"><button id="pu">▲</button><button id="pl">◀</button><button id="pr">▶</button><button id="pd">▼</button></div>
+<div id="barHint"></div>
+<div id="bar"></div>
+<div id="talk"><div class="who" id="talkWho"></div><div class="msg" id="talkMsg"></div><div class="next">タップでつづき ▶</div></div>
+<div id="card"></div>
+<div id="dex"><div id="dexHead"><button id="dexClose" style="border:2px solid var(--line);background:#fff;border-radius:10px;padding:6px 12px;font-family:inherit">もどる</button><b>ことば図鑑</b><span id="dexCnt" style="color:var(--soft);font-size:12px"></span></div><div id="dexList"></div></div>
+<script>
+"use strict";
+const $=s=>document.querySelector(s);
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const TS=48, MW=26, MH=18;
+/* ===== ことば(実データ words.json から補完。無ければこの定義で動く) ===== */
+const WORDS={
+  milk:{ic:'🥛',ja:'ミルク',root:'melg-',rootJa:'乳をしぼる',heal:3},
+  wood:{ic:'🪵',ja:'木材',root:'widhu-',rootJa:'木'},
+  stone:{ic:'🪨',ja:'石',root:'stāi-',rootJa:'石'},
+  grass:{ic:'🌿',ja:'草',root:'ghrē-',rootJa:'育つ'},
+  tree:{ic:'🌳',ja:'木',root:'deru-',rootJa:'木・かたい'},
+  apple:{ic:'🍎',ja:'りんご',root:'ab(e)l-',rootJa:'りんご',heal:2},
+  lettuce:{ic:'🥬',ja:'レタス',root:'melg-',rootJa:'乳をしぼる(切ると乳が出る)'},
+  galaxy:{ic:'🌌',ja:'銀河',root:'melg-',rootJa:'乳をしぼる(天の川=ミルクの道)'},
+};
+const MATES={
+  melg:{name:'メルグ',root:'*melg-',ja:'乳をしぼる',img:'chara/T_ch_mori_water.png',
+        note:'ミルクの祖先。milk はもちろん、lactose も latte も、そして 天の川=galaxy も この子から。'},
+  gwei:{name:'グウェイ',root:'*gwei-',ja:'生きる',img:'chara/T_ch_gwei_live.png',
+        note:'いのちの祖先。quick(=生きている)、vivid、survive、vitamin、biology。'},
+};
+const FAM={melg:['milk','lettuce','galaxy'],gwei:['grass','tree','apple']};
+/* ===== 状態 ===== */
+let S={hp:10,dex:{},mates:[],inv:{},flags:{},revived:{}};
+try{Object.assign(S,JSON.parse(localStorage.getItem('etymopoko-v1')||'{}'));}catch(e){}
+const save=()=>localStorage.setItem('etymopoko-v1',JSON.stringify(S));
+let me={cx:4,cy:13,fx:1},moving=false,held=null,path=[],sel=null,busy=false;
+let blocked=new Set(),objs=new Map(),cam={x:0,y:0},ZOOM=1;
+const key=(x,y)=>x+','+y;
+/* ===== マップ ===== */
+/* r=廃墟の石畳 / d=枯れ地 / w=通行止めの倒木 */
+const OBJDEF={
+  bed:{ic:'🛏',block:1,talk:['ここが きみの ねどこ。','ここで やすむと げんきが もどる。']},
+  navi:{ic:'🐱',block:1,navi:1},
+  wall:{ic:'🧱',block:1},
+  log:{ic:'🪵',block:1,pick:'wood',msg:'木材を ひろった'},
+  rock:{ic:'🪨',block:1,pick:'stone',msg:'石を ひろった'},
+  gate:{ic:'🚧',block:1,gate:1},
+  dryTree:{ic:'🥀',block:1,dry:'tree'},
+  dryGrass:{ic:'🍂',block:0,dry:'grass'},
+  melg:{ic:'',block:1,fallen:'melg'},
+  fruitTree:{ic:'🌳',block:1,fruit:1},
+  grass:{ic:'🌱',block:0,grassy:1},
+};
+const MAP=[];
+function buildMap(){
+  const w=$('#world');
+  w.style.width=MW*TS+'px';w.style.height=MH*TS+'px';
+  let h='';
+  for(let y=0;y<MH;y++)for(let x=0;x<MW;x++){
+    const ruin=x<9&&y>9;
+    const cls=ruin?'path':(S.revived[key(x,y)]?'alive':'dead');
+    h+=`<div class="t ${cls}" id="t_${x}_${y}" style="left:${x*TS}px;top:${y*TS}px"></div>`;
+  }
+  w.innerHTML=h+`<div id="me"><img src="../assets/player/wordopia-player.png" alt=""></div>`;
+  const put=(t,x,y,extra)=>{
+    const d=OBJDEF[t];
+    const el=document.createElement('div');
+    el.className='obj'+(t==='dryGrass'||t==='grass'?' grass':'');
+    el.style.left=x*TS+'px';el.style.top=y*TS+'px';el.style.zIndex=y*10+3;
+    el.id='o_'+key(x,y);
+    el.innerHTML=extra&&extra.img?`<img src="../assets/${extra.img}">`:d.ic;
+    w.appendChild(el);
+    objs.set(key(x,y),{t,x,y,el,...extra});
+    if(d.block)blocked.add(key(x,y));
+  };
+  // 廃墟
+  put('bed',3,13);put('navi',6,12);
+  [[1,10],[2,10],[7,10],[8,10],[1,16],[8,16]].forEach(([x,y])=>put('wall',x,y));
+  // 拾えるもの
+  [[5,10],[7,13],[3,16],[10,14],[12,11]].forEach(([x,y])=>put('log',x,y));
+  [[6,15],[9,12],[11,16],[13,13]].forEach(([x,y])=>put('rock',x,y));
+  // 倒木の通行止め(後の章へ)
+  [[14,3],[14,4],[14,5]].forEach(([x,y])=>put('gate',x,y));
+  // 枯れ地
+  [[16,10],[19,8],[21,12],[17,14],[22,7]].forEach(([x,y])=>put('dryTree',x,y));
+  for(let i=0;i<40;i++){
+    const x=15+Math.floor(Math.random()*10),y=4+Math.floor(Math.random()*13);
+    if(!objs.has(key(x,y))&&!(x===18&&y===11))put('dryGrass',x,y);
+  }
+  // 倒れているメルグ
+  put('melg',18,11,{img:MATES.melg.img});
+  placeMe();
+}
+function placeMe(){
+  const el=$('#me');
+  el.style.left=me.cx*TS+'px';el.style.top=(me.cy*TS-16)+'px';el.style.zIndex=me.cy*10+5;
+  el.classList.toggle('flip',me.fx<0);
+}
+/* ===== 移動 ===== */
+const DIRS={u:[0,-1],d:[0,1],l:[-1,0],r:[1,0]};
+function step(dir,fromPath){
+  if(moving||busy)return;
+  if(!fromPath)path=[];
+  const [dx,dy]=DIRS[dir];
+  if(dx)me.fx=dx<0?-1:1;
+  const nx=me.cx+dx,ny=me.cy+dy;
+  if(nx<0||ny<0||nx>=MW||ny>=MH)return;
+  if(blocked.has(key(nx,ny))){interact(nx,ny);placeMe();return;}
+  moving=true;me.cx=nx;me.cy=ny;
+  const el=$('#me');el.classList.add('step');el.style.transition='left .13s linear,top .13s linear';
+  placeMe();camera();
+  setTimeout(()=>{
+    el.classList.remove('step');el.style.transition='';moving=false;
+    interact(nx,ny);
+    if(held)step(held);else if(path.length)step(path.shift(),true);
+  },135);
+}
+function findPath(tx,ty){
+  const prev=new Map([[key(me.cx,me.cy),null]]),q=[[me.cx,me.cy]];
+  const goal=key(tx,ty),gb=blocked.has(goal);
+  let found=null;
+  while(q.length){
+    const [x,y]=q.shift();
+    if(key(x,y)===goal){found=goal;break;}
+    if(gb&&Math.abs(x-tx)+Math.abs(y-ty)===1){found=key(x,y);break;}
+    for(const [dx,dy] of [[0,-1],[0,1],[-1,0],[1,0]]){
+      const nx=x+dx,ny=y+dy,k=key(nx,ny);
+      if(nx<0||ny<0||nx>=MW||ny>=MH||prev.has(k))continue;
+      if(blocked.has(k)&&k!==goal)continue;
+      prev.set(k,[x,y,dx,dy]);
+      if(!blocked.has(k))q.push([nx,ny]);
+    }
+    if(prev.size>900)break;
+  }
+  if(!found)return null;
+  const steps=[];let c=found;
+  while(prev.get(c)){const [px,py,dx,dy]=prev.get(c);steps.unshift(dx>0?'r':dx<0?'l':dy>0?'d':'u');c=key(px,py);}
+  return steps;
+}
+$('#view').addEventListener('pointerdown',e=>{
+  if(busy){advance();return;}
+  const r=$('#view').getBoundingClientRect();
+  const mx=(e.clientX-r.left)/ZOOM+cam.x,my=(e.clientY-r.top)/ZOOM+cam.y;
+  const tx=Math.floor(mx/TS),ty=Math.floor(my/TS);
+  if(sel){useWord(tx,ty);return;}
+  const p=findPath(tx,ty);
+  if(p&&p.length){path=p.slice(1);step(p[0],true);}
+  else if(Math.abs(tx-me.cx)+Math.abs(ty-me.cy)<=1)interact(tx,ty);
+});
+for(const [id,d] of [['pu','u'],['pd','d'],['pl','l'],['pr','r']]){
+  const b=document.getElementById(id);
+  b.addEventListener('pointerdown',e=>{e.preventDefault();e.stopPropagation();held=d;step(d);});
+  const off=()=>{held=null;};
+  b.addEventListener('pointerup',off);b.addEventListener('pointerleave',off);b.addEventListener('pointercancel',off);
+}
+addEventListener('keydown',e=>{
+  const m={ArrowUp:'u',ArrowDown:'d',ArrowLeft:'l',ArrowRight:'r',w:'u',s:'d',a:'l',d:'r'}[e.key];
+  if(m){e.preventDefault();held=m;step(m);}
+  if(e.key===' '&&busy)advance();
+});
+addEventListener('keyup',()=>{held=null;});
+function camera(instant){
+  const vw=innerWidth/ZOOM,vh=innerHeight/ZOOM;
+  cam.x=Math.max(0,Math.min(MW*TS-vw,me.cx*TS+TS/2-vw/2));
+  cam.y=Math.max(0,Math.min(MH*TS-vh,me.cy*TS+TS/2-vh/2));
+  const w=$('#world');
+  w.style.transition=instant?'none':'transform .14s linear';
+  w.style.transform=`scale(${ZOOM}) translate(${-cam.x}px,${-cam.y}px)`;
+}
+function resize(){ZOOM=Math.max(1,Math.min(2,innerHeight/460));camera(true);}
+addEventListener('resize',resize);
+/* ===== 会話 ===== */
+let queue=[],onEnd=null;
+function talk(lines,who,img,end){
+  queue=lines.slice();onEnd=end||null;busy=true;
+  $('#talkWho').innerHTML=(img?`<img src="../assets/${esc(img)}">`:'')+esc(who||'');
+  $('#talk').classList.add('on');
+  advance(true);
+}
+function advance(first){
+  if(!first)queue.shift();
+  if(!queue.length&&!first){
+    $('#talk').classList.remove('on');busy=false;
+    const f=onEnd;onEnd=null;if(f)f();
+    return;
+  }
+  if(!queue.length){$('#talk').classList.remove('on');busy=false;return;}
+  $('#talkMsg').innerHTML=queue[0];
+}
+$('#talk').addEventListener('pointerdown',e=>{e.stopPropagation();advance();});
+/* ===== ふれる ===== */
+function interact(x,y){
+  const o=objs.get(key(x,y));if(!o)return;
+  const d=OBJDEF[o.t];
+  if(d.navi)return naviTalk();
+  if(d.talk)return talk(d.talk,'ねどこ');
+  if(d.gate)return talk(['大きな 倒木が 道を ふさいでいる。','いまの ちからでは どかせない…','<b>「切る」ことばを 手に入れたら 来よう。</b>'],'???');
+  if(d.pick&&!o.done)return pick(o);
+  if(d.fallen&&!S.mates.includes(d.fallen))return fallenScene(o,d.fallen);
+  if(d.fallen&&S.mates.includes(d.fallen))return getMilk(o,d.fallen);
+  if(d.dry)return talk([`${o.t==='dryTree'?'木が':'草が'} すっかり かれている。`,'<b>ミルクを かけて みよう。</b>(下の カードを えらんで タップ)'],'');
+  if(d.fruit)return fruit(o);
+}
+/* なかまになった エティモンは ことばを 分けてくれる(補給) */
+function getMilk(o,mid){
+  if(o.cool&&o.cool>Date.now())
+    return hint(`${MATES[mid].name}は ひとやすみ中(${Math.ceil((o.cool-Date.now())/1000)}秒)`);
+  o.cool=Date.now()+12000;
+  addWord('milk',2);sparkle(o.x,o.y);
+  hint(`${MATES[mid].name}が ミルクを 2つ わけてくれた`);
+}
+function pick(o){
+  o.done=true;o.el.classList.add('gone');blocked.delete(key(o.x,o.y));
+  setTimeout(()=>o.el.remove(),320);
+  const id=OBJDEF[o.t].pick;
+  addWord(id,1);
+  showCard(id,OBJDEF[o.t].msg);
+}
+function fruit(o){
+  if(o.cool&&o.cool>Date.now())return talk(['もう 実は のこっていない。'],'');
+  o.cool=Date.now()+9000;
+  o.el.style.transform='translateY(-6px)';setTimeout(()=>o.el.style.transform='',260);
+  addWord('apple',1);showCard('apple','木の実を おとした!');
+}
+function naviTalk(){
+  if(!S.flags.intro){
+    S.flags.intro=1;save();
+    talk(['ようこそ。ここは <b>意味を うしなった 大地</b>。',
+      'ぼくは キャットGPT。ことばの みちしるべだ。',
+      'この 世界は ことばの <b>意味</b>を すいとられて、かれ果ててしまった。',
+      'きみは ことばを おぼえて つかえる ただ ひとりの 存在だ。',
+      'まずは 落ちている ものを ひろってみよう。ふれるだけで <b>ことば</b>になる。',
+      'そして 東の 草原に <b>たおれている だれか</b>がいる。たすけてあげて。'],'キャットGPT','chara/T_ch_merlin.png',()=>{giveDex();});
+  }else if(!S.mates.length){
+    talk(['東の 草原に たおれている 子がいる。','ことばを もっていけば きっと たすけられる。'],'キャットGPT','chara/T_ch_merlin.png');
+  }else{
+    talk(['ミルクは いのちの ことば。','かれた大地に かけると、意味が もどってくる。',
+      'そして いつか——<b>夜空の 白い帯(galaxy)</b>も ミルクから 生まれたと 気づくだろう。'],'キャットGPT','chara/T_ch_merlin.png');
+  }
+}
+function giveDex(){
+  talk(['📖 <b>ことば図鑑</b>を 手に入れた!','おぼえた ことばは ここに たまっていく。'],'',null,()=>{S.flags.dex=1;save();renderAll();});
+}
+/* たおれたエティモン(ポコアポケモンの「み…みず…」の場面) */
+function fallenScene(o,mid){
+  const m=MATES[mid];
+  talk([`たおれた だれかが かすかに つぶやいている…`,
+    `「…め…めるく……<b>みるく</b>……」`,
+    `<b>*melg-</b>「乳をしぼる」―― その ひびきから、ひとつの ことばを おもいだした。`],
+    m.name+'?',m.img,()=>{
+      addWord('milk',3);
+      showCard('milk','ことばを おもいだした!',()=>{
+        talk(['<b>ミルクの カードを えらんで、この子に つかってみよう。</b>'],'',null);
+        S.flags.needMilkOnMelg=1;save();renderAll();
+      });
+    });
+}
+/* ===== ことばを つかう ===== */
+function addWord(id,n){
+  S.inv[id]=(S.inv[id]||0)+(n||1);
+  if(!S.dex[id]){S.dex[id]=1;}
+  save();renderAll();
+}
+function useWord(tx,ty){
+  const id=sel;
+  const o=objs.get(key(tx,ty));
+  const far=Math.abs(tx-me.cx)+Math.abs(ty-me.cy)>2;
+  if(far)return hint('とどかない。近くで つかおう');
+  if(!S.inv[id])return hint('もう もっていない');
+  const W=WORDS[id];
+  // ミルク: たおれたエティモン/かれた大地・木・草
+  if(id==='milk'){
+    const fid=o?OBJDEF[o.t].fallen:null;
+    if(fid&&!S.mates.includes(fid))return reviveMate(o,fid);
+    if(o&&OBJDEF[o.t].dry==='tree')return reviveTree(o);
+    if(o&&OBJDEF[o.t].dry==='grass')return reviveGrass(o,true);
+    return waterGround(tx,ty);
+  }
+  if(W&&W.heal){
+    if(S.hp>=10)return hint('げんきは いっぱい');
+    S.inv[id]--;S.hp=Math.min(10,S.hp+W.heal);save();renderAll();
+    return hint(`${W.ic} ${id} で げんきが もどった`);
+  }
+  hint('ここでは つかえないみたいだ');
+}
+function spend(n){
+  S.hp=Math.max(0,S.hp-(n||1));
+  if(S.hp<=0){S.hp=4;me.cx=4;me.cy=13;placeMe();camera(true);
+    talk(['つかれて ねどこで 目がさめた…','ミルクを のんで やすもう。'],'');}
+  save();renderAll();
+}
+function sparkle(x,y){
+  const e=document.createElement('div');
+  e.className='spark';e.style.left=x*TS+'px';e.style.top=y*TS+'px';e.style.zIndex=y*10+9;
+  $('#world').appendChild(e);setTimeout(()=>e.remove(),620);
+}
+function reviveMate(o,mid){
+  S.inv.milk--;busy=true;
+  sparkle(o.x,o.y);
+  const m=MATES[mid];
+  o.el.innerHTML=`<img src="../assets/${m.img}">`;
+  setTimeout(()=>{
+    S.mates.push(mid);save();
+    talk([`<b>${m.name}</b>は ミルクを のんで 目を さました!`,
+      `「ありがとう…… わたしは <b>${m.root}</b>「${m.ja}」。」`,
+      `${m.note}`,
+      `<b>${m.name}</b>が なかまに なった! 図鑑に 登録された。`,
+      `かれた大地に <b>ミルク</b>を かけると、意味が もどるらしい。ためしてみよう。`],
+      m.name,m.img,()=>{S.flags.needMilkOnMelg=0;renderAll();});
+  },500);
+}
+function waterGround(tx,ty){
+  S.inv.milk--;spend(1);
+  let n=0;
+  for(let dx=-1;dx<=1;dx++)for(let dy=-1;dy<=1;dy++){
+    const x=tx+dx,y=ty+dy;
+    if(x<0||y<0||x>=MW||y>=MH)continue;
+    if(x<9&&y>9)continue;                       // 廃墟の石畳はそのまま
+    if(S.revived[key(x,y)])continue;
+    S.revived[key(x,y)]=1;n++;
+    const t=document.getElementById(`t_${x}_${y}`);
+    if(t){t.classList.remove('dead');t.classList.add('alive');}
+    sparkle(x,y);
+    // かれ草があれば 緑の草むらに変わる
+    const o=objs.get(key(x,y));
+    if(o&&o.t==='dryGrass'){o.t='grass';o.el.textContent=OBJDEF.grass.ic;}
+  }
+  save();renderAll();
+  if(n)hint(`大地に 意味が もどった(+${n})`);
+  checkGrassCluster();
+}
+function reviveTree(o){
+  S.inv.milk--;spend(1);sparkle(o.x,o.y);
+  o.t='fruitTree';o.el.textContent=OBJDEF.fruitTree.ic;
+  if(!S.dex.tree){addWord('tree',1);showCard('tree','かれ木が よみがえった!');}
+  else hint('木が よみがえった! ぶつかると 実が おちる');
+  save();renderAll();
+}
+function reviveGrass(o,one){
+  S.inv.milk--;spend(1);sparkle(o.x,o.y);
+  o.t='grass';o.el.textContent=OBJDEF.grass.ic;
+  S.revived[key(o.x,o.y)]=1;
+  const t=document.getElementById(`t_${o.x}_${o.y}`);
+  if(t){t.classList.remove('dead');t.classList.add('alive');}
+  if(!S.dex.grass){addWord('grass',1);showCard('grass','草が よみがえった!');}
+  save();renderAll();checkGrassCluster();
+}
+/* 草むらが4つ つながると、そこに エティモンが かくれる(ポコアポケモンの草むら) */
+function checkGrassCluster(){
+  if(S.mates.includes('gwei'))return;
+  const g=[...objs.values()].filter(o=>o.t==='grass');
+  for(const o of g){
+    const near=g.filter(p=>Math.abs(p.x-o.x)<=1&&Math.abs(p.y-o.y)<=1);
+    if(near.length>=3){
+      const c=near[Math.floor(near.length/2)];
+      spawnHidden(c.x,c.y);return;
+    }
+  }
+}
+function spawnHidden(x,y){
+  if(S.flags.hidden)return;
+  S.flags.hidden=1;save();
+  const el=document.createElement('div');
+  el.className='obj';el.style.left=x*TS+'px';el.style.top=y*TS+'px';el.style.zIndex=y*10+4;
+  el.innerHTML='<span style="font-size:20px">❓</span>';
+  el.id='o_hidden';
+  $('#world').appendChild(el);
+  objs.set(key(x,y),{t:'hidden',x,y,el,fallen:'gwei'});
+  blocked.add(key(x,y));
+  OBJDEF.hidden={ic:'❓',block:1,fallen:'gwei'};
+  talk(['草むらが つながった!','…なにかが かくれている 気配がする。'],'');
+  // 近づいたら出会い
+  const w=MATES.gwei;
+  OBJDEF.hidden.meet=1;
+  objs.get(key(x,y)).meet=()=>{
+    talk(['草むらが がさがさと ゆれた!',
+      `<b>${w.name}</b>(${w.root}「${w.ja}」)が とびだしてきた!`,
+      w.note,
+      `<b>${w.name}</b>が なかまに なった!`],w.name,w.img,()=>{
+        S.mates.push('gwei');addWord('grass',1);save();renderAll();
+        const o=objs.get(key(x,y));if(o){o.el.innerHTML=`<img src="../assets/${w.img}">`;}
+      });
+  };
+}
+/* hidden との接触 */
+const _interact=interact;
+interact=function(x,y){
+  const o=objs.get(key(x,y));
+  if(o&&o.t==='hidden'&&o.meet&&!S.mates.includes('gwei')){o.meet();return;}
+  _interact(x,y);
+};
+/* ===== 演出・UI ===== */
+let cardT=null;
+function showCard(id,msg,end){
+  const W=WORDS[id];if(!W)return;
+  busy=true;
+  $('#card').innerHTML=`<div class="cardIn"><div class="ck">${esc(msg||'ことばを おぼえた!')}</div>
+    <div class="ci">${W.ic}</div><div class="cw">${esc(id)}</div><div class="cja">${esc(W.ja)}</div>
+    <div class="crt">*${esc(W.root)}「${esc(W.rootJa)}」から うまれた</div></div>`;
+  $('#card').classList.add('on');say(id);
+  clearTimeout(cardT);
+  cardT=setTimeout(()=>{$('#card').classList.remove('on');busy=false;if(end)end();},1800);
+}
+let hintT=null;
+function hint(t){
+  $('#barHint').textContent=t;
+  clearTimeout(hintT);hintT=setTimeout(()=>{$('#barHint').textContent='';},1800);
+}
+function say(t){
+  if(!('speechSynthesis'in window))return;
+  speechSynthesis.cancel();
+  const u=new SpeechSynthesisUtterance(t);u.lang='en-US';u.rate=.95;speechSynthesis.speak(u);
+}
+function renderAll(){
+  $('#hp').innerHTML='❤'.repeat(Math.max(0,S.hp))+`<span style="opacity:.25">${'❤'.repeat(Math.max(0,10-S.hp))}</span>`;
+  $('#dexN').textContent=Object.keys(S.dex).length;
+  $('#mateN').textContent=S.mates.length;
+  const items=Object.keys(S.inv).filter(k=>S.inv[k]>0);
+  $('#bar').innerHTML=items.map(k=>{
+    const W=WORDS[k];
+    return `<div class="slot${sel===k?' sel':''}" data-k="${k}">
+      <span class="n">${S.inv[k]}</span><span class="ic">${W.ic}</span>
+      <span class="w">${k}</span><span class="ja">${W.ja}</span></div>`;
+  }).join('')||'<div style="color:#fff;font-size:12px;padding:8px">ことばを ひろおう(ものに ふれる)</div>';
+  document.querySelectorAll('#bar .slot').forEach(el=>el.onclick=e=>{
+    e.stopPropagation();
+    sel=(sel===el.dataset.k)?null:el.dataset.k;
+    renderAll();
+    hint(sel?`${sel} を えらんだ ― つかう先を タップ`:'');
+  });
+  const goals=[];
+  if(!S.flags.intro)goals.push('🐱 ナビに 話しかける');
+  else if(!S.mates.includes('melg'))goals.push('🚶 東の草原の たおれた子を たすける');
+  else if(!S.mates.includes('gwei'))goals.push('🥛 かれ地に ミルクを かけて 草むらを つくる');
+  else goals.push('🌌 いつか galaxy を つくる');
+  $('#goal').innerHTML='<b>つぎに やること</b><br>'+goals[0];
+}
+$('#dexBtn').onclick=()=>{
+  const mates=S.mates.map(id=>{
+    const m=MATES[id],fam=FAM[id]||[];
+    return `<div class="dxE"><img src="../assets/${m.img}">
+      <div class="t"><b>${esc(m.name)}</b><small>${esc(m.root)}「${esc(m.ja)}」<br>${esc(m.note)}</small>
+      <div class="ws">${fam.map(f=>`<span class="${S.dex[f]?'':'no'}">${S.dex[f]?esc(f):'???'}</span>`).join('')}</div></div></div>`;
+  }).join('')||'<div style="color:var(--soft)">まだ なかまが いません</div>';
+  const ws=Object.keys(S.dex).map(k=>{
+    const W=WORDS[k];
+    return `<div class="dxE"><div style="font-size:40px;width:56px;text-align:center">${W.ic}</div>
+      <div class="t"><b>${esc(k)}</b><small>${esc(W.ja)} ・ *${esc(W.root)}「${esc(W.rootJa)}」</small></div></div>`;
+  }).join('');
+  $('#dexList').innerHTML=`<div style="font-size:12px;color:var(--soft);margin-bottom:6px">エティモン</div>${mates}
+    <div style="font-size:12px;color:var(--soft);margin:12px 0 6px">おぼえた ことば</div>${ws}`;
+  $('#dexCnt').textContent=Object.keys(S.dex).length+' ことば';
+  $('#dex').classList.add('on');
+};
+$('#dexClose').onclick=()=>$('#dex').classList.remove('on');
+/* ===== 起動 ===== */
+buildMap();renderAll();resize();camera(true);
+if(!S.flags.intro){
+  setTimeout(()=>talk(['……。','目が さめた。','見わたすかぎり、色を うしなった 大地。',
+    'ちかくに ねこの すがたが 見える。'],'',null),400);
+}
+</script>
+</body>
+</html>

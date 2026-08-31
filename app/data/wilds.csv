@@ -1,0 +1,12 @@
+id,clan,root,clan_jp,clan_color,name,en,img,size,activity,hp,atk,def,spd,luck,flavor
+kaput,kaput,*kaput-,頭,#e8875a,カプト,*kaput-,ch_kaput,1.0,0.7,60,14,12,9,6,「頭」の語根の基本形。cap も captain も cabbage も、みんなこの子の子孫。
+ane,ane,*ane-,息をする,#9fd1c7,アーネ,*ane-,ch_ane,1.0,0.9,44,8,7,14,11,「息をする」の語根。animal も animation も、息づくものはぜんぶ担当。
+bha,bha,*bha-,話す,#f2a444,バーファ,*bha-,ch_bha,0.95,0.8,46,10,8,11,9,「話す」の語根。fable も phone も、この子のおしゃべりから始まった。
+gwei,gwei,*gwei-,生きる,#7cba62,グウェイ,*gwei-,ch_gwei,1.0,1.0,70,12,13,8,5,「生きる」の語根。vivid に quick に、生命力のかたまり。
+oino,oino,*oi-no-,ひとつ,#7f8ff0,オイノ,*oi-no-,ch_oino,0.9,0.3,40,9,9,12,14,「ひとつ」の語根。one も unique も only も、この子から数えはじめる。ほぼ動かない。
+reg,reg,*reg-,まっすぐ,#5aa7e8,レーグ,*reg-,ch_reg,1.05,0.6,55,16,10,10,6,「まっすぐ導く」の語根。right も rule も regal も、道はこの子がしいた。
+weid,weid,*weid-,見る・知る,#a06ee0,ウェイド,*weid-,ch_weid,1.0,0.4,42,15,7,11,13,「見る・知る」の語根の賢者。だいたい立ち止まって遠くを見ている。
+ye,ye,*ye-,投げる,#f26d99,イェート,*ye-,ch_ye,1.05,0.85,48,17,8,13,8,「投げる」の語根。jet も project も、まずこの子が放り投げた。
+mori,mori,*mori-,水域,#46b8d8,モーリ,*mori-,ch_mori,1.0,0.8,52,11,10,12,9,「水域」の語根。marine も submarine も aquamarine も、この子の海から。マーリンの名も“海の丘”。
+men,men,*men-,考える,#9b8bd8,メーン,*men-,ch_men,0.95,0.35,44,13,8,9,14,「考える」の語根。mind も remember も mantra も、この子の思索から生まれた。だいたい考えごとをしている。
+do,do,*do-,与える,#d99a3d,ドー,*do-,ch_do,1.0,0.72,50,10,10,11,15,「与える」の語根。donor も donation も Pandora も、この子の差し出す手から生まれた。

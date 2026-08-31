@@ -1,0 +1,20 @@
+{
+  "name": "エティモリンゴ スワイプ単語バトル",
+  "short_name": "単語バトル",
+  "description": "語根キャラのカードを、なぞって・打って・声で書き上げるバトル",
+  "start_url": "./etymon-word-block-battle.html",
+  "scope": "./",
+  "display": "fullscreen",
+  "display_override": ["fullscreen", "standalone", "minimal-ui"],
+  "orientation": "any",
+  "background_color": "#251f29",
+  "theme_color": "#251f29",
+  "icons": [
+    {
+      "src": "./icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

@@ -1,0 +1,948 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>エティモリンゴ:遠征絵日記(試作)</title><!-- v4: リアルタイム絵日記・家系デッキ -->
+<style>
+:root{
+  --paper:#faf3e3; --ink:#3a3026; --card:#fff8ea; --line:#e0d3b8;
+  --kaput:#e8875a; --weid:#a06ee0; --bha:#f2a444; --gwei:#7cba62;
+  --red:#d63b2f; --green:#4f9d5d; --gold:#c99a2e;
+}
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{height:100%;overflow:hidden}
+body{background:#d8cdb4;color:var(--ink);font-family:"Hiragino Maru Gothic ProN","BIZ UDGothic","Yu Gothic",sans-serif}
+/* 固定ステージ: 1920x1080 を等倍スケール(レイアウトは絶対に変わらない) */
+#app{width:1920px;height:1080px;position:absolute;left:50%;top:50%;transform:translate(-50%,-50%) scale(1);transform-origin:center center;background:#efe6d2;display:flex;flex-direction:column;padding:14px 40px 18px;overflow:hidden}
+h1{font-size:32px;text-align:center;padding:10px 0 2px;letter-spacing:2px}
+.sub{text-align:center;font-size:16px;color:#8a7a60;margin-bottom:14px}
+.tabs{display:flex;gap:8px;justify-content:center;margin-bottom:14px}
+.tab{border:2px solid var(--line);background:var(--card);border-radius:22px;padding:9px 26px;font-size:18px;cursor:pointer;font-weight:bold;color:#8a7a60}
+.tab.on{background:var(--ink);color:var(--paper);border-color:var(--ink)}
+#prep,#reader,#shelf{flex:1;min-height:0;overflow-y:auto;padding-right:6px}
+#exped{flex:1;min-height:0;flex-direction:column}
+.panelbox{background:var(--paper);border:2px solid var(--line);border-radius:16px;padding:16px;margin-bottom:14px}
+.secttl{font-size:20px;font-weight:bold;margin-bottom:8px;display:flex;align-items:center;gap:8px}
+.secttl small{font-weight:normal;color:#8a7a60;font-size:14px}
+.grid{display:flex;flex-wrap:wrap;gap:8px}
+.pick{border:2px solid var(--line);background:var(--card);border-radius:12px;padding:10px 12px;cursor:pointer;user-select:none;width:150px;text-align:center}
+.pick .imgbox{height:92px;display:flex;align-items:center;justify-content:center}
+.pick .imgbox img{max-height:90px;max-width:128px;object-fit:contain}
+.pick .imgbox .fbem{font-size:42px}
+.pick .nm{font-size:17px;font-weight:bold}
+.pick .ds{font-size:13px;color:#8a7a60;line-height:1.35}
+.pick.sel{border-color:var(--ink);background:#fff2cf;box-shadow:0 2px 0 var(--ink)}
+.pick.ety.sel{background:#f3eaff}
+/* 出発メンバー枠 */
+#prep .panelbox,#prep .prow{max-width:1400px;margin-left:auto;margin-right:auto;margin-bottom:14px}
+#partySlots{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;max-width:1100px;margin:0 auto}
+.pslot{min-height:185px;border:3px dashed #c9b98e;border-radius:16px;background:#fffdf4;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;padding:10px;cursor:pointer}
+.pslot.filled{border-style:solid;border-color:var(--ink);background:#fff2cf;box-shadow:3px 3px 0 rgba(58,48,38,.2)}
+.pslot .q{font-size:52px;color:#c9b98e;line-height:1}
+.pslot .slbl{font-size:17px;color:#8a7a60;font-weight:bold}
+.pslot img.face{height:100px;object-fit:contain}
+.pslot .snm{font-weight:bold;font-size:20px}
+.pslot .sdeck{display:flex;gap:6px}
+.pslot .sdeck .bagIt{width:44px;height:44px}
+.pslot .sdeck .bagIt img{max-width:40px;max-height:40px}
+.pslot .sdesc{font-size:14px;color:#8a7a60}
+.pick .mini{display:flex;gap:3px;justify-content:center;margin-top:3px;min-height:20px}
+.pick .mini img{width:26px;height:26px;object-fit:contain}
+.prow{display:flex;gap:14px;flex-wrap:wrap}
+.prow .panelbox{flex:1;min-width:280px}
+.startbtn{display:block;margin:10px auto 0;background:var(--green);color:#fff;border:none;border-radius:30px;padding:16px 60px;font-size:24px;font-weight:bold;cursor:pointer;font-family:inherit}
+.startbtn:disabled{background:#b9b0a0;cursor:not-allowed}
+.hint{font-size:16px;color:#8a7a60;text-align:center;margin-top:8px}
+.heardchips{display:flex;flex-wrap:wrap;gap:6px}
+.chip{background:#ffe8e5;border:1px solid #eab5ae;color:var(--red);border-radius:16px;padding:6px 14px;font-size:15px;font-weight:bold}
+.chip small{color:#a3564d;font-weight:normal}
+.zline{font-size:17px}
+/* ===== 遠征ヘッダ(HUD) ===== */
+#exped{display:none}
+#exHead{background:var(--paper);border:2px solid var(--ink);border-radius:14px;padding:10px 14px;margin:0 auto 8px;width:1500px;box-shadow:3px 3px 0 rgba(58,48,38,.2)}
+#exTopRow{display:flex;justify-content:space-between;align-items:center;gap:10px;font-size:20px;font-weight:bold}
+#exTrack{position:relative;height:8px;border-radius:99px;background:#e5dbc6;margin:7px 0 8px}
+#exFill{position:absolute;left:0;top:0;bottom:0;width:0%;border-radius:99px;background:linear-gradient(90deg,#ffd23e,#ffb545);transition:width .8s ease}
+.tdot{position:absolute;top:50%;width:10px;height:10px;margin:-5px 0 0 -5px;border-radius:50%;background:#fff;border:2px solid var(--line)}
+.tdot.reached{background:#ffd23e;border-color:#c98d12}
+#exStatRow{display:flex;flex-wrap:wrap;gap:6px 14px;align-items:center}
+.vRow{display:flex;align-items:center;gap:5px}
+.vRow .vlab{font-size:14px;font-weight:bold;color:#8a7a60}
+.vRow .icons{font-size:20px;letter-spacing:1px}
+.vRow .icons .off{opacity:.22;filter:grayscale(1)}
+#exBagRow,#exTreRow{display:flex;flex-wrap:wrap;gap:4px;align-items:center}
+.bagIt{position:relative;width:46px;height:46px;border:1.5px solid var(--line);border-radius:7px;background:#fff;display:flex;align-items:center;justify-content:center;transition:opacity .5s}
+.bagIt img{max-width:40px;max-height:40px;object-fit:contain}
+.bagIt .wcard{border:none;background:none}
+.bagIt .wcard .wem{font-size:15px}
+.bagIt .wcard .wtx{display:none}
+.bagIt .pips{position:absolute;right:0;bottom:-1px;font-size:12px;font-weight:bold;color:#c05a2a;background:rgba(255,255,255,.92);border-radius:6px;padding:0 2px}
+.bagIt.gone{opacity:.25}
+.bagIt.gone::after{content:"✕";position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:19px;color:var(--red);font-weight:bold}
+.bagIt.new{animation:popin .5s ease}
+@keyframes popin{0%{transform:scale(.2)}70%{transform:scale(1.2)}100%{transform:scale(1)}}
+#exTreRow .bagIt{border-color:var(--gold);box-shadow:0 0 5px rgba(201,154,46,.5)}
+/* ===== 絵日記フィード(縦スクロール漫画) ===== */
+#comicFeed{flex:1;min-height:0;overflow-y:auto;display:flex;flex-direction:column;gap:18px;align-items:center;padding:8px 0 20px}
+#comicFeed>*{flex-shrink:0}
+.dayband{font-weight:bold;color:#7a6a4a;font-size:20px;letter-spacing:2px;background:var(--card);border:2px solid var(--line);border-radius:14px;padding:4px 20px}
+.koma2{position:relative;border:3px solid var(--ink);border-radius:14px;overflow:hidden;background:#cfe6f2;box-shadow:6px 6px 0 rgba(58,48,38,.3);container-type:inline-size;width:1500px}
+#comicFeed .koma2{animation:kpop .5s ease}
+@keyframes kpop{from{transform:scale(.85);opacity:0}to{transform:scale(1);opacity:1}}
+.koma2 .kbg{position:absolute;inset:0;background-size:cover;background-position:center bottom}
+.koma2.night .kbg{filter:brightness(.5) saturate(.85)}
+.koma2 .kmist{position:absolute;inset:0;background:linear-gradient(rgba(255,255,255,.15),rgba(255,255,255,.75))}
+.koma2 .kbody{position:relative;aspect-ratio:2.4/1}
+.koma2 .kparty{position:absolute;left:1.5%;bottom:2%;display:flex;align-items:flex-end}
+.koma2 .kparty img{height:20cqw;object-fit:contain;filter:drop-shadow(0 6px 5px rgba(40,30,50,.35))}
+.koma2 .knp{position:absolute;right:2.5%;bottom:2%;height:25cqw;display:flex;align-items:flex-end}
+.koma2 .knp img{height:100%;object-fit:contain;filter:drop-shadow(0 4px 3px rgba(40,30,50,.35))}
+.koma2 .knp.ghost img{opacity:.85}
+.koma2 .knp .npem{font-size:12cqw;line-height:1}
+.koma2 .kitem{position:absolute;left:50%;top:2cqw;transform:translateX(-50%);width:13cqw;height:13cqw;background:rgba(255,253,248,.95);border:3px solid var(--ink);border-radius:14px;display:flex;align-items:center;justify-content:center;box-shadow:0 5px 10px rgba(30,24,38,.3);padding:6px}
+.koma2 .kitem img{max-width:88%;max-height:88%;object-fit:contain}
+.koma2 .kitem .wcard{border:none;background:none}
+.koma2 .kitem .wcard .wem{font-size:6cqw}
+.koma2 .kitem.gone::after{content:"✕";position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:64px;color:var(--red);font-weight:bold}
+.koma2 .kitem.float{top:44px;box-shadow:0 14px 10px rgba(30,24,38,.25)}
+.koma2 .kspark{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:13cqw;pointer-events:none;animation:spk 1.6s ease infinite}
+@keyframes spk{0%,100%{opacity:.5;transform:scale(1)}50%{opacity:1;transform:scale(1.15)}}
+/* 文字送り */
+.kline .ch{visibility:hidden}
+.kline .ch.on{visibility:visible}
+/* 画面下固定の操作バー */
+#exCtrl{display:flex;justify-content:center;align-items:center;gap:16px;padding:10px 0 2px}
+#tapNext{min-width:320px;background:var(--ink);color:var(--paper);border:none;border-radius:28px;padding:15px 40px;font-size:22px;font-weight:bold;cursor:pointer;font-family:inherit;box-shadow:0 4px 10px rgba(30,24,38,.3)}
+#tapNext.bob{animation:hintbob 1.1s ease-in-out infinite}
+#tapNext.dim{opacity:.75}
+@keyframes hintbob{0%,100%{transform:translateY(0)}50%{transform:translateY(-5px)}}
+.exbtn.small{font-size:16px;padding:10px 20px;opacity:.85}
+/* イベントチップ(つかった・ダメージ・入手 を流れに刻む) */
+.kline.pend{visibility:hidden}
+.fxrow{display:flex;flex-wrap:wrap;gap:7px;justify-content:center;width:1500px}
+.fxchip{display:inline-flex;align-items:center;gap:8px;background:#fff;border:2px solid var(--line);border-radius:20px;padding:7px 18px;font-size:18px;font-weight:bold;animation:chippop .45s cubic-bezier(.2,1.4,.4,1) backwards}
+.fxchip img{width:26px;height:26px;object-fit:contain}
+.fxchip.dmg{border-color:#e88;color:var(--red);background:#fff0ee}
+.fxchip.gain{border-color:var(--gold);background:#fff8e2;color:#8a6a1a}
+.fxchip.use{border-color:#b8c7dd;background:#f2f6fc;color:#4a5a7a}
+.fxchip.mood{color:#6a5a2f}
+@keyframes chippop{from{transform:scale(.3) translateY(8px);opacity:0}to{transform:scale(1) translateY(0);opacity:1}}
+/* コマのキャプション(文字はここに1〜2行だけ) */
+.koma2 .kcap{position:relative;background:#fff;border-top:3px solid var(--ink);padding:10px 16px}
+.kline{display:flex;gap:10px;align-items:flex-start;font-size:27px;line-height:1.6}
+.kline+.kline{margin-top:3px}
+.kline .spkchip{flex:0 0 auto;width:34px;height:34px;border:1.5px solid var(--line);border-radius:50%;background:#fff;display:inline-flex;align-items:center;justify-content:center;font-size:12px;overflow:hidden;margin-top:1px}
+.kline .spkchip img{width:30px;height:30px;object-fit:contain}
+.kline .jat{display:none;font-size:19px;color:#8a7a60}
+.lang-both .kline .jat{display:block}
+.lang-ja .kline .txt{display:none}
+.lang-ja .kline .jat{display:block;font-size:27px;color:var(--ink)}
+.kline b.w{color:#6a5a2f;background:#f5e9c5;border-radius:4px;padding:0 3px}
+.redw{color:var(--red);font-weight:bold;text-decoration:underline dotted;cursor:pointer}
+.redw.got{background:#ffe8e5;border-radius:4px}
+.langbtns{display:flex;gap:6px;justify-content:flex-end;margin:8px 0}
+.lb{border:1.5px solid var(--line);border-radius:14px;padding:6px 16px;font-size:15px;cursor:pointer;background:var(--card);font-weight:bold;color:#8a7a60}
+.lb.on{background:var(--ink);color:var(--paper);border-color:var(--ink)}
+#exBtns{display:flex;gap:10px;justify-content:center;margin-top:12px}
+.exbtn{border:2px solid var(--ink);background:var(--card);border-radius:20px;padding:10px 26px;font-size:17px;font-weight:bold;cursor:pointer;font-family:inherit}
+/* ===== 日記(=同じ絵日記) ===== */
+.diary{background:var(--paper);border:2px solid var(--line);border-radius:16px;padding:18px 14px;line-height:1.8}
+.diary h2{font-size:24px;border-bottom:2px solid var(--line);padding-bottom:8px;margin-bottom:6px;display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap}
+.badge{font-size:16px;border-radius:12px;padding:3px 12px;color:#fff;white-space:nowrap}
+.b-great{background:var(--gold)} .b-ok{background:var(--green)} .b-fail{background:#a0674f}
+.diary #comicRe{display:flex;flex-direction:column;gap:18px;align-items:center;margin-top:8px}
+.endsum{margin-top:16px;border-top:2px dashed var(--line);padding-top:10px;font-size:18px}
+.tosh{display:block;margin:16px auto 0;background:var(--ink);color:var(--paper);border:none;border-radius:26px;padding:14px 44px;font-size:20px;cursor:pointer;font-family:inherit;font-weight:bold}
+/* 旧形式セーブの表示用 */
+.sent{font-size:14px;padding:2px 0}
+.koma{background:linear-gradient(#dfe9f0,#f2ecdc);border:3px solid var(--ink);border-radius:8px;margin:10px auto;padding:12px 10px 8px;max-width:420px;text-align:center}
+.koma .scene{font-size:40px;letter-spacing:6px}
+.koma .cap{font-size:11px;color:#5c4f3c;font-style:italic;margin-top:5px}
+/* 語カードのフォールバック */
+.wcard{display:flex;flex-direction:column;align-items:center;justify-content:center;background:#fff8ea;border:2px solid var(--ink);border-radius:10px;width:100%;height:100%}
+.wcard .wem{font-size:26px;line-height:1}
+.wcard .wtx{font-size:9px;font-weight:bold}
+/* 本棚 */
+.shelfrow{display:flex;align-items:center;gap:10px;background:var(--card);border:2px solid var(--line);border-radius:12px;padding:10px 12px;margin-bottom:8px;cursor:pointer}
+.shelfrow:hover{background:#fff2cf}
+.shelfrow .no{font-weight:bold;font-size:20px;white-space:nowrap}
+.shelfrow .ti{flex:1;font-size:17px}
+.empty{color:#8a7a60;font-size:13px;text-align:center;padding:30px 0}
+#toast{position:fixed;left:50%;bottom:26px;transform:translateX(-50%);background:var(--ink);color:var(--paper);border-radius:20px;padding:10px 22px;font-size:13px;opacity:0;pointer-events:none;transition:opacity .3s;z-index:50;max-width:88vw}
+#toast.show{opacity:1}
+.resetbtn{background:none;border:1px solid var(--line);border-radius:12px;color:#8a7a60;font-size:14px;padding:4px 12px;cursor:pointer;display:block;margin:20px auto 0;font-family:inherit}
+</style>
+</head>
+<body>
+<div id="app">
+  <h1>🧭 遠征絵日記</h1>
+  <div class="sub">エティモリンゴ 試作 ― ぬしをえらぶと、家系のことばが かばんに入る。旅は 絵日記になって その場でとどく。</div>
+  <div class="tabs">
+    <div class="tab on" id="tabPrep">じゅんび</div>
+    <div class="tab" id="tabShelf">本だな</div>
+  </div>
+
+  <div id="prep">
+    <div class="panelbox">
+      <div class="secttl">🐾 しゅっぱつメンバー <small>(4たいまで。ぬしが 家系のことばを もってくる ― なかまが 多いほど、夕ごはんも 多くいる)</small></div>
+      <div id="partySlots"><div class="pslot" id="ps0"></div><div class="pslot" id="ps1"></div><div class="pslot" id="ps2"></div><div class="pslot" id="ps3"></div></div>
+      <div class="grid" id="etyGrid" style="justify-content:center;margin-top:14px"></div>
+    </div>
+    <div class="prow">
+      <div class="panelbox">
+        <div class="secttl">👂 聞いたことば <small>(絵日記の<span style="color:var(--red);font-weight:bold">赤字</span>をタップすると たまる)</small></div>
+        <div class="heardchips" id="heardBox"><span class="zline" style="color:#8a7a60">まだない。</span></div>
+      </div>
+      <div class="panelbox">
+        <div class="secttl">📖 ずかん</div>
+        <div class="zline" id="zukanBox"></div>
+      </div>
+    </div>
+    <button class="startbtn" id="goBtn">しゅっぱつ!</button>
+    <div class="hint">めざすは きりのみさき。夕ごはん: 2たいまで=1食/晩、3たいからは=2食/晩。2ばん つづけて 食べられないと ひきかえす。</div>
+    <button class="resetbtn" id="resetBtn">きろくを ぜんぶ けす(デバッグ)</button>
+  </div>
+
+  <!-- ===== リアルタイム絵日記 ===== -->
+  <div id="exped">
+    <div id="exHead">
+      <div id="exTopRow"><span>🧭 きりのみさき 遠征</span><span id="exDayLbl">Day 1</span></div>
+      <div id="exTrack"><i id="exFill"></i></div>
+      <div id="exStatRow">
+        <span class="vRow"><span class="vlab">げんき</span><span class="icons" id="hpIcons"></span></span>
+        <span class="vRow"><span class="vlab">おなか</span><span class="icons" id="hgIcons"></span></span>
+        <span class="vRow"><span class="vlab">きぶん</span><span class="icons" id="moIcons"></span></span>
+      </div>
+      <div id="exStatRow" style="margin-top:6px">
+        <span class="vRow"><span class="vlab">🎒</span><span id="exBagRow"></span></span>
+        <span class="vRow"><span class="vlab">💎</span><span id="exTreRow"><span id="treEmpty" style="font-size:10px;color:#b0a488">まだない</span></span></span>
+      </div>
+    </div>
+    <div class="langbtns" id="exLangBtns">
+      <button class="lb" data-lang="en">English</button>
+      <button class="lb" data-lang="both">English+日本語</button>
+      <button class="lb" data-lang="ja">日本語</button>
+    </div>
+    <div id="comicFeed"></div>
+    <div id="exCtrl">
+      <button class="exbtn small" id="exAutoBtn">▶ オート: OFF</button>
+      <button id="tapNext">▼ タップで つぎへ</button>
+      <button class="exbtn small" id="exSkipBtn">⏭ 本にとじる</button>
+    </div>
+  </div>
+
+  <div id="reader" style="display:none"></div>
+  <div id="shelf" style="display:none"></div>
+</div>
+<div id="toast"></div>
+
+<script>
+'use strict';
+/* ============ 素材 ============ */
+const AST='../assets/';
+const BG_IMG={
+  exp:  AST+'ground/T_BG_base_expedition.png',
+  night:AST+'ground/T_BG_base_expedition_night.png',
+  rock: AST+'ground/T_BG_base_expedition_rock.png',
+  sea:  AST+'ground/T_BG_base_sea.png',
+};
+const CHAR_IMG={
+  kaput:AST+'chara/T_ch_kaput_head.png',
+  weid: AST+'chara/T_ch_weid_see.png',
+  bha:  AST+'chara/T_ch_bha_speak.png',
+  gwei: AST+'chara/T_ch_gwei_live.png',
+  reg:  AST+'chara/T_ch_reg_straight.png',
+  do:   AST+'chara/T_ch_do_give.png',
+  kers: AST+'chara/T_ch_kers2.png',
+  leuk: AST+'chara/T_ch_leuk.png',
+  deik: AST+'chara/T_ch_deik_show.png', // ここから下は旧セーブ用
+  pekw: AST+'word/chef.png', // 旧セーブ用
+};
+const NP_IMG={ boss:AST+'chara/T_ch_stage1_boss.png', guard:AST+'chara/T_ch_enemy_01.png', inv:AST+'word/invisible.png' };
+const NP_EM={ boss:'🧌', guard:'💂', inv:'👤', crow:'🐦‍⬛' };
+const WORD_IMG={ // assets/word/ に実在する絵(全カード分あり)
+  cabbage:'cabbage.png', chef:'chef.png', captain:'captain.png',
+  vision:'vision.png', witness:'witness.png', video:'video.png',
+  fable:'fable.png', prophet:'prophet.png', fame:'fame.png',
+  quick:'quick.png', revive:'revive.png', survive:'survive.png',
+  carry:'carry.png', course:'course.png', teach:'teach.png', judge:'judge.png', dictionary:'dictionary.png',
+  illuminate:'illuminate.png', luna:'Luna.png', illustrate:'illustrate.png',
+  direct:'direct.png', right:'right.png', rule:'rule.png',
+  donation:'donation.png', pardon:'pardon.png', date:'date.png',
+  invisible:'invisible.png', pie:'pie.png',
+  apple:'apple.png', horse:'horse.png', light:'light.png', egg:'egg.png', // 旧セーブ用
+};
+function wordImgHTML(id, em){
+  if(WORD_IMG[id]) return `<img src="${AST}word/${WORD_IMG[id]}" alt="${id}" onerror="wfb(this,'${em}','${id}')">`;
+  return `<div class="wcard"><span class="wem">${em}</span><span class="wtx">${id}</span></div>`;
+}
+window.wfb=function(el,em,id){ const d=document.createElement('div'); d.className='wcard'; d.innerHTML=`<span class="wem">${em}</span><span class="wtx">${id}</span>`; el.replaceWith(d); };
+
+/* ============ データ(語根はすべて app/data/pie の実レコード) ============ */
+const ETYMONS = {
+  kaput:{nm:'カプト',   en:'Kaputo',em:'🧢', col:'var(--kaput)', ds:'あたま(*kaput-)。ひきいる、道にまよわない'},
+  weid :{nm:'ウェイド', en:'Weido', em:'👁️', col:'var(--weid)',  ds:'見る・知る(*weid-)。気配に気づく'},
+  bha  :{nm:'バーファ', en:'Bhafa', em:'💬', col:'var(--bha)',   ds:'話す(*bha-)。話して切りぬける'},
+  gwei :{nm:'グウェイ', en:'Gwei',  em:'🌱', col:'var(--gwei)',  ds:'生きる(*gwei-)。きずが半分ですむ'},
+  reg  :{nm:'レーグ',   en:'Regu',  em:'📏', col:'#5aa7e8',      ds:'まっすぐ(*reg-)。道と正しさを ただす'},
+  do   :{nm:'ドー',     en:'Doh',   em:'🎁', col:'#d99a3d',      ds:'与える(*do-)。さずけて 切りぬける'},
+};
+const ETY_LEGACY={pekw:{nm:'シェフ',en:'Peku',em:'🍳'},kers:{nm:'はしるのぬし',en:'Kero',em:'💨'},leuk:{nm:'ひかりのぬし',en:'Luka',em:'💡'},deik:{nm:'しめすのぬし',en:'Deiko',em:'👉'}};
+function etyMeta(id){ return ETYMONS[id]||ETY_LEGACY[id]||{nm:id,en:id,em:'❓'}; }
+/* 仲間=デッキ: ぬしの家系のことばだけ(全語DB照合ずみ) */
+const ETY_DECK={
+  kaput:['cabbage','chef','captain'],   // kaput-: キャベツ(頭の野菜)・シェフ(厨房の頭)・船長(頭領)
+  weid :['vision','witness','video'],   // weid-: 見るの家系
+  bha  :['fable','prophet','fame'],     // bhā-2: 話すの家系
+  gwei :['quick','revive','survive'],   // gwei-: 生きるの家系(quickはもと「生きている」)
+  reg  :['direct','right','rule'],      // reg-: まっすぐの家系(導く/正しい/規則)
+  do   :['donation','pardon','date'],   // dō-: 与えるの家系(寄付/許し/与えられた日)
+};
+function deckOf(etys){ return etys.flatMap(id=>ETY_DECK[id]||[]); }
+const ITEMS = {
+  cabbage:{en:'cabbage',ja:'キャベツ',  em:'🥬', root:'kaput-',      ds:'あたまの野菜。食べもの'},
+  chef   :{en:'chef',   ja:'シェフ',    em:'👨‍🍳', root:'kaput-',      ds:'料理人が出て、食べものを2晩の夕食に'},
+  captain:{en:'captain',ja:'船長',      em:'⚓', root:'kaput-',      ds:'夜の見はり。番兵も敬礼する'},
+  vision :{en:'vision', ja:'視覚',      em:'👁️', root:'weid-',       ds:'見えないもの・くらやみが見える'},
+  witness:{en:'witness',ja:'証人',      em:'🫖', root:'weid-',       ds:'「見た者」がいる'},
+  video  :{en:'video',  ja:'映像',      em:'📹', root:'weid-',       ds:'なんでも きろくする'},
+  fable  :{en:'fable',  ja:'寓話',      em:'📖', root:'bhā-2',       ds:'お話で わらわせ、いやす'},
+  prophet:{en:'prophet',ja:'預言者',    em:'🔮', root:'per1+bhā-2',  ds:'先のことを 言い当てる'},
+  fame   :{en:'fame',   ja:'名声',      em:'🌟', root:'bhā-2',       ds:'ファンから 差し入れが とどく'},
+  quick  :{en:'quick',  ja:'迅速',      em:'💨', root:'gwei-',       ds:'おくれを 1日とりもどす(もとは「生きている」)'},
+  revive :{en:'revive', ja:'蘇生',      em:'🌿', root:'re-+gwei-',   ds:'たおれかけを 1回もちなおす'},
+  survive:{en:'survive',ja:'生存',      em:'🔥', root:'uper+gwei-',  ds:'はらぺこでも あと1日 ふんばる'},
+  horse  :{en:'horse',  ja:'馬',        em:'🐴', root:'kers-2',      ds:'おくれを 1日とりもどす'},
+  carry  :{en:'carry',  ja:'運ぶ',      em:'🧺', root:'kers-2',      ds:'にもつが 多くつめる(パン+1)'},
+  course :{en:'course', ja:'進路',      em:'🧭', root:'kers-2',      ds:'分かれ道で まよわない'},
+  teach  :{en:'teach',  ja:'教える',    em:'✏️', root:'deik-',       ds:'門番に ことばを教えて 通る'},
+  judge  :{en:'judge',  ja:'裁く',      em:'⚖️', root:'yewes-+deik-',ds:'うたがいを 裁定で はらす'},
+  dictionary:{en:'dictionary',ja:'辞書',em:'📕', root:'deik-',       ds:'昇天できなくても「きろく」を もちかえる'},
+  illuminate:{en:'illuminate',ja:'照らす',em:'🔦', root:'en+leuk-',   ds:'くらやみを てらす'},
+  luna   :{en:'Luna',   ja:'月',        em:'🌙', root:'leuk-',       ds:'月あかりの 夜番。カラスも こない'},
+  illustrate:{en:'illustrate',ja:'さし絵',em:'🖌️', root:'en+leuk-',  ds:'さし絵に かいて「きろく」を のこす'},
+  direct :{en:'direct', ja:'導く',      em:'➡️', root:'dwis-+reg-',  ds:'分かれ道で まよわない'},
+  right  :{en:'right',  ja:'正しい',    em:'✅', root:'reg-',        ds:'正しさが うたがいを はらす'},
+  rule   :{en:'rule',   ja:'規則',      em:'📏', root:'reg-',        ds:'規則正しい 夜の見はり'},
+  donation:{en:'donation',ja:'寄付',    em:'🎁', root:'dō-',         ds:'門番に 寄付して 通る'},
+  pardon :{en:'pardon', ja:'許し',      em:'🕊️', root:'per1+dō-',   ds:'「ゆるし」を 与えられる'},
+  date   :{en:'date',   ja:'日付',      em:'📅', root:'dō-',         ds:'「与えられた日」— おくれを 1日とりもどす'},
+};
+const SPK = {
+  kapu :{em:'🧢', nm:'カプト(あたま)', img:CHAR_IMG.kaput},
+  wido :{em:'👁️', nm:'ウェイド(見る・知る)', img:CHAR_IMG.weid},
+  fabo :{em:'💬', nm:'バーファ(話す)', img:CHAR_IMG.bha},
+  gwei :{em:'🌱', nm:'グウェイ(生きる)', img:CHAR_IMG.gwei},
+  regu :{em:'📏', nm:'レーグ(まっすぐ)', img:CHAR_IMG.reg},
+  doh  :{em:'🎁', nm:'ドー(与える)', img:CHAR_IMG.do},
+  kero :{em:'💨', nm:'ケロ(はしるのぬし)', img:CHAR_IMG.kers},
+  luka :{em:'💡', nm:'ルカ(ひかりのぬし)', img:CHAR_IMG.leuk},
+  deiko:{em:'👉', nm:'デイコ(しめすのぬし)', img:CHAR_IMG.deik},
+  peku :{em:'🍳', nm:'ペク(シェフ)', img:CHAR_IMG.pekw},
+  chef :{em:'👨‍🍳', nm:'シェフ(ことばの料理人)', img:AST+'word/chef.png'},
+  gate :{em:'🧌', nm:'門番', img:NP_IMG.boss},
+  guard:{em:'💂', nm:'村の番兵', img:NP_IMG.guard},
+  miller:{em:'🧑‍🌾', nm:'こなひき'},
+  crow :{em:'🐦‍⬛', nm:'カラス'},
+  inv  :{em:'👤', nm:'見えないひと', img:NP_IMG.inv},
+  party:{em:'👣', nm:'一行'},
+};
+const ETY2SPK = {kaput:'kapu', weid:'wido', bha:'fabo', gwei:'gwei', reg:'regu', do:'doh', kers:'kero', leuk:'luka', deik:'deiko', pekw:'peku'};
+const REDWORDS = {
+  hungry:{ja:'はらぺこ', hint:'食べもののことば(kaputの家系のキャベツなど)を'},
+  dark  :{ja:'暗い',     hint:'くらやみでも「見える」ことばが あれば…'},
+  see   :{ja:'見る',     hint:'「見る」の家系(vision, witness…)なら、姿なきものも'},
+  witness:{ja:'証人',    hint:'「見た者」がいれば、うたがいは はれる'},
+};
+const FOOD_JA = {cabbage:'キャベツ', bread:'パン'};
+const FOOD_EN = {cabbage:'cabbage', bread:'bread'};
+const FOOD_EM = {cabbage:'🥬', bread:'🍞'};
+
+/* ============ セーブ ============ */
+const KEY='ej_save1';
+let SAVE = load();
+function load(){ try{ const s=JSON.parse(localStorage.getItem(KEY)) || {}; return {runs:s.runs||[], heard:s.heard||[], zukan:s.zukan||'none', lang:s.lang||'en'}; }catch(e){ return {runs:[],heard:[],zukan:'none',lang:'en'}; } }
+function save(){ localStorage.setItem(KEY, JSON.stringify(SAVE)); }
+
+/* ============ 準備画面 ============ */
+let selEty=[];
+function renderPrep(){
+  // 出発メンバー枠(2つ)
+  for(let i=0;i<4;i++){
+    const slot=document.getElementById('ps'+i);
+    const id=selEty[i];
+    if(id){ const e=ETYMONS[id];
+      slot.className='pslot filled';
+      slot.innerHTML=`<img class="face" src="${CHAR_IMG[id]}" onerror="this.outerHTML='<span style=font-size:64px>${e.em}</span>'">
+        <span class="snm" style="color:${e.col}">${e.nm}</span>
+        <span class="sdesc">${e.ds}</span>
+        <span class="sdeck">${ETY_DECK[id].map(w=>`<span class="bagIt" title="${w}(${ITEMS[w].ja})">${wordImgHTML(w,ITEMS[w].em)}</span>`).join('')}</span>`;
+      slot.onclick=()=>{ selEty.splice(i,1); renderPrep(); };
+      slot.title='タップで はずす';
+    } else {
+      slot.className='pslot';
+      slot.innerHTML=`<span class="q">＋</span><span class="slbl">ぬし ${i+1} をえらぶ</span>`;
+      slot.onclick=null; slot.title='';
+    }
+  }
+  // ロスター(ミニデッキつき)
+  const eg=document.getElementById('etyGrid'); eg.innerHTML='';
+  for(const id in ETYMONS){ const e=ETYMONS[id];
+    const d=document.createElement('div'); d.className='pick ety'+(selEty.includes(id)?' sel':'');
+    d.innerHTML=`<div class="imgbox"><img src="${CHAR_IMG[id]}" onerror="this.outerHTML='<span class=fbem>${e.em}</span>'"></div><span class="nm" style="color:${e.col}">${e.nm}</span><span class="ds">${e.ds}</span><span class="mini">${ETY_DECK[id].map(w=>WORD_IMG[w]?`<img src="${AST}word/${WORD_IMG[w]}" title="${w}">`:`<span>${ITEMS[w].em}</span>`).join('')}</span>`;
+    d.onclick=()=>{ const i=selEty.indexOf(id); if(i>=0)selEty.splice(i,1); else if(selEty.length<4)selEty.push(id); renderPrep(); };
+    eg.appendChild(d);
+  }
+  const hb=document.getElementById('heardBox');
+  if(SAVE.heard.length){ hb.innerHTML=SAVE.heard.map(w=>`<span class="chip">${w} <small>${(REDWORDS[w]||{}).ja||''} … ${(REDWORDS[w]||{}).hint||''}</small></span>`).join(''); }
+  else hb.innerHTML='<span class="zline" style="color:#8a7a60">まだない。</span>';
+  const zb=document.getElementById('zukanBox');
+  zb.innerHTML = SAVE.zukan==='shoten' ? '👤 <b>invisible</b>(見えない)… <b>昇天ずみ!</b> ことばに戻って ずかんに ねむっている。'
+    : SAVE.zukan==='record' ? '👤 <b>???</b> … 映像の きろく だけがある。姿は まだ ことばに なっていない。'
+    : '👤 <b>???</b> … きりのみさきに、なにかが いるらしい。';
+  document.getElementById('goBtn').disabled = !(selEty.length>=1);
+}
+
+/* ============ シミュレーション(コマ単位・短文) ============ */
+function W(id){ return `<b class="w">${FOOD_EN[id]||(ITEMS[id]&&ITEMS[id].en)||id}</b>`; }
+function R(w,disp){ return `<span class="redw" data-w="${w}">${disp||w}</span>`; }
+function pickv(arr){ return arr[Math.floor(Math.random()*arr.length)]; }
+
+function simulate(ety){
+  const itm=deckOf(ety);
+  const hasE=id=>ety.includes(id), has=id=>itm.includes(id);
+  const names=ety.map(id=>ETYMONS[id].en);
+  const lead=names[0]||'Poka';
+  const spkLead=ETY2SPK[ety[0]]||'party';
+  const chef=has('chef');
+  const tough=hasE('gwei');
+  const HURT=tough?-18:-35, FRIGHT=tough?-10:-20;
+  const days=[]; let curDay=null, curP=null;
+  function day(label){ curDay={label, panels:[]}; days.push(curDay); }
+  function P(k){ curP={k:k||{}, sents:[]}; curDay.panels.push(curP); return curP; }
+  function add(en,ja,spk,fx){ curP.sents.push({en,ja,spk:spk||null,fx:fx||null}); }
+
+  const breadBase=2+(has('carry')?1:0);
+  const pantry=[{id:'bread',p:chef?breadBase*2:breadBase}];
+  if(has('cabbage')) pantry.push({id:'cabbage',p:chef?2:1});
+  let hungryStreak=0, crowStole=null, crowEverStole=false, result='', recorded=false, resonance=false;
+  let recoverUsed=!(has('quick')||has('horse')||has('date')), reviveUsed=!has('revive'), surviveUsed=!has('survive'), fameUsed=!has('fame');
+  function tryRecover(){
+    if(recoverUsed) return false;
+    recoverUsed=true;
+    if(has('quick')) add(`But ${W('quick')} — the word that once meant "alive" — ran the road for them. Day saved.`,`でも「quick」――もとは「生きている」ということば――が 道を かけてくれた。一日 セーフ。`,null,{play:'quick'});
+    else if(has('date')) add(`But ${W('date')} — "a given day" — gave the lost day right back.`,`でも「date」――もとは「与えられた日」――が、うしなった一日を そのまま あたえかえしてくれた。`,'doh',{play:'date'});
+    else add(`But ${W('horse')} galloped the lost hours back. Day saved.`,`でも 馬が うしなった時間を かけもどしてくれた。一日 セーフ。`,'kero',{play:'horse'});
+    return true;
+  }
+
+  const MEAL_COST = ety.length<=2 ? 1 : 2; // なかまが多いほど 夕ごはんも 多くいる
+  const EAT_ORDER=['bread','cabbage'];
+  function dinner(){
+    const avail=pantry.reduce((t,x)=>t+x.p,0);
+    if(avail>=MEAL_COST){
+      const eaten=[]; let need=MEAL_COST;
+      for(const id of EAT_ORDER){ const f=pantry.find(x=>x.id===id&&x.p>0);
+        while(f&&f.p>0&&need>0){ f.p--; need--; eaten.push(id); } if(!need) break; }
+      P({bg:'night', item:eaten[0]});
+      const menu=[...new Set(eaten)];
+      const menuEn=menu.map(id=>W(id)).join(' and '), menuJa=menu.map(id=>FOOD_JA[id]).join('と');
+      if(chef) add(`The ${W('chef')} stepped out of the word and cooked the ${menuEn}. Best dinner on the road.`,`「chef」の ことばから 料理人が出てきて、${menuJa}を 料理した。旅いちばんの 夕ごはん。`,'chef',{consume:eaten,hg:100,night:true,mo:2});
+      else add(`Dinner: the ${menuEn}, shared around the fire.`,`夕ごはんは ${menuJa}。たき火を かこんで わけあった。`,null,{consume:eaten,hg:100,night:true,mo:1});
+      if(has('fable')) add(`Then one ${W('fable')} before sleep. Everyone slept well.`,`ねるまえに 寓話をひとつ。みんな ぐっすり ねむれた。`,'fabo',{mo:1});
+      hungryStreak=0; return true;
+    }
+    if(avail>0){ // あるが たりない
+      const eaten=[]; for(const f of pantry){ while(f.p>0){ f.p--; eaten.push(f.id); } }
+      P({bg:'night', item:eaten[0]});
+      add(`Dinner, but not enough for ${ety.length}. Everyone had two bites and one sigh: ${R('hungry')}.`,`夕ごはんは あった。でも ${ety.length}たいには たりない。みんな ふたくちと、ためいき ひとつ。「はらぺこ」。`,null,{consume:eaten,hp:HURT,hg:30,night:true,mo:-1});
+      hungryStreak++;
+      if(hungryStreak>=2){ if(!surviveUsed){ surviveUsed=true; add(`${W('survive')} burned quietly. One more day.`,`「survive」が しずかに もえた。あと一日だけ。`,null,{play:'survive'}); return true; }
+        add(`"Home," said ${lead}. Nobody argued.`,`「帰ろう」と${lead}。はんたいは なかった。`,spkLead);
+        result='hunger'; return false; }
+      return true;
+    }
+    hungryStreak++;
+    if(hungryStreak===1){
+      P({bg:'night'});
+      add(`No dinner tonight. Every stomach said it: ${R('hungry')}.`,`こんやは 夕ごはんが ない。おなかが 言っていた。「はらぺこ」と。`,null,{hp:HURT,hg:8,night:true,mo:-1});
+      if(!reviveUsed){ reviveUsed=true; add(`But ${W('revive')} glowed soft green. Nobody fell.`,`でも「revive」が みどりに ひかった。だれも たおれなかった。`,null,{hp:35,play:'revive'}); }
+      return true;
+    }
+    if(!surviveUsed){ surviveUsed=true;
+      P({bg:'night', item:'survive'});
+      add(`Two nights without dinner — but ${W('survive')} burned quietly. One more day.`,`夕ごはんぬき 2ばんめ――でも「survive」が しずかに もえた。あと一日だけ、ふんばれる。`,null,{hp:HURT,hg:4,night:true,mo:-1});
+      return true;
+    }
+    P({bg:'night'});
+    add(`Two nights without dinner. "Home," said ${lead}. Nobody argued.`,`夕ごはんぬきが 2ばん つづいた。「帰ろう」と${lead}。はんたいは なかった。`,spkLead,{hp:HURT,night:true,mo:-1});
+    result='hunger';
+    return false;
+  }
+  function nightCrow(){
+    if(has('captain')){ P({bg:'night', item:'captain'});
+      add(`${W('captain')} set the night watch. A crow came, saw, and left.`,`船長が 夜の見はりを 立てた。カラスは 来て、見て、あきらめた。`,'kapu',{night:true,play:'captain'}); return; }
+    if(hasE('weid')){ P({bg:'night'});
+      add(`A crow crept close. Weido opened one eye. It left, offended.`,`カラスが しのびよった。ウェイドが かた目を ひらいた。カラスは 心外そうに 去った。`,'wido',{night:true}); return; }
+    if(has('luna')){ P({bg:'night', item:'luna'});
+      add(`${W('luna')} hung bright over the camp. Nothing dared to sneak.`,`「Luna」が キャンプの上に あかるく かかった。しのびよる ものは いなかった。`,'luka',{night:true,play:'luna'}); return; }
+    if(has('rule')){ P({bg:'night', item:'rule'});
+      add(`${W('rule')} wrote the night-watch schedule, perfectly straight. The crow found no gap in it.`,`「rule」が 見はりの当番表を まっすぐに 書いた。カラスの つけいる すきまは なかった。`,'regu',{night:true,play:'rule'}); return; }
+    const t=pantry.find(f=>f.p>0);
+    if(t){ t.p--; crowStole=t.id; crowEverStole=true; }
+  }
+  function morning(){
+    if(crowStole){ P({bg:'exp', np:'crow', item:crowStole, itemGone:true});
+      add(`Morning. The ${W(crowStole)} was gone — only small black feathers left.`,`あさ。${FOOD_JA[crowStole]}が きえていた。のこっていたのは 小さな黒い羽根だけ。`,'crow',{stolen:crowStole,mo:-1});
+      crowStole=null;
+    }
+    if(!fameUsed){ fameUsed=true; pantry.push({id:'bread',p:1});
+      P({bg:'exp', item:'fame'});
+      add(`A fan found them even here. "${lead}! I love your journeys!" — and left fresh bread.`,`こんなところにも ファンが いた。「${lead}さん! 旅、いつも見てます!」――やきたてのパンを おいていった。`,null,{gain:{id:'bread',p:1},play:'fame',mo:1});
+    }
+  }
+
+  /* ---- Day 1 ---- */
+  day('Day 1');
+  P({bg:'exp'});
+  add(`Off to the Misty Cape — ${names.join(' and ')||'one small walker'}, and a bag of ${itm.length} words.`,`きりのみさきへ、しゅっぱつ! ${ety.map(id=>ETYMONS[id].nm).join('と')||'ひとり'}、かばんには ことばが${itm.length}つ。`);
+  // 門番
+  P({bg:'exp', np:'boss'});
+  add(`A gatekeeper as big as a door: "I'm ${R('hungry')}. Toll: one food."`,`とびらみたいに 大きな門番。「はらが へった。通行りょうは 食べもの ひとつ」`,'gate');
+  const gift=pantry.find(f=>f.id==='cabbage');
+  if(gift){ pantry.splice(pantry.indexOf(gift),1);
+    curP.k.item='cabbage';
+    add(`${lead} paid with the ${W('cabbage')}. One bite. "Pass."`,`${lead}が キャベツで はらった。ひとくち。「とおれ」`,spkLead,{lose:'cabbage'});
+  } else if(has('fable')){
+    curP.k.item='fable';
+    add(`Bhafa told a ${W('fable')} about a whale who hated water. The bridge shook with laughter. "Pass!"`,`バーファが「水ぎらいのクジラ」の寓話を かたった。橋が わらいで ゆれた。「とおれ!」`,'fabo',{play:'fable'});
+  } else if(has('donation')){
+    curP.k.item='donation';
+    add(`Doh held out a ${W('donation')} — giving is his family's whole business. The gatekeeper blinked, bowed, and opened the gate.`,`ドーが「donation」を さしだした。あたえることこそ この家系の 本業である。門番は 目をぱちくりさせて、おじぎをして、門を あけた。`,'doh',{play:'donation'});
+  } else if(has('teach')){
+    curP.k.item='teach';
+    add(`Deiko chose to ${W('teach')} him a brand-new word instead: "snack." The gatekeeper repeated it, delighted, and opened the gate.`,`デイコは かわりに あたらしい ことばを 教えた。「スナック」。門番は うれしそうに くりかえして、門を あけた。`,'deiko',{play:'teach'});
+  } else {
+    add(`Nothing to give. They climbed the cold hills instead — one day lost.`,`わたせるものが ない。さむい丘を こえるしかなく、一日 むだにした。`);
+    if(!tryRecover()){ if(!dinner()) return fin(); day('(lost day)'); }
+  }
+  if(result!=='hunger' && !dinner()) return fin();
+  nightCrow();
+
+  /* ---- Day 2 ---- */
+  if(result==='hunger') return fin();
+  day('Day 2');
+  morning();
+  P({bg:'rock'});
+  add(`The road forked by a bent pine.`,`まがった松のところで、道が ふたつに わかれた。`);
+  if(hasE('kaput')) add(`Kaputo sniffed the wind and pointed. Right, as always.`,`カプトが 風のにおいを かいで、ゆびさした。いつもどおり 正解。`,'kapu');
+  else if(has('course')){ curP.k.item='course';
+    add(`The word ${W('course')} lay on the map like an arrow. No wrong turns today.`,`「course」の ことばが 地図のうえに 矢じるしみたいに のった。きょうは まよわない。`,'kero',{play:'course'}); }
+  else if(has('direct')){ curP.k.item='direct';
+    add(`${W('direct')} pulled the road straight. No wrong turns.`,`「direct」が 道を まっすぐに した。まよいようが なかった。`,'regu',{play:'direct'}); }
+  else {
+    add(`They chose wrong — a wall of thorns, and a lost day.`,`えらんだほうが はずれ。いばらのかべで、一日 むだに。`);
+    if(!tryRecover()){ if(!dinner()) return fin(); day('(lost day)'); }
+  }
+  if(result!=='hunger' && !dinner()) return fin();
+  nightCrow();
+
+  /* ---- Day 3 ---- */
+  if(result==='hunger') return fin();
+  day('Day 3');
+  morning();
+  P({bg:'rock'});
+  add(`A cave cut through the hill — a shortcut, but ${R('dark')} inside.`,`丘を つらぬく ほらあな。近道だけど、なかは まっくら。`);
+  if(has('illuminate')){ curP.k.item='illuminate';
+    add(`${W('illuminate')} filled the cave with warm light, wall to wall. Straight through.`,`「illuminate」が ほらあなを はしからはしまで あたたかく てらした。まっすぐ 通過。`,'luka',{play:'illuminate'}); }
+  else if(has('vision')){ curP.k.item='vision';
+    add(`Darkness means nothing to ${W('vision')}. Straight through.`,`「vision」に くらやみは 関係ない。まっすぐ 通りぬけた。`,null,{play:'vision'}); }
+  else add(`They took the long way around.`,`とおまわりを えらんだ。`);
+  // 村の疑い
+  P({bg:'exp', np:'guard'});
+  add(`In the village: "A pie was stolen last night! It was you!"`,`村で 番兵が。「ゆうべ パイが ぬすまれた! おまえたちだな!」`,'guard');
+  if(has('captain')){ curP.k.item='captain';
+    add(`Then he saw the ${W('captain')}'s word, stood straight, and saluted. "Carry on, Captain."`,`そこで「captain」の ことばに 気づき、しゃんと 立って 敬礼した。「しつれいしました、船長どの」`,'guard',{play:'captain'});
+  } else if(has('witness')){ curP.k.item='witness';
+    add(`An old miller raised a floury hand: "I am a ${W('witness')}. They slept by the river."`,`こなだらけの手が あがった。「わしが 証人だ。この人たちは 川べで ねとった」`,'miller',{play:'witness'});
+  } else if(has('video')){ curP.k.item='video';
+    add(`The ${W('video')} had filmed the night — the thief was a crow with a whole pie.`,`「video」が 夜を うつしていた――どろぼうは、パイを かかえた カラス。`,null,{play:'video'});
+    if(crowEverStole) add(`"THE SAME CROW," said everyone.`,`「あの カラス だ」。ぜんいんの こえが そろった。`,'party');
+  } else if(has('right')){ curP.k.item='right';
+    add(`Regu raised the word ${W('right')}. It stood perfectly straight.`,`レーグが「right」を かかげた。それは まっすぐに 立った。`,'regu',{play:'right'});
+    add(`The guard looked at it, then at his own crooked whistle, and let them pass.`,`番兵は それを 見て、それから じぶんの まがった ふえを 見て、通してくれた。`,'guard');
+  } else if(has('pardon')){ curP.k.item='pardon';
+    add(`Doh offered the word ${W('pardon')} — "a gift of forgiveness, in advance." The guard took it, confused but soothed.`,`ドーが「pardon」を さしだした。「まえもって あたえる、ゆるしの おくりもの」。番兵は こんがらがりながらも、なだめられて 受け取った。`,'doh',{play:'pardon'});
+  } else if(has('judge')){ curP.k.item='judge';
+    add(`Deiko raised the word ${W('judge')}. It weighed the fact and the shout — and pointed at "not them."`,`デイコが「judge」の ことばを かかげた。ことばは 事実と どなりごえを はかりにかけて――「このひとたちではない」を ゆびさした。`,'deiko',{play:'judge'});
+    add(`The guard put away his whistle, embarrassed.`,`番兵は ばつがわるそうに ふえを しまった。`,'guard');
+  } else if(hasE('bha')){
+    add(`Bhafa described the pie so deliciously that the guard got hungry and forgot the crime.`,`バーファが パイを あんまり おいしそうに かたるので、番兵は はらがへって じけんを わすれた。`,'fabo');
+  } else {
+    add(`No ${R('witness')}, nothing. A day in the little jail.`,`証人も なにも ない。小さなろうやで 一日。`);
+    if(!tryRecover()){ if(!dinner()) return fin(); day('(lost day)'); }
+  }
+  if(result!=='hunger' && !dinner()) return fin();
+  nightCrow();
+
+  /* ---- 最終日: 岬 ---- */
+  if(result==='hunger') return fin();
+  day('Last Day');
+  morning();
+  P({bg:'sea', mist:true});
+  add(`The Misty Cape. Something is here — something that hates to be seen.`,`きりのみさき。なにかが いる――見られることが 大きらいな なにかが。`,hasE('weid')?'wido':null,{sea:true});
+  if(has('vision')||has('witness')){
+    const wd=has('vision')?'vision':'witness';
+    P({bg:'sea', np:'inv', item:wd, mist:true, spark:'✨'});
+    if(wd==='vision') add(`${lead} raised ${W('vision')}. It opened like a great calm eye — and the invisible one was seen — all of it.`,`${lead}が「vision」を かかげた。それは 大きな しずかな目に ひらいて――見えないひとは、すっかり やさしく 見られた。`,spkLead,{play:'vision'});
+    else add(`${lead} raised ${W('witness')}. "Now there is one who saw." It stopped running.`,`${lead}が「witness」を かかげた。「もう『見た者』が いる」。それは にげるのを やめた。`,spkLead,{play:'witness'});
+    add(`It bowed — and returned to words. <b class="w">invisible</b>: one who cannot be seen.`,`それは おじぎをして、ことばに もどった。invisible:「見ることの できないもの」。`,'inv',{tre:'invisible',mo:2});
+    if(hasE('weid')){ resonance=true; add(`Weido smiled. The family of seeing was all here.`,`ウェイドが ほほえんだ。「見る」の家系が、そろっていたから。`,'wido'); }
+    result='ascend';
+  } else if(has('cabbage')&&pantry.some(f=>f.id==='cabbage'&&f.p>0)){
+    const c=pantry.find(f=>f.id==='cabbage'); c.p=0;
+    P({bg:'sea', np:'inv', item:'cabbage', itemFloat:true, mist:true});
+    add(`${lead} threw the ${W('cabbage')} into the mist — and it STOPPED, floating in mid-air.`,`${lead}が キャベツを きりに 投げた――キャベツは 空中で ピタッと とまった。`,spkLead,{lose:'cabbage'});
+    add(`Something invisible was holding it. It ate the cabbage and fled, crunching.`,`見えない なにかが つかんでいる。そいつは キャベツを たべて、ぽりぽり いいながら にげていった。`,'inv');
+    if(has('video')){ recorded=true; add(`The ${W('video')} caught every crunch. The book gained a page of records.`,`「video」が その ぽりぽりを ぜんぶ とらえた。ずかんに「きろく」のページが ふえた。`,null,{tre:'record',play:'video',mo:1}); }
+    else if(has('illustrate')){ recorded=true; add(`Luka drew the white shape fast — ${W('illustrate')}! The book gained a picture record.`,`ルカが まっしろなすがたを 大いそぎで さし絵にした。ずかんに「きろく」の絵が のこった。`,'luka',{tre:'record',play:'illustrate',mo:1}); }
+    else add(`Nobody truly ${R('see')}d it. Next time.`,`だれも ほんとうには 見ていない。つぎこそ。`,spkLead);
+    result='repel';
+  } else if(has('prophet')){
+    P({bg:'sea', np:'inv', item:'prophet', mist:true});
+    add(`The ${W('prophet')} spoke into the mist: "Tomorrow, you WILL be seen."`,`「prophet」が きりに むかって 告げた。「あす、おまえは かならず 見られる」`,'fabo',{play:'prophet'});
+    add(`A horrified gasp — and it fled over the sea. The cape went quiet.`,`ぞっとした いきづかい――それは 海のむこうへ にげさった。みさきは しずかに なった。`,'inv',{mo:1});
+    add(`Nobody ${R('see')}d it, though. The book stayed empty.`,`でも だれも 見ては いない。ずかんは からのまま。`,null);
+    result='repel';
+  } else {
+    P({bg:'sea', mist:true});
+    add(`Nobody could ${R('see')} it — but it could see them. Cold laughter circled twice.`,`だれにも 見えない――でも むこうからは 見えている。つめたい わらいごえが、ふたまわり。`,'inv',{hp:FRIGHT,mo:-2});
+    add(`They ran all the way down the hill.`,`一行は 丘を いっきに かけおりた。`);
+    result='flee';
+  }
+
+  day('Going Home');
+  P({bg:'exp'});
+  if(result==='ascend') add(`They walked home. In the bag: one new word — <b class="w">invisible</b>.`,`帰りみち。かばんの中には、あたらしい ことばが ひとつ――invisible。`);
+  else if(result==='repel') add(`"Next time," said ${lead}, "we bring the seeing kind of word." Even the bag nodded.`,`「つぎは『見る』の ことばを もってこよう」。かばんまで うなずいた気がした。`,spkLead);
+  else if(result==='hunger') add(`Nobody called it a defeat. ${lead} called it "research about dinner."`,`だれも「まけ」とは よばない。${lead}いわく「夕ごはんの けんきゅう」である。`,spkLead);
+  else add(`They walked home fast, already planning the next bag.`,`はやあしで 帰りながら、もう つぎの かばんの中身を かんがえていた。`);
+  return fin();
+  function fin(){ return {days, result, recorded, resonance, itm}; }
+}
+
+/* ============ コマ描画 ============ */
+function fxChips(fx){
+  if(!fx) return [];
+  const out=[];
+  const icon=id=>WORD_IMG[id]?`<img src="${AST}word/${WORD_IMG[id]}" onerror="this.outerHTML='${(ITEMS[id]&&ITEMS[id].em)||FOOD_EM[id]||'❓'}'">`:((ITEMS[id]&&ITEMS[id].em)||FOOD_EM[id]||'❓');
+  const nm=id=>FOOD_EN[id]||(ITEMS[id]&&ITEMS[id].en)||id;
+  if(fx.play)   out.push({cls:'use', html:`${icon(fx.play)} ${nm(fx.play)} をつかった`});
+  if(fx.lose)   out.push({cls:'use', html:`${icon(fx.lose)} ${nm(fx.lose)} をつかった`});
+  if(fx.consume){ (Array.isArray(fx.consume)?fx.consume:[fx.consume]).forEach(id=>out.push({cls:'use', html:`${icon(id)} ${nm(id)} をたべた`})); }
+  if(fx.stolen) out.push({cls:'dmg', html:`${icon(fx.stolen)} ${nm(fx.stolen)} を ぬすまれた!`});
+  if(fx.gain)   out.push({cls:'gain',html:`+ ${icon(fx.gain.id)} ${nm(fx.gain.id)}`});
+  if(fx.tre)    out.push({cls:'gain',html: fx.tre==='invisible'? `💎 <b>invisible</b> を てにいれた!` : `💎 きろく映像 を もちかえる`});
+  if(fx.hp){ const h=Math.max(1,Math.round(Math.abs(fx.hp)/20))*(fx.hp>0?1:-1);
+    out.push({cls: h<0?'dmg':'gain', html:`❤️ ${h>0?'+':''}${h}`}); }
+  if(fx.hg===100) out.push({cls:'gain',html:'🍖 まんぷく!'});
+  if(fx.mo) out.push({cls:'mood',html:`${fx.mo>0?'😊 +':'😟 '}${fx.mo}`});
+  return out;
+}
+function panelHTML(p, run, pend){
+  const k=p.k||{};
+  const bgUrl=BG_IMG[k.bg]||BG_IMG.exp;
+  const party=(run.ety||[]).slice(0,2).map(id=>`<img src="${CHAR_IMG[id]}" onerror="this.outerHTML='<span style=font-size:52px>${etyMeta(id).em}</span>'">`).join('');
+  const np=k.np? `<div class="knp${k.np==='inv'?' ghost':''}">${NP_IMG[k.np]?`<img src="${NP_IMG[k.np]}" onerror="this.outerHTML='<span class=npem>${NP_EM[k.np]}</span>'">`:`<span class="npem">${NP_EM[k.np]||'❓'}</span>`}</div>`:'';
+  const item=k.item? `<div class="kitem${k.itemGone?' gone':''}${k.itemFloat?' float':''}">${wordImgHTML(k.item,(ITEMS[k.item]&&ITEMS[k.item].em)||FOOD_EM[k.item]||'❓')}</div>`:'';
+  const caps=p.sents.map(s=>{
+    const spk=s.spk&&SPK[s.spk];
+    const chip=spk? (spk.img?`<span class="spkchip" title="${spk.nm}"><img src="${spk.img}" onerror="this.outerHTML='${spk.em}'"></span>`:`<span class="spkchip" title="${spk.nm}">${spk.em}</span>`):'';
+    return `<div class="kline${pend?' pend':''}">${chip}<span style="flex:1"><span class="txt">${s.en}</span><span class="jat">${s.ja}</span></span></div>`;
+  }).join('');
+  return `<div class="koma2${k.bg==='night'?' night':''}">
+    <div class="kbody"><div class="kbg" style="background-image:url('${bgUrl}')"></div>${k.mist?'<div class="kmist"></div>':''}<div class="kparty">${party}</div>${np}${item}${k.spark?`<div class="kspark">${k.spark}</div>`:''}</div>
+    <div class="kcap">${caps}</div>
+  </div>`;
+}
+function wireRedwords(scope){
+  scope.querySelectorAll('.redw').forEach(el=>{
+    if(SAVE.heard.includes(el.dataset.w)) el.classList.add('got');
+    el.onclick=(ev)=>{ ev.stopPropagation(); const w=el.dataset.w;
+      if(!SAVE.heard.includes(w)){ SAVE.heard.push(w); save(); toast(`👂 聞いたことば「${w}」(${(REDWORDS[w]||{}).ja||''})を おぼえた`); }
+      scope.querySelectorAll(`.redw[data-w="${w}"]`).forEach(x=>x.classList.add('got'));
+    };
+  });
+}
+
+/* ============ リアルタイム再生(絵日記) ============ */
+let playTimer=null;
+function startExpedition(run){
+  showScreen('exped');
+  const feed=document.getElementById('comicFeed');
+  const exRoot=document.getElementById('exped');
+  function scrollBottom(){ feed.scrollTop = feed.scrollHeight; }
+  const fill=document.getElementById('exFill');
+  const track=document.getElementById('exTrack');
+  const dayLbl=document.getElementById('exDayLbl');
+  const hpEl=document.getElementById('hpIcons'), hgEl=document.getElementById('hgIcons'), moEl=document.getElementById('moIcons');
+  const bagRow=document.getElementById('exBagRow'), treRow=document.getElementById('exTreRow');
+  feed.innerHTML='';
+  treRow.innerHTML='<span id="treEmpty" style="font-size:10px;color:#b0a488">まだない</span>';
+
+  // かばん
+  const bagState={};
+  function bagAdd(id,portions,isNew){
+    const em=(ITEMS[id]&&ITEMS[id].em)||FOOD_EM[id]||'❓';
+    const el=document.createElement('span'); el.className='bagIt'+(isNew?' new':''); el.title=id;
+    el.innerHTML=`${wordImgHTML(id,em)}${portions>1?`<span class="pips">×${portions}</span>`:''}`;
+    bagRow.appendChild(el); bagState[id]={el,p:portions};
+  }
+  bagRow.innerHTML='';
+  const chef=run.itm.includes('chef');
+  bagAdd('bread', chef?4:2);
+  for(const id of run.itm) bagAdd(id, id==='cabbage'&&chef?2:1);
+  function bagConsume(id){ const b=bagState[id]; if(!b)return; b.p--; const pip=b.el.querySelector('.pips');
+    if(b.p<=0){ b.el.classList.add('gone'); if(pip)pip.remove(); } else if(pip) pip.textContent='×'+b.p; else {} }
+  function bagLose(id){ const b=bagState[id]; if(b){ b.p=0; b.el.classList.add('gone'); const pip=b.el.querySelector('.pips'); if(pip)pip.remove(); } }
+  function bagGain(id,p){ const b=bagState[id];
+    if(b&&!b.el.classList.contains('gone')){ b.p+=p; let pip=b.el.querySelector('.pips'); if(!pip){pip=document.createElement('span');pip.className='pips';b.el.appendChild(pip);} pip.textContent='×'+b.p; return; }
+    bagAdd(id,p,true); }
+  function treAdd(kind){ const emp=document.getElementById('treEmpty'); if(emp)emp.remove();
+    const el=document.createElement('span'); el.className='bagIt new';
+    el.innerHTML = kind==='invisible'? wordImgHTML('invisible','👤') : '<span style="font-size:17px">🎞️</span>';
+    el.title = kind==='invisible'?'invisible ― ずかんへ':'きろく映像';
+    treRow.appendChild(el); }
+
+  // ゲージ
+  let hp=100,hg=80,mo=3;
+  function icons(el,n,full){ el.innerHTML=Array.from({length:5},(_,i)=>`<span${i<n?'':' class="off"'}>${full}</span>`).join(''); }
+  function setHp(v){ hp=Math.max(0,Math.min(100,v)); icons(hpEl,Math.max(0,Math.round(hp/20)),'❤️'); }
+  function setHg(v){ hg=Math.max(0,Math.min(100,v)); icons(hgEl,Math.max(0,Math.round(hg/20)),'🍖'); }
+  function setMo(v){ mo=Math.max(0,Math.min(5,v)); icons(moEl,mo,'😊'); }
+  setHp(100); setHg(80); setMo(3);
+  function applyFx(fx){ if(!fx)return;
+    if(fx.hp!==undefined)setHp(hp+fx.hp);
+    if(fx.hg!==undefined)setHg(fx.hg);
+    if(fx.mo!==undefined)setMo(mo+fx.mo);
+    if(fx.lose)bagLose(fx.lose);
+    if(fx.consume){ (Array.isArray(fx.consume)?fx.consume:[fx.consume]).forEach(bagConsume); }
+    if(fx.stolen)bagConsume(fx.stolen);
+    if(fx.gain)bagGain(fx.gain.id,fx.gain.p||1);
+    if(fx.tre)treAdd(fx.tre);
+  }
+
+  // 距離バー
+  track.querySelectorAll('.tdot').forEach(e=>e.remove());
+  const nDays=run.days.length;
+  for(let i=0;i<nDays;i++){ const d=document.createElement('i'); d.className='tdot'; d.style.left=(nDays<2?100:(i/(nDays-1)*100))+'%'; track.appendChild(d); }
+
+  // 言語
+  function applyLang(){ exRoot.classList.remove('lang-en','lang-both','lang-ja'); exRoot.classList.add('lang-'+SAVE.lang);
+    document.querySelectorAll('#exLangBtns .lb').forEach(b=>b.classList.toggle('on',b.dataset.lang===SAVE.lang)); }
+  document.querySelectorAll('#exLangBtns .lb').forEach(b=>{ b.onclick=()=>{ SAVE.lang=b.dataset.lang; save(); applyLang(); }; });
+  applyLang();
+
+  // 再生: 1タップ=1コマ。コマ内の行は自動で順に流れ、タップで残りを即時表示
+  const q=[];
+  run.days.forEach((d,di)=>{ q.push({t:'day',label:d.label,di});
+    d.panels.forEach(p=>q.push({t:'panel',p}));
+  });
+  let qi=0, done=false, waiting=false, typer=null, auto=false, autoT=null, instant=false;
+  let curCaps=null, capIdx=0, curPanelEl=null, curPanel=null;
+  const tapNext=document.getElementById('tapNext');
+  function setCtrl(state){
+    tapNext.classList.remove('bob','dim');
+    if(state==='typing'){ tapNext.textContent='▶▶ ぜんぶ 表示'; tapNext.classList.add('dim'); }
+    else if(state==='close'){ tapNext.textContent='📖 タップで 本にとじる'; tapNext.classList.add('bob'); }
+    else { tapNext.textContent='▼ タップで つぎへ'; tapNext.classList.add('bob'); }
+  }
+  function wrapChars(root,out){
+    [...root.childNodes].forEach(n=>{
+      if(n.nodeType===3){
+        const frag=document.createDocumentFragment();
+        for(const ch of n.textContent){ const sp=document.createElement('span'); sp.className='ch'; sp.textContent=ch; frag.appendChild(sp); out.push(sp); }
+        n.replaceWith(frag);
+      } else if(n.nodeType===1) wrapChars(n,out);
+    });
+  }
+  function typeLine(lineEl,onDone){
+    const spans=[];
+    lineEl.querySelectorAll('.txt,.jat').forEach(node=>wrapChars(node,spans));
+    let i=0, cb=onDone;
+    const iv = instant? null : setInterval(()=>{ if(i>=spans.length){ fin(); return; } spans[i++].classList.add('on'); },24);
+    if(instant) setTimeout(fin,0);
+    function fin(){ if(iv)clearInterval(iv); spans.forEach(sp=>sp.classList.add('on')); const c=cb; cb=null; if(c)c(); }
+    return {finish:fin};
+  }
+  function emitChips(fx){
+    const chips=fxChips(fx);
+    if(!chips.length) return;
+    let row=curPanelEl._fxrow;
+    if(!row){ row=document.createElement('div'); row.className='fxrow'; curPanelEl.after(row); curPanelEl._fxrow=row; }
+    chips.forEach((c,i)=>{ const d=document.createElement('span'); d.className='fxchip '+c.cls; d.style.animationDelay=(instant?0:i*0.15)+'s'; d.innerHTML=c.html; row.appendChild(d); });
+    scrollBottom();
+  }
+  function nextCap(){
+    if(done) return;
+    if(!curCaps || capIdx>=curCaps.length){
+      curCaps=null; instant=false; waiting=true;
+      setCtrl(qi>=q.length? 'close':'next');
+      if(auto){ clearTimeout(autoT); autoT=setTimeout(()=>{ if(waiting&&!done) nextOrFinish(); }, 1300); }
+      return;
+    }
+    const sIdx=capIdx, sent=curCaps[sIdx];
+    capIdx++;
+    const line=curPanelEl.querySelectorAll('.kline')[sIdx];
+    if(!line){ nextCap(); return; }
+    line.classList.remove('pend'); wireRedwords(line);
+    typer=typeLine(line, ()=>{ typer=null;
+      applyFx(sent.fx); emitChips(sent.fx);
+      if(instant) nextCap(); else setTimeout(nextCap, 320);
+    });
+  }
+  function advanceBeat(){
+    if(done) return;
+    waiting=false; setCtrl('typing');
+    while(qi<q.length){
+      const e=q[qi++];
+      if(e.t==='day'){
+        dayLbl.textContent=e.label;
+        fill.style.width=(nDays<2?100:(e.di/(nDays-1)*100))+'%';
+        track.querySelectorAll('.tdot').forEach((d,i)=>d.classList.toggle('reached',i<=e.di));
+        setHg(Math.max(15,hg-25));
+        const bnd=document.createElement('div'); bnd.className='dayband'; bnd.textContent=e.label;
+        feed.appendChild(bnd); continue;
+      }
+      // panel: コマを丸ごと出して、行は自動再生
+      const div=document.createElement('div'); div.innerHTML=panelHTML(e.p, run, true);
+      const el=div.firstElementChild; feed.appendChild(el);
+      curPanel=e.p; curPanelEl=el; curCaps=e.p.sents; capIdx=0;
+      scrollBottom();
+      nextCap();
+      return;
+    }
+    waiting=true; setCtrl('close');
+  }
+  function nextOrFinish(){ if(qi>=q.length){ finish(); } else advanceBeat(); }
+  function onTap(){
+    if(done) return;
+    if(!waiting){ instant=true; if(typer) typer.finish(); return; } // コマの残りを全部出す
+    clearTimeout(autoT); nextOrFinish();
+  }
+  function finish(){ done=true; clearTimeout(autoT); openDiary(run); }
+  document.getElementById('exSkipBtn').onclick=(ev)=>{ ev.stopPropagation(); finish(); };
+  const autoBtn=document.getElementById('exAutoBtn');
+  autoBtn.textContent='▶ オート: OFF';
+  autoBtn.onclick=(ev)=>{ ev.stopPropagation(); auto=!auto; autoBtn.textContent=auto?'▶ オート: ON':'▶ オート: OFF';
+    if(auto&&waiting&&!done){ nextOrFinish(); } };
+  document.getElementById('exped').onclick=(ev)=>{ if(ev.target.closest('.exbtn,.lb,.redw,#tapNext')) return; onTap(); };
+  tapNext.onclick=(ev)=>{ ev.stopPropagation(); onTap(); };
+  setCtrl('typing');
+  advanceBeat();
+}
+
+/* ============ 出発 ============ */
+document.getElementById('goBtn').onclick=()=>{
+  const sim=simulate(selEty.slice());
+  const run={
+    no: SAVE.runs.length+1,
+    date: new Date().toLocaleDateString('ja-JP'),
+    ety: selEty.slice(), itm: sim.itm,
+    days: sim.days, result: sim.result, recorded: sim.recorded, resonance: sim.resonance,
+    v:4,
+  };
+  SAVE.runs.push(run);
+  if(sim.result==='ascend') SAVE.zukan='shoten';
+  else if(sim.recorded && SAVE.zukan==='none') SAVE.zukan='record';
+  save();
+  startExpedition(run);
+};
+
+/* ============ 日記(=絵日記をとじたもの) ============ */
+const RESULT_META = {
+  ascend:{cls:'b-great',label:'大成功 ― 昇天'},
+  repel :{cls:'b-ok',   label:'成功 ― おいはらった'},
+  flee  :{cls:'b-fail', label:'失敗 ― にげかえった'},
+  hunger:{cls:'b-fail', label:'失敗 ― はらぺこで撤退'},
+};
+function openDiary(run){
+  clearTimeout(playTimer);
+  const rd=document.getElementById('reader');
+  const meta=RESULT_META[run.result]||RESULT_META.flee;
+  let h=`<div class="diary lang-${SAVE.lang}" id="diaryRoot"><h2><span>第${run.no}回 きりのみさき遠征</span><span class="badge ${meta.cls}">${meta.label}</span></h2>`;
+  h+=`<div style="font-size:12px;color:#8a7a60">${run.date} ／ ${run.ety.map(id=>etyMeta(id).em+etyMeta(id).nm).join('・')||'なし'}</div>`;
+  h+=`<div class="langbtns">
+        <button class="lb" data-lang="en">English</button>
+        <button class="lb" data-lang="both">English+日本語</button>
+        <button class="lb" data-lang="ja">日本語</button>
+      </div>`;
+  if(run.v===4){
+    h+='<div id="comicRe">';
+    for(const d of run.days){
+      h+=`<div class="dayband">${d.label}</div>`;
+      for(const p of d.panels){ h+=panelHTML(p, run);
+        const chips=p.sents.flatMap(sn=>fxChips(sn.fx));
+        if(chips.length) h+='<div class="fxrow">'+chips.map(c=>`<span class="fxchip ${c.cls}">${c.html}</span>`).join('')+'</div>';
+      }
+    }
+    h+='</div>';
+  } else {
+    // 旧形式セーブ
+    for(const d of run.days||[]){
+      h+=`<div class="dayband" style="margin:10px auto 4px">${d.label}</div>`;
+      for(const s of d.sents||[]) h+=`<div class="sent">${s.en}<div style="font-size:11px;color:#8a7a60">${s.ja}</div></div>`;
+      if(d.koma&&d.koma.scene) h+=`<div class="koma"><div class="scene">${d.koma.scene}</div><div class="cap">${d.koma.cap}</div></div>`;
+    }
+  }
+  h+=`<div class="endsum">`;
+  if(run.result==='ascend') h+=`📖 <b>invisible</b> が ずかんに 入った!`+(run.resonance?` 「見る」の家系が そろった 共鳴の遠征だった。`:'');
+  else if(run.result==='repel') h+= run.recorded? `📹 姿の「きろく」を もちかえった。昇天には「見る」ことばが いるらしい。` : `おいはらったが、ずかんには のらなかった。`;
+  else h+=`もちかえったのは 経験と <span style="color:var(--red);font-weight:bold">赤いことば</span>。それで じゅうぶん。`;
+  h+=`</div><button class="tosh" id="backBtn">本だなへ しまう</button></div>`;
+  rd.innerHTML=h;
+  const root=document.getElementById('diaryRoot');
+  function applyLang(){ root.className='diary lang-'+SAVE.lang;
+    rd.querySelectorAll('.lb').forEach(b=>b.classList.toggle('on',b.dataset.lang===SAVE.lang)); }
+  rd.querySelectorAll('.lb').forEach(b=>{ b.onclick=()=>{ SAVE.lang=b.dataset.lang; save(); applyLang(); }; });
+  applyLang();
+  wireRedwords(rd);
+  document.getElementById('backBtn').onclick=()=>{ renderShelf(); showScreen('shelf'); setTab('shelf'); };
+  showScreen('reader');
+}
+
+/* ============ 本棚 ============ */
+function renderShelf(){
+  const sh=document.getElementById('shelf');
+  if(!SAVE.runs.length){ sh.innerHTML='<div class="panelbox"><div class="empty">まだ 絵日記が ない。さいしょの 遠征に 出よう。</div></div>'; return; }
+  let h='<div class="panelbox"><div class="secttl">📚 遠征絵日記の 本だな <small>いつでも よみかえせる</small></div>';
+  for(const run of [...SAVE.runs].reverse()){
+    const meta=RESULT_META[run.result]||RESULT_META.flee;
+    h+=`<div class="shelfrow" data-no="${run.no}"><span class="no">第${run.no}回</span><span class="ti">きりのみさき ― ${run.ety.map(id=>etyMeta(id).em).join('')||'∅'}</span><span class="badge ${meta.cls}">${meta.label}</span></div>`;
+  }
+  h+='</div>';
+  sh.innerHTML=h;
+  sh.querySelectorAll('.shelfrow').forEach(el=>{
+    el.onclick=()=>{ const run=SAVE.runs.find(r=>r.no==el.dataset.no); if(run) openDiary(run); };
+  });
+}
+
+/* ============ 画面切替・小物 ============ */
+function showScreen(id){ for(const s of ['prep','exped','reader','shelf']) document.getElementById(s).style.display=(s===id)?(s==='exped'?'flex':'block'):'none'; }
+/* IP360方式: 1920x1080固定ステージを等倍スケール */
+function fitApp(){ const sc=Math.min(innerWidth/1920, innerHeight/1080);
+  document.getElementById('app').style.transform=`translate(-50%,-50%) scale(${sc})`; }
+window.addEventListener('resize', fitApp);
+function setTab(t){ document.getElementById('tabPrep').classList.toggle('on',t==='prep'); document.getElementById('tabShelf').classList.toggle('on',t==='shelf'); }
+document.getElementById('tabPrep').onclick=()=>{ clearTimeout(playTimer); renderPrep(); showScreen('prep'); setTab('prep'); };
+document.getElementById('tabShelf').onclick=()=>{ clearTimeout(playTimer); renderShelf(); showScreen('shelf'); setTab('shelf'); };
+document.getElementById('resetBtn').onclick=()=>{ if(confirm('絵日記・聞いたことば・ずかんを ぜんぶ けします。いい?')){ SAVE={runs:[],heard:[],zukan:'none',lang:SAVE.lang}; save(); renderPrep(); toast('まっさらに なった。'); } };
+let toastT=null;
+function toast(msg){ const t=document.getElementById('toast'); t.textContent=msg; t.classList.add('show'); clearTimeout(toastT); toastT=setTimeout(()=>t.classList.remove('show'),2600); }
+
+fitApp();
+renderPrep();
+</script>
+</body>
+</html>

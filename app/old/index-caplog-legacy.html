@@ -1,0 +1,3353 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no">
+<title>Wild Wordopia</title>
+<style>
+:root{
+  --ink:#1a1228;--parchment:#f5f0e8;--gold:#c8901a;--gold-light:#f0c84a;
+  --wild-green:#2d6a4f;--wild-blue:#1d3557;--accent:#e63946;
+  --card-bg:#fffdf7;--shadow:rgba(0,0,0,.18);
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--ink);font-family:'Georgia',serif;overflow:hidden;
+  display:flex;justify-content:center;align-items:center;min-height:100dvh}
+#app{width:min(390px,100vw);height:100dvh;position:relative;overflow:hidden;
+  display:flex;flex-direction:column;background:#1e1030;
+  margin:0 auto;}
+
+/* ── META SCREENS (home/wildlist/etc) ── */
+.meta-screen{position:absolute;inset:0;display:flex;flex-direction:column;
+  opacity:0;pointer-events:none;transition:opacity .2s;z-index:20}
+.meta-screen.active{opacity:1;pointer-events:auto}
+
+/* HOME */
+#home{background:linear-gradient(160deg,#0d1b2a 0%,#1d3557 60%,#2d6a4f 100%)}
+.home-sky{position:absolute;inset:0;overflow:hidden}
+.star{position:absolute;border-radius:50%;background:#fff;animation:twinkle 2s ease-in-out infinite}
+@keyframes twinkle{0%,100%{opacity:.3;transform:scale(1)}50%{opacity:1;transform:scale(1.3)}}
+.home-ground{position:absolute;bottom:0;left:0;right:0;height:35%;
+  background:linear-gradient(180deg,#2d6a4f,#1a4a2e);border-radius:60% 60% 0 0 / 20px 20px 0 0}
+.home-header{position:relative;z-index:10;padding:16px 18px 8px;
+  display:flex;align-items:center;justify-content:space-between}
+.game-title{font-size:22px;font-weight:700;color:var(--gold-light);
+  text-shadow:0 0 20px rgba(200,144,26,.5);letter-spacing:1px}
+.player-level{background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.2);
+  border-radius:20px;padding:4px 12px;font-size:12px;color:#fff;display:flex;gap:6px}
+.lv-num{color:var(--gold-light);font-weight:700}
+.wild-stage{position:absolute;bottom:30%;left:0;right:0;height:180px;
+  display:flex;align-items:flex-end;justify-content:center;gap:16px;z-index:5}
+.wild-figure{display:flex;flex-direction:column;align-items:center;cursor:pointer;transition:transform .2s}
+.wild-figure:active{transform:scale(.94)}
+.wild-sprite{position:relative;animation:wfloat 3s ease-in-out infinite}
+@keyframes wfloat{0%,100%{transform:translateY(0)}50%{transform:translateY(-8px)}}
+.wild-body{border-radius:50%;display:flex;align-items:center;justify-content:center;
+  font-size:28px;box-shadow:0 6px 20px var(--shadow)}
+.wild-name{font-size:9px;color:rgba(255,255,255,.85);margin-top:4px;
+  background:rgba(0,0,0,.35);padding:2px 7px;border-radius:8px;text-align:center;
+  max-width:70px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.wild-rarity{font-size:8px;color:var(--gold-light)}
+.wild-shadow{width:60%;height:6px;background:rgba(0,0,0,.3);border-radius:50%;margin:3px auto 0}
+.home-bottom{position:absolute;bottom:0;left:0;right:0;z-index:10;
+  background:linear-gradient(transparent,rgba(0,0,0,.7));padding:12px 16px 20px}
+.coin-row{display:flex;align-items:center;gap:8px;margin-bottom:10px}
+.coin-display{display:flex;align-items:center;gap:5px;background:rgba(200,144,26,.15);
+  border:1px solid rgba(200,144,26,.4);border-radius:20px;padding:4px 12px}
+.coin-icon{font-size:16px}.coin-val{font-size:14px;font-weight:700;color:var(--gold-light)}
+.collect-btn{margin-left:auto;background:linear-gradient(135deg,var(--gold),#a06010);
+  color:#fff;border:none;border-radius:16px;padding:5px 14px;font-size:11px;font-weight:700;cursor:pointer}
+.collect-btn:active{transform:scale(.96)}
+.nav-row{display:flex;gap:8px}
+.nav-btn{flex:1;padding:11px 6px;border:none;border-radius:14px;cursor:pointer;
+  font-size:12px;font-weight:700;transition:all .15s;display:flex;flex-direction:column;align-items:center;gap:3px}
+.nav-btn:active{transform:scale(.96)}
+.nav-btn.primary{background:linear-gradient(135deg,#e63946,#c01020);color:#fff;box-shadow:0 4px 12px rgba(230,57,70,.4)}
+.nav-btn.secondary{background:rgba(255,255,255,.1);color:rgba(255,255,255,.85);border:1px solid rgba(255,255,255,.15)}
+.nav-btn .btn-icon{font-size:20px}.nav-btn .btn-label{font-size:10px}
+.notif{position:absolute;top:-4px;right:-4px;background:#e63946;color:#fff;
+  font-size:9px;font-weight:700;border-radius:10px;padding:1px 5px;min-width:16px;
+  text-align:center;border:1.5px solid var(--ink)}
+
+/* SHARED SCREEN HEADER */
+.screen-header{background:rgba(255,255,255,.05);padding:14px 16px 12px;
+  display:flex;align-items:center;gap:12px;border-bottom:1px solid rgba(255,255,255,.08);flex-shrink:0}
+.back-btn{background:rgba(255,255,255,.1);border:none;color:#fff;border-radius:10px;
+  padding:6px 12px;font-size:13px;cursor:pointer}
+.screen-title{font-size:16px;font-weight:700;color:#fff}
+.screen-sub{font-size:11px;color:rgba(255,255,255,.5);margin-left:auto}
+
+/* WILD LIST */
+#wildlist{background:var(--ink)}
+.wild-grid{flex:1;overflow-y:auto;padding:12px;display:flex;flex-direction:column;gap:8px;scrollbar-width:none}
+.wild-grid::-webkit-scrollbar{display:none}
+.wild-card{background:var(--card-bg);border-radius:16px;padding:12px 14px;
+  display:flex;align-items:center;gap:12px;cursor:pointer;transition:transform .15s;border:2px solid transparent}
+.wild-card:active{transform:scale(.98)}
+.wild-card.adult{border-color:var(--gold)}
+.wc-sprite{font-size:40px;width:56px;height:56px;border-radius:14px;
+  display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.wc-info{flex:1;min-width:0}
+.wc-name{font-size:15px;font-weight:700;color:var(--ink)}
+.wc-family{font-size:10px;color:#888;margin-top:1px}
+.wc-tags{display:flex;gap:4px;margin-top:5px;flex-wrap:wrap}
+.tag{font-size:9px;padding:2px 7px;border-radius:8px;font-weight:700}
+.tag.rarity{background:#f0e8c8;color:#8a6010}
+.tag.type{background:#e8f0ff;color:#2060c0}
+.tag.sub{background:#f0e8f8;color:#7020a0}
+.wc-intimacy{margin-top:6px}
+.intimacy-bar{height:4px;background:#e0e0e0;border-radius:2px;overflow:hidden}
+.intimacy-fill{height:100%;border-radius:2px;background:linear-gradient(90deg,#f0c84a,#c8901a);transition:width .3s}
+.intimacy-label{font-size:9px;color:#aaa;margin-top:2px}
+.larva-badge{background:linear-gradient(135deg,#2d6a4f,#1a4a2e);color:#a0f0c0;font-size:9px;padding:2px 7px;border-radius:8px;font-weight:700}
+
+/* WORLD SELECT */
+#adventure-select{background:linear-gradient(180deg,#0d1b2a,#1a2040)}
+.world-list{flex:1;overflow-y:auto;padding:12px;display:flex;flex-direction:column;gap:10px;scrollbar-width:none}
+.world-list::-webkit-scrollbar{display:none}
+.world-card{border-radius:18px;overflow:hidden;cursor:pointer;transition:transform .15s;position:relative}
+.world-card:active{transform:scale(.98)}
+.world-card.locked{opacity:.5;pointer-events:none}
+.world-bg{height:100px;display:flex;align-items:flex-end;padding:10px 14px;position:relative}
+.world-info{background:rgba(255,255,255,.95);padding:10px 14px}
+.world-name{font-size:15px;font-weight:700;color:var(--ink)}
+.world-desc{font-size:10px;color:#666;margin-top:2px}
+.world-meta{display:flex;gap:8px;margin-top:6px;align-items:center}
+.world-tag{font-size:9px;background:#f0f0f0;padding:2px 8px;border-radius:8px;color:#555}
+.world-progress-text{font-size:11px;color:var(--gold);font-weight:700;margin-left:auto}
+.locked-label{position:absolute;top:10px;left:12px;background:rgba(0,0,0,.7);
+  color:#fff;font-size:10px;padding:3px 8px;border-radius:8px;z-index:3}
+
+/* FORMATION */
+#formation{background:var(--ink)}
+.cost-bar{padding:10px 16px;background:rgba(255,255,255,.05);display:flex;align-items:center;gap:8px;font-size:12px;color:rgba(255,255,255,.7)}
+.cost-fill{flex:1;height:8px;background:rgba(255,255,255,.1);border-radius:4px;overflow:hidden}
+.cost-used{height:100%;background:linear-gradient(90deg,var(--gold),var(--gold-light));border-radius:4px;transition:width .3s}
+.cost-num{font-size:13px;font-weight:700;color:var(--gold-light)}
+.formation-slots{padding:12px 16px;display:flex;gap:8px;flex-wrap:wrap;flex-shrink:0}
+.slot{width:calc(50% - 4px);height:80px;background:rgba(255,255,255,.05);border:2px dashed rgba(255,255,255,.2);
+  border-radius:14px;display:flex;align-items:center;justify-content:center;cursor:pointer;transition:all .15s;position:relative}
+.slot.filled{border-style:solid;border-color:var(--gold)}
+.slot:active{transform:scale(.97)}
+.slot-content{display:flex;align-items:center;gap:8px;padding:0 10px}
+.slot-empty-text{font-size:11px;color:rgba(255,255,255,.3)}
+.slot-remove{position:absolute;top:4px;right:4px;background:rgba(230,57,70,.8);border:none;color:#fff;border-radius:50%;width:18px;height:18px;font-size:10px;cursor:pointer}
+.roster-section{padding:8px 16px 4px;font-size:11px;color:rgba(255,255,255,.5);font-weight:700;letter-spacing:.5px;flex-shrink:0}
+.roster-list{flex:1;overflow-y:auto;padding:8px 16px;display:flex;flex-direction:column;gap:6px;scrollbar-width:none}
+.roster-list::-webkit-scrollbar{display:none}
+.roster-item{background:rgba(255,255,255,.06);border:1.5px solid rgba(255,255,255,.1);border-radius:12px;padding:8px 12px;display:flex;align-items:center;gap:10px;cursor:pointer;transition:all .15s}
+.roster-item:active{transform:scale(.98)}
+.roster-item.in-slot{opacity:.4;pointer-events:none}
+.ri-emoji{font-size:28px}
+.ri-info{flex:1}
+.ri-name{font-size:13px;font-weight:700;color:#fff}
+.ri-cost{font-size:10px;color:var(--gold-light)}
+.start-btn{margin:8px 16px 16px;padding:15px;background:linear-gradient(135deg,#e63946,#c01020);
+  color:#fff;border:none;border-radius:16px;font-size:16px;font-weight:700;cursor:pointer;flex-shrink:0}
+.start-btn:active{transform:scale(.98)}
+
+/* TRIAL */
+#trial{background:linear-gradient(160deg,#1a0838,#2d1060)}
+.trial-header{padding:20px 16px 10px;text-align:center;flex-shrink:0}
+.trial-title{font-size:20px;font-weight:700;color:var(--gold-light);margin-bottom:4px}
+.trial-wild{font-size:14px;color:rgba(255,255,255,.7)}
+.trial-progress{display:flex;gap:6px;padding:10px 16px;justify-content:center;flex-shrink:0}
+.trial-dot{width:24px;height:24px;border-radius:50%;border:2px solid rgba(255,255,255,.3);
+  display:flex;align-items:center;justify-content:center;font-size:10px;color:rgba(255,255,255,.4)}
+.trial-dot.done{background:var(--gold);border-color:var(--gold);color:var(--ink)}
+.trial-dot.active{border-color:var(--gold-light);color:var(--gold-light);box-shadow:0 0 10px rgba(240,200,74,.5)}
+.trial-question{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:16px;gap:16px}
+.trial-definition{background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.15);border-radius:16px;padding:16px 20px;text-align:center;max-width:300px}
+.trial-def-en{font-size:14px;color:#fff;line-height:1.6;font-style:italic}
+.trial-def-jp{font-size:11px;color:rgba(255,255,255,.5);margin-top:5px}
+.trial-family{font-size:11px;color:var(--gold-light);margin-top:4px}
+.syllable-answer{display:flex;gap:6px;justify-content:center;flex-wrap:wrap;min-height:44px;align-items:center}
+.syl-slot{background:rgba(255,255,255,.08);border:2px solid rgba(255,255,255,.25);border-radius:10px;
+  padding:6px 12px;font-size:16px;font-weight:700;color:#fff;cursor:pointer;min-width:36px;text-align:center;transition:all .15s}
+.syl-slot.placed{background:rgba(200,144,26,.2);border-color:var(--gold)}
+.syl-slot.correct{background:rgba(45,106,79,.3);border-color:#4caf80;color:#a0f0c0}
+.syl-slot.wrong{background:rgba(230,57,70,.2);border-color:#e63946;animation:tsshake .3s ease}
+@keyframes tsshake{0%,100%{transform:translateX(0)}25%{transform:translateX(-5px)}75%{transform:translateX(5px)}}
+.syllable-pool{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;padding:0 16px}
+.syl-btn{background:rgba(255,255,255,.1);border:1.5px solid rgba(255,255,255,.2);border-radius:10px;
+  padding:8px 14px;font-size:15px;font-weight:700;color:#fff;cursor:pointer;transition:all .15s}
+.syl-btn:active{transform:scale(.95)}
+.syl-btn.used{opacity:.25;pointer-events:none}
+.trial-actions{display:flex;gap:8px;padding:12px 16px;flex-shrink:0}
+.trial-clear-btn{background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.2);color:rgba(255,255,255,.6);border-radius:12px;padding:10px 16px;font-size:12px;cursor:pointer}
+.trial-check-btn{flex:1;background:linear-gradient(135deg,var(--gold),#a06010);color:#fff;border:none;border-radius:12px;padding:10px;font-size:14px;font-weight:700;cursor:pointer}
+.evolution-reveal{position:absolute;inset:0;background:linear-gradient(160deg,#1a0838,#2d1060);
+  display:none;flex-direction:column;align-items:center;justify-content:center;gap:16px;z-index:100}
+.evolution-reveal.show{display:flex;animation:revealIn .5s ease}
+@keyframes revealIn{from{opacity:0}to{opacity:1}}
+.evo-glow{font-size:80px;animation:glowPulse 1s ease-in-out infinite}
+@keyframes glowPulse{0%,100%{filter:drop-shadow(0 0 20px gold)}50%{filter:drop-shadow(0 0 40px gold)}}
+.evo-title{font-size:14px;color:rgba(255,255,255,.7);letter-spacing:2px}
+.evo-name{font-size:36px;font-weight:700;color:var(--gold-light);text-shadow:0 0 30px rgba(240,200,74,.8)}
+.evo-rarity{font-size:16px;color:var(--gold);margin-top:-8px}
+.evo-desc{font-size:12px;color:rgba(255,255,255,.6);text-align:center;max-width:260px;line-height:1.6}
+.evo-confirm{background:linear-gradient(135deg,var(--gold),#a06010);color:var(--ink);border:none;border-radius:20px;padding:12px 32px;font-size:15px;font-weight:700;cursor:pointer;margin-top:8px}
+
+
+/* GAME SCREENS */
+.screen{position:absolute;inset:0;display:flex;flex-direction:column;
+  opacity:0;pointer-events:none;transition:opacity .2s;z-index:10;overflow:hidden}
+.screen.active{opacity:1;pointer-events:auto}
+
+/* GAME */
+#sg{background:#1e1030}
+#tb{background:linear-gradient(180deg,#1a3560,#152848);padding:8px 10px 6px;flex-shrink:0;z-index:10}
+.trow{display:flex;align-items:center;justify-content:space-between;margin-bottom:6px}
+.ibtn{width:32px;height:32px;background:rgba(255,255,255,.12);border-radius:8px;
+  display:flex;align-items:center;justify-content:center;font-size:15px;
+  border:1.5px solid rgba(255,255,255,.18);cursor:pointer}
+.dpill{background:linear-gradient(135deg,#f5a623,#e07810);color:#fff;font-weight:900;
+  font-size:14px;padding:4px 14px;border-radius:18px;box-shadow:0 3px 8px rgba(0,0,0,.3)}
+.gdw{display:flex;align-items:center;gap:4px;background:rgba(0,0,0,.3);
+  border:1.5px solid #c89020;border-radius:14px;padding:3px 8px}
+.gcoin{width:16px;height:16px;background:radial-gradient(circle at 35% 35%,#ffe060,#c89020);
+  border-radius:50%;border:1.5px solid #a07010;flex-shrink:0}
+.gnum{font-size:13px;font-weight:900;color:#ffe060;min-width:28px}
+.dibtn{width:32px;height:32px;background:rgba(255,200,50,.15);border-radius:8px;
+  display:flex;align-items:center;justify-content:center;font-size:15px;
+  border:1.5px solid rgba(255,200,50,.3);cursor:pointer;position:relative}
+.dbadge{position:absolute;top:-4px;right:-4px;background:#f5a623;color:#fff;
+  font-size:8px;font-weight:900;border-radius:8px;padding:1px 4px;min-width:14px;text-align:center}
+.dtk{display:flex;align-items:center;gap:2px;overflow-x:auto;scrollbar-width:none;padding:2px 0}
+.dtk::-webkit-scrollbar{display:none}
+.dn{display:flex;flex-direction:column;align-items:center;gap:1px;flex-shrink:0;min-width:26px}
+.dni{width:24px;height:24px;border-radius:50%;background:rgba(255,255,255,.1);
+  border:2px solid rgba(255,255,255,.12);display:flex;align-items:center;justify-content:center;
+  font-size:10px;color:#aaa;transition:all .3s}
+.dn.cur .dni{background:#f5a623;border-color:#fff;box-shadow:0 0 8px rgba(245,166,35,.9);
+  transform:scale(1.25);color:#fff}
+.dn.done .dni{background:rgba(80,180,80,.3);border-color:#60c060;color:#90d890}
+.dnl{font-size:7px;color:rgba(255,255,255,.35);font-weight:700}
+.dn.cur .dnl{color:#f5a623}
+.trl{width:6px;height:2px;background:rgba(255,255,255,.1);flex-shrink:0;align-self:center;margin-bottom:8px}
+.trl.done{background:#60c060}
+
+/* FIELD */
+#fld{position:relative;flex-shrink:0;height:clamp(160px,26dvh,220px);overflow:hidden}
+.fsc{position:absolute;inset:0;width:200%;display:flex}
+.fp{width:50%;height:100%;flex-shrink:0}
+#fsa{animation:fS 10s linear infinite}
+@keyframes fS{0%{transform:translateX(0)}100%{transform:translateX(-50%)}}
+.ft{background:linear-gradient(180deg,#87ceeb 0%,#a8dcf0 62%,#7ab87a 62%,#5a9e5a 100%)}
+.ff{background:linear-gradient(180deg,#9ed4e8 0%,#c0e8f8 62%,#5aa05a 62%,#3a803a 100%)}
+.fr{background:linear-gradient(180deg,#d4b880 0%,#c8a860 62%,#8a7050 62%,#6a5030 100%)}
+.fb{background:linear-gradient(180deg,#ff9060 0%,#ff6030 62%,#cc3010 62%,#aa2010 100%)}
+.fbo{background:linear-gradient(180deg,#2a0a3a 0%,#4a1060 40%,#3a0820 62%,#200010 100%)}
+.fn{background:linear-gradient(180deg,#1a1a3a 0%,#2a2a5a 62%,#2a3a1a 62%,#1a2a0a 100%)}
+.grl{position:absolute;top:62%;left:0;right:0;height:3px;background:rgba(255,255,255,.3)}
+.stopped{animation:none!important}
+@keyframes npcFloat{0%,100%{transform:translateY(0)}50%{transform:translateY(-6px)}}
+/* deco scroll layer */
+.deco-scroll{position:absolute;inset:0;width:200%;animation:fS 10s linear infinite;pointer-events:none;z-index:3}
+.deco-panel{position:absolute;top:0;height:100%;width:50%}
+.deco-panel:nth-child(2){left:50%}
+
+/* party — left zone: allies, right zone: enemy */
+#pa{position:absolute;bottom:38%;left:0;right:0;
+  display:flex;align-items:flex-end;justify-content:center;
+  gap:30px;z-index:8;padding:0 20px}
+/* ally group: stays together, right edge faces enemy */
+#ally-zone{display:flex;flex-direction:row;align-items:flex-end;
+  justify-content:flex-start;gap:10px}
+/* enemy zone */
+#enemy-zone{display:flex;align-items:flex-end;justify-content:center}
+.cu{display:flex;flex-direction:column;align-items:center}
+.wlk{animation:hw2 .35s steps(2) infinite}
+@keyframes hw2{0%,100%{transform:translateY(0)}50%{transform:translateY(-4px)}}
+.usk{animation:ushk .4s ease}
+@keyframes ushk{0%,100%{transform:translateX(0)}25%{transform:translateX(-8px)}75%{transform:translateX(8px)}}
+.flyoff{animation:flyo .6s ease forwards!important}
+@keyframes flyo{0%{transform:translateX(0) translateY(0) rotate(0)}
+  100%{transform:translateX(-220px) translateY(-60px) rotate(-130deg);opacity:0}}
+.chpw{height:6px;border-radius:3px;overflow:hidden;margin-bottom:4px;
+  background:rgba(0,0,0,.5);border:1px solid rgba(255,255,255,.15)}
+.chpf{height:100%;border-radius:3px;transition:width .3s;background:linear-gradient(90deg,#e84040,#ff7070)}
+.chpf.pet{background:linear-gradient(90deg,#40a0e8,#70c0ff)}
+
+/* battle fx */
+#fgtxt{position:absolute;top:14%;left:50%;transform:translateX(-50%) scale(0);
+  font-size:42px;font-weight:900;color:#ffe060;
+  text-shadow:0 0 20px #ff8000,0 4px 8px rgba(0,0,0,.5);z-index:20;display:none;letter-spacing:4px}
+#fgtxt.pop{display:block;animation:fpop .6s ease forwards}
+@keyframes fpop{0%{transform:translateX(-50%) scale(0) rotate(-10deg)}
+  60%{transform:translateX(-50%) scale(1.15) rotate(3deg)}
+  100%{transform:translateX(-50%) scale(1) rotate(0)}}
+#bstxt{position:absolute;top:10%;left:50%;transform:translateX(-50%);font-size:26px;
+  font-weight:900;color:#ff60a0;text-shadow:0 0 20px #ff00aa;z-index:20;display:none;white-space:nowrap}
+#bstxt.show{display:block;animation:bshow 1.5s ease forwards}
+@keyframes bshow{0%{opacity:0;transform:translateX(-50%) scale(.5)}
+  30%{opacity:1;transform:translateX(-50%) scale(1.1)}70%{opacity:1}100%{opacity:0}}
+#aoef{position:absolute;inset:0;background:rgba(255,80,80,.35);z-index:18;pointer-events:none;opacity:0}
+#aoef.show{animation:aflsh .5s ease forwards}
+@keyframes aflsh{0%{opacity:.7}100%{opacity:0}}
+#tnbdg{position:absolute;top:6px;left:50%;transform:translateX(-50%);
+  background:rgba(0,0,0,.6);color:#fff;font-size:11px;font-weight:700;
+  padding:3px 10px;border-radius:10px;display:none;z-index:15}
+.dmg{position:absolute;font-weight:900;pointer-events:none;z-index:25;
+  animation:dmgr .9s ease forwards;text-shadow:0 2px 4px rgba(0,0,0,.5)}
+.dr{color:#ff4444;font-size:22px}.dg{color:#ffe060;font-size:22px}.dh{color:#44ee88;font-size:18px}
+@keyframes dmgr{0%{opacity:1;transform:translateY(0) scale(1)}
+  40%{opacity:1;transform:translateY(-28px) scale(1.2)}100%{opacity:0;transform:translateY(-60px) scale(.8)}}
+.cfx{position:fixed;width:16px;height:16px;
+  background:radial-gradient(circle at 35% 35%,#ffe060,#c89020);
+  border-radius:50%;border:2px solid #a07010;pointer-events:none;z-index:100}
+#lva{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
+  z-index:30;pointer-events:none;opacity:0}
+#lva.show{animation:lvshow 2s ease forwards}
+@keyframes lvshow{0%{opacity:0}15%{opacity:1}75%{opacity:1}100%{opacity:0}}
+.lvt{font-size:44px;font-weight:900;color:#fff;
+  text-shadow:0 0 30px #f5a623,0 0 60px #f5a623;animation:lvsc 2s ease}
+@keyframes lvsc{0%{transform:scale(.4) rotate(-8deg)}20%{transform:scale(1.2) rotate(2deg)}
+  35%,100%{transform:scale(1)}}
+
+
+
+/* STATUS */
+#stb{background:#2a2040;padding:7px 10px;flex-shrink:0;
+  border-top:2px solid rgba(255,255,255,.07);border-bottom:2px solid rgba(0,0,0,.3)}
+.srow{display:flex;align-items:center;gap:6px}
+.expp{background:linear-gradient(135deg,#3a8a1a,#2a6a0a);border:2px solid #5ac03a;
+  border-radius:10px;padding:3px 7px;text-align:center;flex-shrink:0}
+.epl{font-size:8px;color:#a0e080;font-weight:700;display:block}
+.eplv{font-size:16px;font-weight:900;color:#fff;line-height:1}
+.bcol{flex:1;display:flex;flex-direction:column;gap:3px;min-width:0}
+.brow{display:flex;align-items:center;gap:4px}
+.bi{font-size:12px;flex-shrink:0}.bl{font-size:8px;color:#ccc;font-weight:700;width:18px;flex-shrink:0}
+.btr{flex:1;height:9px;background:rgba(0,0,0,.4);border-radius:5px;overflow:hidden;
+  border:1px solid rgba(255,255,255,.08)}
+.bfi{height:100%;border-radius:5px;transition:width .4s}
+.hpf{background:linear-gradient(90deg,#e84040,#ff7070)}
+.exf{background:linear-gradient(90deg,#20b040,#40d060)}
+.bpc{font-size:9px;color:#ccc;font-weight:700;flex-shrink:0;width:26px;text-align:right}
+.bvl{font-size:9px;color:#fff;font-weight:700;flex-shrink:0;min-width:52px;text-align:right}
+.schips{display:flex;flex-direction:column;gap:3px;flex-shrink:0}
+.sc{display:flex;align-items:center;gap:3px;background:rgba(255,255,255,.06);
+  border:1px solid rgba(255,255,255,.1);border-radius:8px;padding:2px 7px}
+.sci{font-size:12px}.scv{font-size:12px;font-weight:900;color:#fff}
+.scl{font-size:8px;color:rgba(255,255,255,.45)}
+
+
+
+
+
+
+#boss-puzzle{display:none;background:#200010;border:2px solid #e04060;
+  border-radius:14px;padding:10px 12px;margin:6px 0}
+#boss-puzzle.show{display:block}
+.bp-title{font-size:11px;font-weight:900;color:#ff8090;letter-spacing:1px;margin-bottom:6px}
+.bp-pairs{display:flex;flex-direction:column;gap:5px}
+.bp-row{display:flex;gap:6px}
+.bp-en{flex:1;background:#2a0010;border:1.5px solid #c03050;border-radius:8px;
+  padding:6px 8px;font-size:13px;font-weight:700;color:#ffb0c0;
+  cursor:pointer;text-align:center;transition:all .12s;user-select:none}
+.bp-en.sel{background:rgba(200,50,80,.3);border-color:#ff6080;transform:scale(1.03)}
+.bp-en.matched{background:rgba(40,160,80,.25);border-color:#50c070;color:#a0ffa0;cursor:default}
+.bp-en.wrong{animation:pzwrong .4s ease}
+.bp-jp{flex:1;background:#1a0008;border:1.5px solid #802040;border-radius:8px;
+  padding:6px 8px;font-size:12px;color:rgba(255,180,190,.85);
+  cursor:pointer;text-align:center;transition:all .12s;user-select:none}
+.bp-jp.sel{background:rgba(150,50,80,.3);border-color:#ff6080;transform:scale(1.03)}
+.bp-jp.matched{background:rgba(40,160,80,.25);border-color:#50c070;color:#a0ffa0;cursor:default}
+.bp-jp.wrong{animation:pzwrong .4s ease}
+.bp-hint{font-size:10px;color:#ff8090;text-align:center;margin-top:4px}
+
+/* LOG */
+#la{flex:1;min-height:0;overflow:hidden;background:#18102a;padding:0;
+  display:flex;flex-direction:column}
+#ls{flex:1;overflow-y:auto;padding:6px 10px 4px;scroll-behavior:smooth;
+  scrollbar-width:thin;scrollbar-color:rgba(255,255,255,.1) transparent}
+#ls::-webkit-scrollbar{display:none}
+.ec{border-radius:12px;padding:9px 11px 8px;margin-bottom:8px;
+  border:2px solid #d4c490;background:#fffbe8;animation:cin .35s ease;position:relative}
+
+@keyframes chestPop{0%{transform:scale(0) rotate(-10deg);opacity:0}
+  60%{transform:scale(1.2) rotate(5deg);opacity:1}100%{transform:scale(1) rotate(0);opacity:1}}
+
+@keyframes cin{0%{opacity:0;transform:translateY(16px)}100%{opacity:1;transform:translateY(0)}}
+.ec.lucky{background:#e8f4ff;border-color:#6aace0}
+.ec.great{background:#fff0f0;border-color:#e06060}
+.ec.bad{background:#f0f0f0;border-color:#a0a0b0}
+.ec.bt{background:#fff5f0;border-color:#e07050}
+.ec.vc{background:#f0fff4;border-color:#50c080}
+.ec.ch{background:#f5f0ff;border-color:#9070d0}
+.cday{font-size:13px;font-weight:900;color:#4a3010;margin-bottom:5px;
+  border-bottom:1px solid rgba(0,0,0,.08);padding-bottom:4px}
+.cen{font-size:12px;color:#4a3808;line-height:1.6;margin-bottom:4px}
+.cjp{font-size:10px;color:#7a6848;line-height:1.5;margin-top:4px;padding-top:4px;
+  border-top:1px solid rgba(0,0,0,.1)}
+.crw{display:flex;flex-wrap:wrap;gap:5px;margin-top:5px}
+.rt{display:inline-flex;align-items:center;gap:3px;padding:2px 8px;border-radius:10px;
+  font-size:11px;font-weight:700;animation:tpop .3s .1s ease both}
+@keyframes tpop{0%{transform:scale(0);opacity:0}70%{transform:scale(1.1)}100%{transform:scale(1);opacity:1}}
+.re{background:#d4f0c4;color:#2a6a0a}.rg{background:#f8e8a0;color:#886010}
+.rhp{background:#fcd4d4;color:#c02020}.ra{background:#e8d4f8;color:#6020a0}
+.rd{background:#d4e4f8;color:#2040a0}.rb{background:#f0e0e0;color:#a02020}
+.rw{background:linear-gradient(90deg,#2a1060,#1a0840);color:#ffe060;
+  border:1px solid #f5a623;cursor:pointer}
+.lbdg{position:absolute;bottom:7px;right:8px;font-size:11px;font-weight:900;opacity:.7}
+.hlb{font-weight:800;color:#2060c0}.hlr{font-weight:800;color:#c02020}
+.hlg{font-weight:800;color:#108040}.hlo{font-weight:800;color:#906010}
+.cbts{display:flex;gap:8px;margin-top:8px}
+.cbt{flex:1;padding:9px;font-size:14px;font-weight:900;color:#fff;border:none;
+  border-radius:20px;cursor:pointer}
+.cbt.lv{background:linear-gradient(180deg,#a0a0b0,#808090);box-shadow:0 4px 0 #505060}
+.cbt.pr{background:linear-gradient(180deg,#9060e0,#7040c0);box-shadow:0 4px 0 #402080}
+.cbt:active{transform:translateY(3px);box-shadow:none!important}
+
+/* BTN AREA */
+#ba{padding:5px 14px 76px;background:#18102a;flex-shrink:0;position:relative;overflow:visible}
+/* 固定ナビ(70px)に隠れないよう全画面に余白 */
+.meta-screen{padding-bottom:72px !important}
+#home{padding-bottom:0 !important}
+.home-bottom{bottom:72px !important;padding-bottom:0}
+.lrow{display:flex;gap:6px;justify-content:center;margin-bottom:6px}
+.lb{font-size:13px;font-weight:700;padding:6px 0;border-radius:20px;
+  border:2px solid rgba(255,255,255,.2);background:rgba(255,255,255,.07);
+  color:rgba(255,255,255,.55);cursor:pointer;flex:1;text-align:center}
+.lb.active{background:#f5a623;border-color:#f5a623;color:#fff;box-shadow:0 3px 0 #a06010}
+.lb.vb{max-width:52px;flex:0 0 52px;font-size:16px}
+.lb.vb.mt{background:rgba(255,255,255,.04);border-color:rgba(255,255,255,.1);color:rgba(255,255,255,.25)}
+#mb{width:100%;padding:17px;font-size:22px;font-weight:900;color:#fff;
+  background:linear-gradient(180deg,#5ad04a,#3ab02a,#28a018);border:none;border-radius:40px;
+  cursor:pointer;letter-spacing:1px;box-shadow:0 6px 0 #186010,0 8px 18px rgba(0,0,0,.4);
+  text-shadow:0 2px 4px rgba(0,0,0,.3);position:relative;overflow:hidden;transition:all .1s}
+#mb::after{content:'';position:absolute;top:4px;left:14px;right:14px;height:38%;
+  background:rgba(255,255,255,.22);border-radius:20px}
+#mb.btl{background:linear-gradient(180deg,#f87060,#e04030,#c02020);box-shadow:0 6px 0 #801010}
+#mb.bos{background:linear-gradient(180deg,#d060e0,#a020c0,#800090);box-shadow:0 6px 0 #500060}
+#mb.fgt{background:linear-gradient(180deg,#a090b0,#807090);box-shadow:0 6px 0 #504060;cursor:default}
+#mb:active:not(.fgt){transform:translateY(4px);box-shadow:0 2px 0 #186010}
+#mb.btl:active,#mb.bos:active{transform:translateY(4px);box-shadow:0 2px 0 #501010!important}
+
+/* LUCK */
+#lo{position:absolute;left:0;right:0;bottom:0;height:220px;
+  display:flex;align-items:center;justify-content:center;z-index:50;pointer-events:none;opacity:0}
+#lo.sg,#lo.sl,#lo.sb{animation:lshow 1.6s ease forwards}
+@keyframes lshow{0%{opacity:0}12%{opacity:1}70%{opacity:1}100%{opacity:0}}
+.ltxt{font-size:72px;font-weight:900;letter-spacing:4px;line-height:1;animation:lbnc 1.4s ease}
+@keyframes lbnc{0%{transform:scale(.2) rotate(-15deg)}30%{transform:scale(1.25) rotate(4deg)}
+  50%{transform:scale(.95)}65%{transform:scale(1.08)}80%,100%{transform:scale(1)}}
+.lgreat{color:#ffe060;text-shadow:0 0 30px #ff8000,0 0 60px #ff4000}
+.llucky{color:#60d0ff;text-shadow:0 0 20px #2080ff}
+.lbad{color:#d0d0e0;font-size:58px;text-shadow:0 0 20px #6060a0}
+.lbgg{position:absolute;inset:0;background:radial-gradient(ellipse at center,rgba(255,160,0,.45),rgba(255,80,0,.2) 50%,transparent 75%)}
+.lbgl{position:absolute;inset:0;background:radial-gradient(ellipse at center,rgba(0,160,255,.35),rgba(0,80,200,.15) 50%,transparent 75%)}
+.lbgb{position:absolute;inset:0;background:radial-gradient(ellipse at center,rgba(80,80,100,.45),rgba(40,40,60,.2) 50%,transparent 75%)}
+.lsp{position:absolute;font-size:20px;animation:spf 1.4s ease forwards;opacity:0}
+@keyframes spf{0%{opacity:0;transform:scale(0)}30%{opacity:1;transform:scale(1.2) translateY(-10px)}100%{opacity:0;transform:scale(.6) translateY(-50px)}}
+
+
+/* DICT */
+#sdict{background:#1a1228;display:flex;flex-direction:column}
+.dhdr{background:linear-gradient(180deg,#2a1060,#1a0840);padding:14px 16px 10px;flex-shrink:0}
+.dtit{font-size:18px;font-weight:900;color:#ffe060;display:flex;align-items:center;gap:8px}
+.dcnt{font-size:12px;color:rgba(255,255,255,.5);font-weight:600;margin-top:2px}
+.dbk{background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.2);
+  color:#fff;border-radius:10px;padding:4px 10px;font-size:12px;cursor:pointer}
+#dl{flex:1;overflow-y:auto;padding:12px;display:flex;flex-direction:column;gap:8px;scrollbar-width:thin}
+.dcard{background:linear-gradient(135deg,#2a1060,#1a0840);border:1.5px solid #f5a623;
+  border-radius:14px;padding:12px 14px;display:flex;align-items:center;gap:12px;cursor:pointer}
+.dcard:active{transform:scale(.98)}
+.dw{font-size:22px;font-weight:900;color:#ffe060}
+.djp{font-size:14px;color:#fff;font-weight:700}
+.dpron{font-size:10px;color:rgba(255,255,255,.45)}
+.dday{font-size:10px;color:rgba(255,255,255,.3);margin-left:auto;text-align:right}
+
+
+/* RESULT (meta) */
+#result-meta{background:linear-gradient(180deg,#1d3557,#0d1b2a)}
+.result-card{background:var(--card-bg);border-radius:24px;width:100%;padding:24px;box-shadow:0 20px 60px rgba(0,0,0,.5)}
+.result-title{font-size:26px;font-weight:700;color:var(--ink);text-align:center;margin-bottom:4px}
+.result-world{font-size:12px;color:#888;text-align:center;margin-bottom:18px}
+.result-rewards{display:flex;flex-direction:column;gap:6px;margin-bottom:16px}
+.result-reward-row{display:flex;align-items:center;gap:8px;padding:8px 10px;background:#f8f8f8;border-radius:10px}
+.rr-icon{font-size:18px}.rr-label{font-size:12px;color:#555;flex:1}.rr-value{font-size:14px;font-weight:700;color:var(--ink)}
+.result-relics{margin-bottom:16px}
+.relic-title{font-size:11px;color:#888;font-weight:700;margin-bottom:6px;letter-spacing:.5px}
+.relic-list{display:flex;gap:6px;flex-wrap:wrap}
+.relic-item{background:#fff8e8;border:1px solid #e8d898;border-radius:10px;padding:5px 10px;font-size:10px;color:#886010;font-weight:700}
+.result-btn{width:100%;padding:14px;background:linear-gradient(135deg,#1d3557,#2d6a4f);color:#fff;border:none;border-radius:16px;font-size:15px;font-weight:700;cursor:pointer}
+.result-btn:active{transform:scale(.98)}
+
+</style>
+</head>
+<body>
+<div id="app">
+
+<!-- ══ META SCREENS ══ -->
+
+<!-- HOME -->
+<div id="home" class="meta-screen active">
+  <div class="home-sky" id="home-sky"></div>
+  <div class="home-ground"></div>
+  <div class="home-header">
+    <div class="game-title">🌿 Wild Wordopia</div>
+    <div style="display:flex;align-items:center;gap:8px">
+      <div class="player-level">Lv <span class="lv-num" id="player-lv">1</span>&nbsp;EXP <span class="lv-num" id="player-exp">0</span></div>
+      <button onclick="hardReset()" style="background:rgba(255,80,80,.15);border:1px solid rgba(255,80,80,.3);color:rgba(255,120,120,.9);border-radius:10px;padding:4px 10px;font-size:13px;cursor:pointer" title="Reset">↺</button>
+    </div>
+  </div>
+  <div class="wild-stage" id="wild-stage"></div>
+  <div class="home-bottom">
+    <div class="coin-row">
+      <div class="coin-display"><span class="coin-icon">🪙</span><span class="coin-val" id="coin-display">0</span></div>
+      <button class="collect-btn" onclick="collectCoins()">コイン回収</button>
+    </div>
+    <div style="display:flex;gap:8px">
+      <button class="nav-btn secondary" onclick="showMeta('wildlist')" style="position:relative;flex:1">
+        <span class="btn-icon">🐾</span><span class="btn-label">ワイルド一覧</span>
+        <span class="notif" id="trial-notif" style="display:none">!</span>
+      </button>
+      <button class="nav-btn secondary" onclick="startTrial(META.wilds.findIndex(w=>w.trialReady&&w.type==='juvenile'))" style="flex:1;display:none" id="trial-btn">
+        <span class="btn-icon">✨</span><span class="btn-label">進化試験</span>
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- WILD LIST -->
+<div id="wildlist" class="meta-screen">
+  <div class="screen-header">
+    <button class="back-btn" onclick="showMeta('home')">← Back</button>
+    <div class="screen-title">My Wilds</div>
+    <div class="screen-sub" id="wild-count">0 wilds</div>
+  </div>
+  <div class="wild-grid" id="wild-grid" style="padding-bottom:70px"></div>
+</div>
+
+<!-- ADVENTURE SELECT -->
+<div id="adventure-select" class="meta-screen">
+  <div class="screen-header">
+    <button class="back-btn" onclick="showMeta('home')">← Back</button>
+    <div class="screen-title">Choose World</div>
+  </div>
+  <div class="world-list" id="world-list" style="padding-bottom:70px"></div>
+</div>
+
+<!-- FORMATION -->
+<div id="formation" class="meta-screen">
+  <div class="screen-header">
+    <button class="back-btn" onclick="showMeta('adventure-select')">← Back</button>
+    <div class="screen-title">Formation</div>
+  </div>
+  <div class="cost-bar">
+    <span>Cost</span>
+    <div class="cost-fill"><div class="cost-used" id="cost-bar" style="width:0%"></div></div>
+    <span class="cost-num"><span id="cost-used">0</span>/<span id="cost-max">8</span></span>
+  </div>
+  <!-- プレイヤー固定枠 -->
+  <div style="padding:6px 16px 0">
+    <div style="background:rgba(255,255,255,.06);border:2px solid rgba(255,200,74,.4);
+      border-radius:14px;padding:8px 14px;display:flex;align-items:center;gap:10px;margin-bottom:2px">
+      <span style="font-size:28px">😊</span>
+      <div style="flex:1">
+        <div style="font-size:12px;font-weight:700;color:rgba(255,255,255,.9)">YOU — Always in party</div>
+        <div style="font-size:9px;color:rgba(255,200,74,.7)">💰 Cost 0 · Fixed</div>
+      </div>
+      <span style="font-size:10px;color:rgba(255,200,74,.6);background:rgba(255,200,74,.1);
+        padding:2px 8px;border-radius:8px">FIXED</span>
+    </div>
+  </div>
+  <div class="formation-slots" id="formation-slots">
+    <div class="slot" data-slot="0" onclick="slotClick(0)"><div class="slot-empty-text">+ Add Wild</div></div>
+    <div class="slot" data-slot="1" onclick="slotClick(1)"><div class="slot-empty-text">+ Add Wild</div></div>
+    <div class="slot" data-slot="2" onclick="slotClick(2)"><div class="slot-empty-text">+ Add Wild</div></div>
+    <div class="slot" data-slot="3" onclick="slotClick(3)"><div class="slot-empty-text">+ Add Wild</div></div>
+  </div>
+  <div class="roster-section">AVAILABLE WILDS</div>
+  <div class="roster-list" id="roster-list" style="padding-bottom:10px"></div>
+  <button class="start-btn" onclick="launchAdventure()" style="margin-bottom:70px">Start Adventure →</button>
+</div>
+
+<!-- RESULT (meta) -->
+<div id="result-meta" class="meta-screen" style="align-items:center;justify-content:center;padding:20px">
+  <div class="result-card">
+    <div class="result-title" id="res-title">Adventure Over</div>
+    <div class="result-world" id="res-world">Alice in Wonderland</div>
+    <div class="result-rewards" id="res-rewards"></div>
+    <div class="result-relics">
+      <div class="relic-title">RELICS FOUND</div>
+      <div class="relic-list" id="res-relics"></div>
+    </div>
+    <button class="result-btn" onclick="backToHome()">Back to Base</button>
+  </div>
+</div>
+
+<!-- SHOP -->
+<div id="shop" class="meta-screen">
+  <div class="screen-header">
+    <button class="back-btn" onclick="showMeta('home')">← Back</button>
+    <div class="screen-title">🛒 Shop</div>
+    <div class="screen-sub" id="shop-coins">🪙 0</div>
+  </div>
+  <div style="flex:1;overflow-y:auto;padding:12px;display:flex;flex-direction:column;gap:8px">
+    <div style="background:var(--card-bg);border-radius:14px;padding:14px">
+      <div style="font-size:13px;font-weight:700;color:#3a2010;margin-bottom:8px">🏪 Coming Soon</div>
+      <div style="font-size:11px;color:#888;line-height:1.7">
+        • Healing potions<br>
+        • ATK / DEF upgrades<br>
+        • Wild food (intimacy boost)<br>
+        • Relic crafting
+      </div>
+    </div>
+    <div style="background:rgba(255,255,255,.05);border-radius:14px;padding:14px;border:1px solid rgba(255,255,255,.1)">
+      <div style="font-size:11px;color:rgba(255,255,255,.5);text-align:center">
+        Shop will be available in a future update.<br>Save your coins!
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- TRIAL -->
+<div id="trial" class="meta-screen">
+  <div class="trial-header">
+    <div class="trial-title">✨ Evolution Trial</div>
+    <div class="trial-wild" id="trial-wild-name">見る一族 — Juvenile</div>
+  </div>
+  <div class="trial-progress" id="trial-progress"></div>
+  <div class="trial-question">
+    <div class="trial-definition">
+      <div class="trial-def-en" id="trial-def-en">definition here</div>
+      <div class="trial-def-jp" id="trial-def-jp">定義</div>
+      <div class="trial-family" id="trial-family-hint">Family hint</div>
+    </div>
+    <div class="syllable-answer" id="syl-answer"></div>
+    <div class="syllable-pool" id="syl-pool"></div>
+  </div>
+  <div class="trial-actions">
+    <button class="trial-clear-btn" onclick="clearSyllables()">↩ Clear</button>
+    <button class="trial-check-btn" onclick="checkAnswer()">Check Answer</button>
+  </div>
+  <div class="evolution-reveal" id="evo-reveal">
+    <div class="evo-glow" id="evo-emoji">🌟</div>
+    <div class="evo-title">EVOLUTION COMPLETE</div>
+    <div class="evo-name" id="evo-name">Respect</div>
+    <div class="evo-rarity" id="evo-rarity">★323</div>
+    <div class="evo-desc" id="evo-desc">よく見る一族 · 動詞/名詞</div>
+    <button class="evo-confirm" onclick="confirmEvolution()">Welcome! →</button>
+  </div>
+</div>
+
+<!-- ══ GAME SCREEN (v3 system) ══ -->
+<div id="sg" class="screen">
+  <div id="tb">
+    <div class="trow">
+      <div class="ibtn" onclick="quitAdventure()" title="Settings">⚙️</div>
+      <div class="ibtn" onclick="hardReset()" title="Reset" style="font-size:13px;color:rgba(255,80,80,.8)">↺</div>
+      <div class="dpill" id="dpill">Day 1</div>
+      <div style="display:flex;gap:6px;align-items:center">
+        <div class="gdw"><div class="gcoin" id="gcref"></div><span class="gnum" id="gnum">0</span></div>
+        <div class="dibtn" onclick="showRelicList()">✨<span class="dbadge" id="dbadge">0</span></div>
+      </div>
+    </div>
+    <div class="dtk" id="dtk"></div>
+  </div>
+  <div id="fld">
+    <div class="fsc" id="fsa"><div class="fp ft" id="fp1"></div><div class="fp ft" id="fp2"></div></div>
+    <div class="deco-scroll" id="deco-scroll"><div class="deco-panel" id="dp1"></div><div class="deco-panel" id="dp2"></div></div>
+    <div class="grl"></div>
+    <div id="npc-unit" style="display:none;position:absolute;bottom:37%;z-index:8;flex-direction:column;align-items:center">
+      <span id="npc-emoji" style="font-size:40px;display:block;text-align:center;animation:npcFloat 2s ease-in-out infinite">🌿</span>
+      <div class="shad" style="width:28px;height:5px"></div>
+    </div>
+    <div id="pa">
+      <div id="ally-zone">
+        <div class="cu wlk" id="hu">
+          <div class="chpw" style="width:46px"><div class="chpf" id="hhpb" style="width:100%"></div></div>
+          <div style="font-size:36px;text-align:center;line-height:1">😊</div>
+          <div class="shad" style="width:32px;height:6px"></div>
+        </div>
+        <div class="cu wlk" id="pu" style="display:none">
+          <div class="chpw" style="width:44px"><div class="chpf pet" id="phpb" style="width:100%"></div></div>
+          <span id="pemi" style="font-size:36px;display:block;text-align:center">🦊</span>
+          <div class="shad" style="width:26px;height:5px"></div>
+        </div>
+      </div>
+      <div id="enemy-zone">
+        <div class="cu" id="eu" style="display:none">
+          <div style="font-size:9px;color:#fff;background:rgba(0,0,0,.5);border-radius:6px;padding:1px 6px;margin-bottom:2px;font-weight:700" id="ename">???</div>
+          <div class="chpw" style="width:56px"><div class="chpf" id="ehpb" style="width:100%"></div></div>
+          <span id="eemi" style="font-size:44px;display:block;text-align:center">👾</span>
+          <div class="shad" style="width:32px;height:6px"></div>
+        </div>
+      </div>
+    </div>
+    <div id="fgtxt">FIGHT!</div>
+    <div id="relic-chest" style="display:none;position:absolute;bottom:28%;left:12px;
+      z-index:15;cursor:pointer;animation:chestPop .4s ease;flex-direction:column;align-items:center"
+      onclick="openRelicChest()">
+      <div style="font-size:38px;filter:drop-shadow(0 0 8px gold)">📦</div>
+      <div style="font-size:9px;color:#ffe060;font-weight:700;background:rgba(0,0,0,.5);
+        border-radius:6px;padding:1px 6px;margin-top:2px">TAP!</div>
+    </div>
+    <div id="bstxt">⚠️ BOSS !</div>
+    <div id="aoef"></div>
+    <div id="tnbdg">Turn 1/10</div>
+    <div id="lva"><div class="lvt">⭐ LV UP! ⭐</div></div>
+  </div>
+  <div id="stb">
+    <div class="srow">
+      <div class="expp"><span class="epl">EXP</span><span class="eplv" id="lvd">1</span><span class="epl">LV</span></div>
+      <div class="bcol">
+        <div class="brow"><span class="bi">❤️</span><span class="bl">HP</span><div class="btr"><div class="bfi hpf" id="hpb" style="width:100%"></div></div><span class="bpc" id="hppc">100%</span><span class="bvl" id="hpvl">500/500</span></div>
+        <div class="brow"><span class="bi">✨</span><span class="bl">EX</span><div class="btr"><div class="bfi exf" id="exb" style="width:0%"></div></div><span class="bpc" id="expc">0%</span><span class="bvl" id="exvl">0/100</span></div>
+      </div>
+      <div class="schips">
+        <div class="sc"><span class="sci">⚔️</span><span class="scv" id="atkd">100</span><span class="scl" id="atkl">ATK</span></div>
+        <div class="sc"><span class="sci">🛡️</span><span class="scv" id="defd">25</span><span class="scl" id="defl">DEF</span></div>
+      </div>
+    </div>
+  </div>
+  <div id="la">
+    <div id="ls"></div>
+    <div id="summon-panel" style="display:none"></div>
+    <div id="boss-puzzle" style="display:none"></div>
+  </div>
+  <div id="ba">
+    <div id="lo"><div id="lsp"></div><div id="lbg" class="lbgg"></div><div><div class="ltxt" id="ltxt">大吉</div></div></div>
+    <div class="lrow">
+      <button class="lb active" onclick="setLang('jp')">JP</button>
+      <button class="lb" onclick="setLang('en')">EN</button>
+      <button class="lb" onclick="setLang('both')">JP+EN</button>
+      <button class="lb vb mt" id="vbtn" onclick="toggleVoice()">🔇</button>
+    </div>
+    <div id="cbtrow" style="display:none;gap:8px;margin-bottom:0">
+      <button class="cbt lv" style="flex:1;padding:16px;font-size:18px;border-radius:40px;box-shadow:0 5px 0 #505060" onclick="resolveChoice(false,+$('cbtrow').dataset.idx)"></button>
+      <button class="cbt pr" style="flex:1;padding:16px;font-size:18px;border-radius:40px;box-shadow:0 5px 0 #402080" onclick="resolveChoice(true,+$('cbtrow').dataset.idx)"></button>
+    </div>
+    <button id="mb" onclick="onBtn()">Next Day</button>
+  </div>
+</div>
+
+<!-- DICT -->
+<div id="sdict" class="screen">
+  <div class="dhdr">
+    <div style="display:flex;justify-content:space-between;align-items:flex-start">
+      <div><div class="dtit">📖 Word Dictionary</div><div class="dcnt" id="dcnt">0 words</div></div>
+      <button class="dbk" onclick="closeDict()">← Back</button>
+    </div>
+  </div>
+  <div id="dl"></div>
+</div>
+
+<!-- RESULT (in-game) -->
+<div id="sres" class="screen">
+  <div class="rbd"></div>
+  <div class="rsc">
+    <div class="rod" style="margin-bottom:-2px"><span class="rodl"></span><span class="rodr"></span></div>
+    <div class="rbo" id="rbo">
+      <span class="rcrown" id="rcrown">👑</span>
+      <div class="rtit" id="rtit">Victory</div>
+      <div class="rch" id="rch">Day 1</div>
+      <div class="rlbl" id="rlbl">Days Survived</div>
+      <div><span class="rdays" id="rdays">10</span><span class="rdunit" id="runit"> Days</span></div>
+      <div class="rmax" id="rmax">Best: 10 days</div>
+      <div class="rrw" id="rrw"></div>
+    </div>
+    <div class="rod" style="margin-top:-2px"><span class="rodl"></span><span class="rodr"></span></div>
+  </div>
+  <button id="rbb" onclick="backToHome()">Back to Base</button>
+</div>
+
+<!-- 常時表示ナビ：全画面の上に固定 -->
+<div id="bottom-nav" style="position:fixed;bottom:0;left:50%;transform:translateX(-50%);
+  width:min(390px,100vw);display:flex;gap:5px;padding:6px 10px 14px;
+  background:#18102a;z-index:100;border-top:1px solid rgba(255,255,255,.1)">
+  <button onclick="goToBase()" style="flex:1;padding:10px 2px;background:rgba(255,255,255,.08);
+    border:1px solid rgba(255,255,255,.15);border-radius:12px;color:rgba(255,255,255,.85);
+    font-size:10px;font-weight:700;cursor:pointer">🏠<br>Base</button>
+  <button onclick="goToAdventure()" style="flex:1;padding:10px 2px;background:rgba(230,57,70,.15);
+    border:1px solid rgba(230,57,70,.4);border-radius:12px;color:rgba(255,140,150,.95);
+    font-size:10px;font-weight:700;cursor:pointer">⚔️<br>Adventure</button>
+  <button onclick="goToShop()" style="flex:1;padding:10px 2px;background:rgba(255,200,74,.12);
+    border:1px solid rgba(255,200,74,.3);border-radius:12px;color:rgba(255,200,74,.95);
+    font-size:10px;font-weight:700;cursor:pointer">🛒<br>Shop</button>
+  <button onclick="openRelicList()" style="flex:1;padding:10px 2px;background:rgba(150,80,255,.12);
+    border:1px solid rgba(150,80,255,.3);border-radius:12px;color:rgba(200,160,255,.95);
+    font-size:10px;font-weight:700;cursor:pointer">✨<br>Relics</button>
+</div>
+
+</div><!-- #app -->
+
+<script>
+'use strict';
+
+// ══════════════════════════════════
+// PIE FAMILIES & WORLDS DATA
+// ══════════════════════════════════
+const PIE_FAMILIES = {
+  spek:{id:'spek',name:'見る一族',emoji:'👁️',color:'#4a90d9',bg:'#deeeff',root:'*spek-',meaning:'to observe, look at',stat_focus:'tech',
+    adult_pool:[
+      {word:'respect',rarity:323,pos:'v/n',sub:'romance',def_en:'To admire and hold in high regard',def_jp:'尊敬する',syllables:['re','spect'],emoji:'🫡'},
+      {word:'inspect',rarity:287,pos:'v',sub:'romance',def_en:'To look at something carefully and officially',def_jp:'検査する',syllables:['in','spect'],emoji:'🔍'},
+      {word:'spectator',rarity:412,pos:'n',sub:'romance',def_en:'A person who watches an event',def_jp:'観客',syllables:['spec','ta','tor'],emoji:'👀'},
+      {word:'perspective',rarity:456,pos:'n',sub:'romance',def_en:'A particular way of thinking about something',def_jp:'視点・見方',syllables:['per','spec','tive'],emoji:'🎭'},
+    ]},
+  gwei:{id:'gwei',name:'生きる一族',emoji:'🌱',color:'#2d9a5f',bg:'#d4f5e5',root:'*gwei-',meaning:'to live, be alive',stat_focus:'hp',
+    adult_pool:[
+      {word:'biology',rarity:445,pos:'n',sub:'greek',def_en:'The scientific study of living organisms',def_jp:'生物学',syllables:['bi','ol','o','gy'],emoji:'🧬'},
+      {word:'survive',rarity:398,pos:'v',sub:'romance',def_en:'To continue to live despite danger',def_jp:'生き残る',syllables:['sur','vive'],emoji:'💪'},
+      {word:'vivid',rarity:356,pos:'adj',sub:'romance',def_en:'Producing powerful images in the mind',def_jp:'鮮やかな',syllables:['viv','id'],emoji:'🌈'},
+    ]},
+  kap:{id:'kap',name:'頭一族',emoji:'👑',color:'#c8901a',bg:'#fff3d0',root:'*kap-',meaning:'to grasp, head',stat_focus:'atk',
+    adult_pool:[
+      {word:'captain',rarity:378,pos:'n',sub:'romance',def_en:'The person in charge of a ship or team',def_jp:'キャプテン',syllables:['cap','tain'],emoji:'⚓'},
+      {word:'chapter',rarity:334,pos:'n',sub:'romance',def_en:'A main division of a book',def_jp:'章・節',syllables:['chap','ter'],emoji:'📖'},
+      {word:'capture',rarity:367,pos:'v/n',sub:'romance',def_en:'To catch and keep a person or animal',def_jp:'捕まえる',syllables:['cap','ture'],emoji:'🪤'},
+    ]},
+};
+
+const WORLDS = [
+  {id:'alice',name:"Alice in Wonderland",emoji:'🐇',bg:'linear-gradient(135deg,#c840a8,#8820e8)',
+   desc:'A strange world of curious creatures and wordplay.',recommended:'Any Cost',unlocked:true,progress:0},
+  {id:'beowulf',name:"Beowulf",emoji:'🐉',bg:'linear-gradient(135deg,#304050,#102030)',
+   desc:'An ancient hall. A monster in the dark.',recommended:'Cost 8+',unlocked:false,progress:0},
+];
+
+// ══════════════════════════════════
+// META GAME STATE
+// ══════════════════════════════════
+const META = {
+  coins:450, pendingCoins:0,
+  wilds:[], formation:[null,null,null,null],
+  currentWorld:null,
+  trial:{wildIdx:null,qIdx:0,questions:[],placed:[]},
+  relics:[],      // persistent across runs: [{id,name,emoji,desc,effect,count}]
+  totalIntimacy:0, // cumulative intimacy gained across all runs
+};
+
+// ══════════════════════════════════
+// V3 GAME STATE (adventure)
+// ══════════════════════════════════
+const S={
+  lang:'jp',firstRun:true,
+  day:1,phase:'idle',
+  lv:1,exp:0,expNext:100,
+  hp:500,hpMax:500,atk:100,def:25,gold:0,
+  hasPet:false,petId:'fox',
+  pets:[],
+  eHp:0,eHpMax:1,turn:0,maxT:12,
+  bestDays:0,pendingChoice:false,
+  dict:[],
+  worldId:null,
+};
+
+const $=id=>document.getElementById(id);
+
+// ══════════════════════════════════
+// META SCREEN MANAGEMENT
+// ══════════════════════════════════
+function showMeta(id){
+  // Hide game screens
+  ['sg','sdict','sres'].forEach(s=>{
+    const el=$(s); if(el) el.classList.remove('active');
+  });
+  // Toggle meta screens
+  document.querySelectorAll('.meta-screen').forEach(s=>s.classList.remove('active'));
+  const el=$(id); if(el) el.classList.add('active');
+  if(id==='wildlist') renderWildList();
+  if(id==='shop'){$('shop-coins').textContent='🪙 '+META.coins.toLocaleString();}
+  if(id==='adventure-select') renderWorldList();
+  if(id==='formation') renderFormation();
+  if(id==='home') renderHomeScreen();
+}
+
+function show(id){
+  // v3 screen switcher - hides meta, shows game screen
+  document.querySelectorAll('.meta-screen').forEach(s=>s.classList.remove('active'));
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  const el=$(id); if(el) el.classList.add('active');
+}
+
+// ══════════════════════════════════
+// HOME SCREEN
+// ══════════════════════════════════
+function renderHomeScreen(){
+  $('player-lv').textContent=S.lv;
+  $('player-exp').textContent=S.exp;
+  $('coin-display').textContent=META.coins.toLocaleString();
+  const sky=$('home-sky');
+  if(!sky.children.length){
+    for(let i=0;i<30;i++){
+      const s=document.createElement('div');s.className='star';
+      const sz=1+Math.random()*3;
+      s.style.cssText=`width:${sz}px;height:${sz}px;left:${Math.random()*100}%;top:${Math.random()*60}%;animation-delay:${Math.random()*2}s`;
+      sky.appendChild(s);
+    }
+  }
+  const stage=$('wild-stage');stage.innerHTML='';
+  META.wilds.slice(0,4).forEach((w,i)=>{
+    const fam=PIE_FAMILIES[w.familyId];
+    const div=document.createElement('div');div.className='wild-figure';
+    const emoji=w.type==='adult'?w.wordData.emoji:fam.emoji;
+    div.onclick=()=>w.trialReady&&w.type==='juvenile'?startTrial(META.wilds.indexOf(w)):null;
+    div.innerHTML=`<div class="wild-sprite"><div class="wild-body" style="width:54px;height:54px;background:${fam.bg}">${emoji}</div></div>
+      <div class="wild-name">${w.type==='adult'?w.name:fam.name}${w.trialReady?'<br>✨':''}</div>
+      <div class="wild-shadow"></div>`;
+    stage.appendChild(div);
+  });
+  renderTrialNotif();
+}
+
+function renderTrialNotif(){
+  const ready=META.wilds.some(w=>w.trialReady&&w.type==='juvenile');
+  $('trial-notif').style.display=ready?'':'none';
+  const tb=$('trial-btn'); if(tb) tb.style.display=ready?'':'none';
+}
+
+function collectCoins(){
+  META.coins+=META.pendingCoins;META.pendingCoins=0;
+  $('coin-display').textContent=META.coins.toLocaleString();
+}
+
+// ══════════════════════════════════
+// WILD LIST
+// ══════════════════════════════════
+function renderWildList(){
+  const grid=$('wild-grid');grid.innerHTML='';
+  $('wild-count').textContent=META.wilds.length+' wilds';
+  META.wilds.forEach((w,i)=>{
+    const fam=PIE_FAMILIES[w.familyId];
+    const onMission = META._onMission && META._onMission.has(w.id);
+    const card=document.createElement('div');
+    card.className='wild-card'+(w.type==='adult'?' adult':'');
+    if(onMission) card.style.opacity='0.4';
+    const emoji=w.type==='adult'?w.wordData.emoji:fam.emoji;
+    const pct=Math.round(w.intimacy/w.intimacyMax*100);
+    card.innerHTML=`<div class="wc-sprite" style="background:${fam.bg}">${emoji}</div>
+      <div class="wc-info">
+        <div class="wc-name">${w.type==='adult'?w.name:fam.name+' (幼体)'}</div>
+        <div class="wc-family">${fam.root} — ${fam.name}</div>
+        <div class="wc-tags">
+          ${w.type==='juvenile'?'<span class="tag larva-badge">Juvenile</span>':
+            `<span class="tag rarity">★${w.rarity}</span><span class="tag type">${w.wordData.pos}</span>`}
+          ${w.trialReady?'<span class="tag" style="background:#fff0d0;color:#c07010">✨ Trial Ready</span>':''}
+          ${(META._onMission&&META._onMission.has(w.id))?'<span class="tag" style="background:#ffeee0;color:#c06010">⚔️ On Mission</span>':''}
+        </div>
+        <div class="wc-intimacy">
+          <div class="intimacy-bar"><div class="intimacy-fill" style="width:${pct}%"></div></div>
+          <div class="intimacy-label">Intimacy ${w.intimacy}/${w.intimacyMax}</div>
+        </div>
+      </div>`;
+    if(w.trialReady&&w.type==='juvenile') card.onclick=()=>startTrial(i);
+    grid.appendChild(card);
+  });
+}
+
+// ══════════════════════════════════
+// WORLDS
+// ══════════════════════════════════
+function renderWorldList(){
+  const list=$('world-list');list.innerHTML='';
+  WORLDS.forEach(w=>{
+    const div=document.createElement('div');
+    div.className='world-card'+(w.unlocked?'':' locked');
+    div.onclick=()=>w.unlocked&&selectWorld(w.id);
+    div.innerHTML=`<div class="world-bg" style="background:${w.bg}">
+      <span style="font-size:40px">${w.emoji}</span>
+      ${!w.unlocked?'<div class="locked-label">🔒 Locked</div>':''}
+    </div>
+    <div class="world-info">
+      <div class="world-name">${w.name}</div>
+      <div class="world-desc">${w.desc}</div>
+      <div class="world-meta">
+        <span class="world-tag">${w.recommended}</span>
+        <span class="world-progress-text">Best: ${w.progress} days</span>
+      </div>
+    </div>`;
+    list.appendChild(div);
+  });
+}
+
+function selectWorld(id){ META.currentWorld=id; showMeta('formation'); }
+
+// ══════════════════════════════════
+// FORMATION
+// ══════════════════════════════════
+function getCost(w){ if(!w||w.type==='juvenile') return 0; return Math.min(10,Math.ceil((w.rarity||200)/100)); }
+
+function renderFormation(){
+  updateCostBar();
+  const roster=$('roster-list');roster.innerHTML='';
+  META.wilds.forEach((w,i)=>{
+    const fam=PIE_FAMILIES[w.familyId];
+    const inSlot=META.formation.includes(w.id);
+    const item=document.createElement('div');
+    item.className='roster-item'+(inSlot?' in-slot':'');
+    item.onclick=()=>addToFormation(w.id);
+    const emoji=w.type==='adult'?w.wordData.emoji:fam.emoji;
+    item.innerHTML=`<div class="ri-emoji">${emoji}</div>
+      <div class="ri-info">
+        <div class="ri-name">${w.type==='adult'?w.name:fam.name+' (幼体)'}</div>
+        <div class="ri-cost">💰 Cost ${getCost(w)}</div>
+      </div>`;
+    roster.appendChild(item);
+  });
+  renderSlots();
+}
+
+function updateCostBar(){
+  let used=0;
+  META.formation.forEach(id=>{if(!id)return;const w=META.wilds.find(x=>x.id===id);if(w)used+=getCost(w);});
+  const pct=Math.min(100,used/S.lv/8*100); // cost max scales with lv
+  $('cost-bar').style.width=pct+'%';
+  $('cost-used').textContent=used;
+  $('cost-max').textContent=8+S.lv*2;
+}
+
+function renderSlots(){
+  for(let i=0;i<4;i++){
+    const slot=document.querySelector(`.slot[data-slot="${i}"]`);
+    const id=META.formation[i];
+    if(id){
+      const w=META.wilds.find(x=>x.id===id);
+      const fam=PIE_FAMILIES[w.familyId];
+      const emoji=w.type==='adult'?w.wordData.emoji:fam.emoji;
+      slot.className='slot filled';
+      slot.innerHTML=`<div class="slot-content">
+        <span style="font-size:28px">${emoji}</span>
+        <div style="flex:1"><div style="font-size:11px;font-weight:700;color:#fff">${w.type==='adult'?w.name:fam.name}</div>
+        <div style="font-size:9px;color:rgba(255,255,255,.5)">Cost ${getCost(w)}</div></div>
+      </div>
+      <button class="slot-remove" onclick="event.stopPropagation();removeFromSlot(${i})">✕</button>`;
+    } else {
+      slot.className='slot';slot.innerHTML='<div class="slot-empty-text">+ Add Wild</div>';
+    }
+  }
+}
+
+function slotClick(i){ if(META.formation[i]) removeFromSlot(i); }
+
+function addToFormation(id){
+  const empty=META.formation.indexOf(null);if(empty<0)return;
+  META.formation[empty]=id;renderFormation();
+}
+
+function removeFromSlot(i){ META.formation[i]=null;renderFormation(); }
+
+// ══════════════════════════════════
+// LAUNCH ADVENTURE → v3 system
+// ══════════════════════════════════
+function launchAdventure(){
+  const world=WORLDS.find(w=>w.id===META.currentWorld);
+  S.worldId=META.currentWorld;
+  // Wire formation into S.pets
+  S.pets=[];
+  let firstPet=null;
+  META.formation.forEach(id=>{
+    if(!id) return;
+    const w=META.wilds.find(x=>x.id===id);
+    if(!w) return;
+    if(w.type==='juvenile'||w.type==='adult'){
+      const fam=PIE_FAMILIES[w.familyId];
+      const emoji=w.type==='adult'?w.wordData.emoji:fam.emoji;
+      if(!firstPet){ firstPet={emoji,id:w.id,name:w.type==='adult'?w.name:fam.name}; }
+      else {
+        // add extra pets dynamically
+        S.pets.push({hp:300,hpMax:300,def:30,atk:w.type==='adult'?40:20,healer:false,elId:'pu'});
+      }
+    }
+  });
+  if(firstPet){
+    S.hasPet=true;
+    $('pemi').textContent=firstPet.emoji;
+    $('pu').style.display='flex';
+    $('pu').classList.remove('flyoff');
+    S.pets=[{hp:300,hpMax:300,def:30,atk:35,healer:false,elId:'pu'}];
+  } else {
+    S.hasPet=false;
+    $('pu').style.display='none';
+  }
+  // Reset adventure state
+  Object.assign(S,{day:1,phase:'idle',lv:1,exp:0,expNext:100,
+    hp:500,hpMax:500,atk:100,def:25,gold:0,
+    eHp:0,eHpMax:1,turn:0,pendingChoice:false});
+  applyRelicEffects(); // 永続レリック効果を適用
+  // word collection removed
+  $('ls').innerHTML='';
+  // 敵を右に退場
+  const _eu=$('eu');
+  _eu.style.transition='transform .4s ease, opacity .3s ease';
+  _eu.style.transform='translateX(120px)';_eu.style.opacity='0';
+  setTimeout(()=>{_eu.style.display='none';_eu.style.transform='';_eu.style.opacity='';_eu.style.transition='';},420);
+  $('fgtxt').style.display='none';$('bstxt').style.display='none';
+  $('tnbdg').style.display='none';$('mb').disabled=false;$('mb').style.opacity='';
+  ['hu','pu'].forEach(id=>{const e=$(id);if(e&&e.style.display!=='none'){e.classList.remove('usk','flyoff');e.classList.add('wlk');}});
+  if(typeof speechSynthesis!=='undefined') speechSynthesis.cancel();
+  setLang('jp');
+  updateStat();
+  show('sg');
+  presentDay();
+  balanceLayout();
+}
+
+function quitAdventure(){
+  if(confirm('Quit adventure and return to base?')){
+    stopBGM();
+    if(typeof speechSynthesis!=='undefined') speechSynthesis.cancel();
+    META.coins+=S.gold;
+    // update intimacy for party members
+    META.formation.forEach(id=>{
+      if(!id) return;
+      const w=META.wilds.find(x=>x.id===id);
+      if(w){w.intimacy=Math.min(w.intimacyMax,w.intimacy+S.day*2);
+        if(w.type==='juvenile'&&w.intimacy>=w.intimacyMax) w.trialReady=true;}
+    });
+    showResultMeta(false);
+  }
+}
+
+
+// 冒険中に拠点へ
+function hardReset(){
+  if(confirm('Reset ALL progress? (Relics, coins, wilds — everything)')){
+    location.reload();
+  }
+}
+function goToAdventure(){
+  if(S.phase!=='idle'||S.day>1) show('sg');
+  else showMeta('adventure-select');
+}
+function goToBase(){
+  stopBGM();
+  // 拠点でのワイルド表示：出撃中ワイルドを除外するフラグ
+  const formationIds = META.formation.filter(Boolean);
+  // wildlistで出撃中を表示しない
+  META._onMission = new Set(formationIds);
+  showMeta('home');
+}
+function goToShop(){
+  showMeta('shop');
+}
+
+function backToHome(){
+  showMeta('home');
+}
+
+// Override showResult to route to meta result screen when returning to home
+const _origShowResult=window.showResult;
+function showResult(win){
+  stopBGM();
+  if(typeof speechSynthesis!=='undefined') speechSynthesis.cancel();
+  // Update world best
+  const world=WORLDS.find(w=>w.id===S.worldId);
+  if(world&&S.day>world.progress) world.progress=S.day;
+  META.coins+=S.gold;
+  // Update intimacy
+  const _intimacyGained = S.day * 2;
+  META.formation.forEach(id=>{
+    if(!id) return;
+    const w=META.wilds.find(x=>x.id===id);
+    if(w){w.intimacy=Math.min(w.intimacyMax,w.intimacy+_intimacyGained);
+      if(w.type==='juvenile'&&w.intimacy>=w.intimacyMax) w.trialReady=true;}
+  });
+  META.intimacyTotal = (META.intimacyTotal||0) + _intimacyGained;
+  META._onMission = null; // 帰還したので解除
+  // Show in-game result screen first (v3's sres)
+  const L=S.lang==='en'?'en':'jp';
+  $('rcrown').textContent=win?'👑':'💔';
+  $('rtit').textContent=win?'Victory!':'Game Over';
+  $('rch').textContent=(WORLDS.find(w=>w.id===S.worldId)||{name:'Adventure'}).name;
+  $('rlbl').textContent='Days Survived';
+  $('rdays').textContent=S.day;$('runit').textContent=' Days';
+  $('rmax').textContent='Best: '+(world?world.progress:S.day)+' days';
+  const relicCount=Object.values(META.relics).reduce((a,b)=>a+b,0);
+  // ワイルドごとの親愛増加をまとめる
+  const intimacyGained = S.day * 2;
+  const wildBonuses = META.formation
+    .filter(Boolean)
+    .map(id=>META.wilds.find(x=>x.id===id))
+    .filter(Boolean)
+    .map(w=>{
+      const fam=PIE_FAMILIES[w.familyId];
+      const emoji=w.type==='adult'?w.wordData.emoji:fam.emoji;
+      return `${emoji} ${w.type==='adult'?w.name:fam.name} <span style="color:#c8901a">+${intimacyGained}</span>`;
+    }).join('<br>');
+  const relicRows = Object.entries(META.relics).filter(([,c])=>c>0)
+    .map(([id,c])=>`${ALICE_RELICS[id]?.emoji||''} ${ALICE_RELICS[id]?.name||id}${c>1?' ×'+c:''}`).join(', ')||'None';
+  $('rrw').innerHTML=
+    `<div class="rrb"><span class="rrbi">🪙</span><span class="rrbv">×${S.gold} coins</span></div>
+     <div class="rrb"><span class="rrbi">✨</span><span class="rrbv">${relicCount} relics: ${relicRows}</span></div>
+     <div class="rrb" style="flex-direction:column;align-items:flex-start;gap:3px">
+       <span class="rrbi" style="margin-bottom:2px">💜 Bond deepened with:</span>
+       <div style="font-size:11px;line-height:1.8">${wildBonuses||'No wilds in party'}</div>
+     </div>`;
+  $('rbo').className='rbo'+(win?'':' df');
+  show('sres');
+}
+
+function showResultMeta(win){
+  // Show meta result
+  $('res-title').textContent=win?'Adventure Complete!':'Retreat';
+  $('res-world').textContent=(WORLDS.find(w=>w.id===S.worldId)||{name:''}).name;
+  $('res-rewards').innerHTML=`
+    <div class="result-reward-row"><span class="rr-icon">🪙</span><span class="rr-label">Coins</span><span class="rr-value">+${S.gold}</span></div>
+    <div class="result-reward-row"><span class="rr-icon">📖</span><span class="rr-label">Words Found</span><span class="rr-value">${collectedWords.length}</span></div>
+    <div class="result-reward-row"><span class="rr-icon">⏱️</span><span class="rr-label">Days Survived</span><span class="rr-value">${S.day}</span></div>`;
+  $('res-relics').innerHTML='<span style="font-size:11px;color:#aaa">—</span>';
+  showMeta('result-meta');
+}
+
+// ══════════════════════════════════
+// EVOLUTION TRIAL
+// ══════════════════════════════════
+const TRIAL_Q_COUNT=5;
+
+function startTrial(wildIdx){
+  const w=META.wilds[wildIdx];
+  if(!w||!w.trialReady) return;
+  const fam=PIE_FAMILIES[w.familyId];
+  const questions=fam.adult_pool.slice(0,TRIAL_Q_COUNT);
+  META.trial={wildIdx,qIdx:0,questions,placed:[]};
+  $('trial-wild-name').textContent=fam.name+' — Juvenile';
+  renderTrialProgress();renderTrialQuestion();
+  showMeta('trial');
+}
+
+function renderTrialProgress(){
+  const prog=$('trial-progress');prog.innerHTML='';
+  const {qIdx,questions}=META.trial;
+  questions.forEach((_,i)=>{
+    const dot=document.createElement('div');
+    dot.className='trial-dot'+(i<qIdx?' done':i===qIdx?' active':'');
+    dot.textContent=i+1;prog.appendChild(dot);
+  });
+}
+
+function renderTrialQuestion(){
+  const {qIdx,questions,placed}=META.trial;
+  if(qIdx>=questions.length){trialComplete();return;}
+  const q=questions[qIdx];
+  $('trial-def-en').textContent=q.def_en;
+  $('trial-def-jp').textContent=q.def_jp;
+  const fam=PIE_FAMILIES[META.wilds[META.trial.wildIdx].familyId];
+  $('trial-family-hint').textContent=fam.root+' — '+fam.meaning;
+  const ans=$('syl-answer');ans.innerHTML='';
+  placed.forEach((s,i)=>{
+    const slot=document.createElement('div');slot.className='syl-slot placed';
+    slot.textContent=s;slot.onclick=()=>removeSyllable(i);ans.appendChild(slot);
+  });
+  const pool=$('syl-pool');pool.innerHTML='';
+  [...q.syllables].sort(()=>Math.random()-.5).forEach(s=>{
+    const btn=document.createElement('div');
+    btn.className='syl-btn'+(placed.includes(s)?' used':'');
+    btn.textContent=s;btn.onclick=()=>placeSyllable(s);pool.appendChild(btn);
+  });
+  renderTrialProgress();
+}
+
+function placeSyllable(s){META.trial.placed.push(s);renderTrialQuestion();}
+function removeSyllable(i){META.trial.placed.splice(i,1);renderTrialQuestion();}
+function clearSyllables(){META.trial.placed=[];renderTrialQuestion();}
+
+function checkAnswer(){
+  const {qIdx,questions,placed}=META.trial;
+  const q=questions[qIdx];
+  if(q.syllables.join('')===placed.join('')){
+    META.trial.qIdx++;META.trial.placed=[];
+    if(META.trial.qIdx>=META.trial.questions.length) trialComplete();
+    else renderTrialQuestion();
+  } else {
+    $('syl-answer').querySelectorAll('.syl-slot').forEach(s=>{s.classList.add('wrong');setTimeout(()=>s.classList.remove('wrong'),350);});
+    META.trial.placed=[];setTimeout(()=>renderTrialQuestion(),400);
+  }
+}
+
+function trialComplete(){
+  const w=META.wilds[META.trial.wildIdx];
+  const fam=PIE_FAMILIES[w.familyId];
+  const adult=fam.adult_pool[Math.floor(Math.random()*fam.adult_pool.length)];
+  META.wilds[META.trial.wildIdx]={
+    id:w.id,type:'adult',familyId:w.familyId,
+    wordData:adult,name:adult.word.charAt(0).toUpperCase()+adult.word.slice(1),
+    rarity:adult.rarity,hp:180,hpMax:180,
+    intimacy:0,intimacyMax:200,trialReady:false,
+  };
+  $('evo-emoji').textContent=adult.emoji;
+  $('evo-name').textContent=adult.word.charAt(0).toUpperCase()+adult.word.slice(1);
+  $('evo-rarity').textContent='★'+adult.rarity;
+  $('evo-desc').textContent=fam.name+' · '+adult.pos+' · '+adult.sub;
+  $('evo-reveal').classList.add('show');
+  META.coins+=50;
+}
+
+function confirmEvolution(){
+  $('evo-reveal').classList.remove('show');
+  renderTrialNotif();showMeta('wildlist');
+}
+
+// ══════════════════════════════════
+// UI helpers (v3 compat)
+// ══════════════════════════════════
+const UI={
+  jp:{dl:d=>`${d}日目`,nd:'次の日',bt:'⚔️ バトル',bos:'💀 ボスバトル！',
+    fg:'バトル中...',vc:'バトル勝利',df:'💀 冒険終了',
+    dfm:'倒れてしまった…',drm:'なんとか逃げた',
+    re:'🔄 もう一度',cl:'🎉 クリア！',
+    tb:(t,m)=>`ターン ${t}/${m}`,
+    lg:'大吉',ll:'小吉',lb:'運が悪い',atk:'攻撃',def:'防御',
+    exp:n=>`経験値+${n}`,gld:n=>`ゴールド+${n}`,glm:n=>`ゴールド${n}`,
+    hp:n=>`HP+${n}`,ap:n=>`攻撃力+${n}`,am:n=>`攻撃力${n}`,
+    dp:n=>`防御力+${n}`,mh:n=>`最大HP+${n}`,app:n=>`攻撃力+${n}%`,hpp:n=>`HP${n}%`,
+    lbg:'大吉',lbl:'小吉',lbb:'運が悪かった',
+    rw:'勝利',rl:'敗北',rdl:'生存日数',ru:' 日',rb:'戻る',cp:'祈る',cl2:'去る',
+    dw:n=>`${n} 語を発見`,dr:'引き分け',
+  },
+  en:{dl:d=>`Day ${d}`,nd:'Next Day',bt:'⚔️ Battle',bos:'💀 BOSS BATTLE!',
+    fg:'Battling...',vc:'Victory!',df:'💀 Defeated',
+    dfm:"You fell... but the words remain.",drm:"You barely escaped.",
+    re:'🔄 Try Again',cl:'🎉 Clear!',
+    tb:(t,m)=>`Turn ${t}/${m}`,
+    lg:'Great Luck!',ll:'Good Luck!',lb:'Bad Luck...',atk:'ATK',def:'DEF',
+    exp:n=>`EXP+${n}`,gld:n=>`Gold+${n}`,glm:n=>`Gold${n}`,
+    hp:n=>`HP+${n}`,ap:n=>`ATK+${n}`,am:n=>`ATK${n}`,
+    dp:n=>`DEF+${n}`,mh:n=>`MaxHP+${n}`,app:n=>`ATK+${n}%`,hpp:n=>`HP${n}%`,
+    lbg:'Great Luck',lbl:'Good Luck',lbb:'Bad Luck',
+    rw:'Victory',rl:'Defeat',rdl:'Days Survived',ru:' Days',rb:'Back',cp:'Pray',cl2:'Leave',
+    dw:n=>`${n} words found`,dr:'Draw',
+  }
+};
+function t(k,...a){const L=S.lang==='both'?'en':S.lang;const v=UI[L][k];return typeof v==='function'?v(...a):v;}
+function setLang(l){
+  S.lang=l;
+  document.querySelectorAll('.lb').forEach(b=>{
+    const tx=b.textContent.trim();
+    b.classList.toggle('active',(l==='jp'&&tx==='JP')||(l==='en'&&tx==='EN')||(l==='both'&&tx==='JP+EN'));
+  });
+  applyLang();updateStat();relabel();
+}
+function applyLang(){
+  const isBoth=S.lang==='both';
+  document.querySelectorAll('.cjp').forEach(e=>{
+    e.style.display=S.lang==='en'?'none':'';e.style.order=isBoth?'2':'';
+  });
+  document.querySelectorAll('.cen').forEach(e=>{
+    e.style.display=S.lang==='jp'?'none':'';e.style.order=isBoth?'1':'';
+  });
+  document.querySelectorAll('.ec').forEach(e=>{
+    if(isBoth){e.style.display='flex';e.style.flexDirection='column';}
+    else{e.style.display='';e.style.flexDirection='';}
+  });
+}
+function relabel(){
+  const ev=EVS[S.day-1];
+  if(S.phase==='idle') setBtn(S.day>=90?t('cl'):t('nd'),'');
+  else if(S.phase==='battle_ready') setBtn(ev&&ev.type==='boss'?t('bos'):t('bt'),ev&&ev.type==='boss'?'bos':'btl');
+  else if(S.phase==='battling') setBtn(t('fg'),'fgt');
+  else if(S.phase==='defeat') setBtn(t('re'),'btl');
+  const cr=$('cbtrow');
+  if(cr&&cr.style.display!=='none'){
+    const evIdx=parseInt(cr.dataset.idx);const cev=EVS[evIdx];
+    if(cev&&cev.type==='pet'){}
+    else{cr.children[0].textContent=t('cl2');cr.children[1].textContent=t('cp');}
+  }
+}
+
+let voiceOn=false,ttsV=null,ttsW=null;
+let audioCtx=null,bgmNodes=[],bgmPlaying=false,bgmType='',bgmGen=0,bgmLoopId=null;
+let collectedWords=[];
+
+const EVS=[
+// ═══ Ch.1 Down the Rabbit Hole (1-15) ═══
+{day:1,type:'story',luck:'',
+ en:"A white rabbit dashes past, muttering about being late. It drops a tiny key.",
+ jp:"白ウサギが「遅れた！」と呟きながら走り去り、小さな鍵を落としていった。",
+ rw:{exp:15,gold:10}},
+{day:2,type:'rest',luck:'lucky',
+ en:"You find a cool pool at the bottom of the rabbit hole. The water shimmers with strange words.",
+ jp:"穴の底に涼しい水たまりがあった。水面に不思議な文字が揺れている。",
+ rw:{exp:12,heal:80,gold:10}},
+{day:3,type:'story',luck:'',
+ en:"A bottle reads DRINK ME. Your Wilds tremble with curiosity.",
+ jp:"「飲んでください」と書かれた瓶があった。ワイルドたちは好奇心で震えた。",
+ rw:{exp:15,gold:15}},
+{day:4,type:'pet',luck:'lucky',npc:'🐇',
+ en:"The White Rabbit stops to look at you. Your bond deepens.",
+ jp:"白ウサギが立ち止まり、こちらを見つめた。絆が深まった。",
+ rw:{exp:20,intimacy:15}},
+{day:5,type:'reward',luck:'lucky',
+ en:"Behind a small door: a glass table with a golden key and a note.",
+ jp:"小さな扉の向こう、ガラスのテーブルに金の鍵と手紙があった。",
+ rw:{exp:20,gold:40,relic:'tiny_key'}},
+{day:6,type:'story',luck:'',
+ en:"You grow too tall, then too small. Wonderland's logic makes no sense.",
+ jp:"大きくなったり小さくなったり。ワンダーランドの論理には意味がない。",
+ rw:{exp:15,gold:10}},
+{day:7,type:'battle',luck:'',
+ en:"Card soldiers march toward you, waving painted spears with absurd menace.",
+ jp:"トランプの兵士たちが描かれた槍を振り回しながら迫ってくる。",
+ enemy:{name:'Card Soldier',emoji:'🃏',hp:180,atk:55},rw:{exp:50,gold:45}},
+{day:8,type:'rest',luck:'',
+ en:"A white rabbit fur is left behind — still warm.",
+ jp:"白いウサギの毛皮が残されていた。まだ温かかった。",
+ rw:{exp:15,heal:60,relic:'rabbit_fur'}},
+{day:9,type:'pet',luck:'lucky',npc:'🍄',
+ en:"A blue caterpillar on a mushroom blows smoke rings that spell your name.",
+ jp:"キノコの上の青いイモムシが、あなたの名前を描く煙の輪を吹いた。",
+ rw:{exp:20,intimacy:15}},
+{day:10,type:'choice',luck:'',npc:'🐛',
+ en:"The Caterpillar offers you a piece of mushroom. Which side?",
+ jp:"イモムシがキノコの欠片を差し出した。どちら側を食べる？",
+ cen:'Take the right side, or the left side?',
+ cjp:'右側か、左側か。',
+ b1en:'Right side',b1jp:'右側',b2en:'Left side',b2jp:'左側',
+ srw:{exp:25,atk:10,relic:'caterpillar_smoke'},frw:{exp:25,maxHp:30},rate:1.0},
+{day:11,type:'story',luck:'bad',
+ en:"The Duchess's kitchen is chaos. Pepper fills the air. Your eyes water.",
+ jp:"公爵夫人の台所は混沌としていた。コショウが空気を満たし、目が染みた。",
+ rw:{exp:10,hpPct:-10}},
+{day:12,type:'battle',luck:'',
+ en:"A baby turned pig charges wildly through the hall.",
+ jp:"赤ちゃんがブタに変わって廊下を暴走している。",
+ enemy:{name:'Piglet Child',emoji:'🐷',hp:220,atk:65},rw:{exp:60,gold:50}},
+{day:13,type:'rest',luck:'lucky',
+ en:"The Cheshire Cat's smile lingers even after it vanishes. It feels like luck.",
+ jp:"チェシャ猫の笑みが消えた後も漂っていた。何か幸運な予感がする。",
+ rw:{exp:18,heal:100,relic:'cheshire_smile'}},
+{day:14,type:'pet',luck:'lucky',npc:'😸',
+ en:"The Cheshire Cat whispers advice. Your Wilds listen intently.",
+ jp:"チェシャ猫がアドバイスを囁いた。ワイルドたちは真剣に耳を傾けた。",
+ rw:{exp:25,intimacy:20}},
+{day:15,type:'boss',luck:'',
+ en:"The Queen of Hearts screams: OFF WITH THEIR HEADS! Her guards surround you.",
+ jp:"ハートの女王が叫んだ。「首をはねよ！」衛兵たちがあなたを取り囲んだ。",
+ enemy:{name:'Queen of Hearts',emoji:'👸',hp:600,atk:90,boss:true},
+ rw:{exp:150,gold:120}},
+
+// ═══ Ch.2 The Mad Tea（帽子屋のお茶） Party (16-30) ═══
+{day:16,type:'story',luck:'',
+ en:"A long table stretches through the forest. No room! No room! they cry.",
+ jp:"長いテーブルが森を貫いていた。「席はない！席はない！」と彼らは叫んだ。",
+ rw:{exp:20,gold:15}},
+{day:17,type:'pet',luck:'lucky',npc:'🎩',
+ en:"The 帽子屋 tips his hat. Somehow it changes everything.",
+ jp:"帽子屋が帽子を傾けた。なぜかすべてが変わった気がした。",
+ rw:{exp:22,intimacy:18}},
+{day:18,type:'reward',luck:'lucky',
+ en:"A steaming cup of mad tea restores your spirits completely.",
+ jp:"熱々のマッドティーがあなたの気力を完全に回復させた。",
+ rw:{exp:20,heal:120,relic:'mad_tea'}},
+{day:19,type:'battle',luck:'',
+ en:"The March Hare hurls teacups at your party with alarming accuracy.",
+ jp:"三月ウサギが驚くほどの正確さでティーカップを投げつけてくる。",
+ enemy:{name:'March Hare',emoji:'🐰',hp:280,atk:75},rw:{exp:70,gold:60}},
+{day:20,type:'story',luck:'',
+ en:"The Dormouse tells a story about treacle wells. Nobody understands, but everyone listens.",
+ jp:"ヤマネが蜜糖の井戸の話をした。誰も理解できないが、全員が聞き入った。",
+ rw:{exp:22,gold:20}},
+{day:21,type:'rest',luck:'lucky',
+ en:"Tea spilled on the table — but somehow it forms the shape of a pocket watch.",
+ jp:"テーブルにこぼれたお茶が、なぜか懐中時計の形になった。",
+ rw:{exp:18,heal:80,relic:'pocket_watch'}},
+{day:22,type:'pet',luck:'lucky',npc:'🎩',
+ en:"帽子屋 gives your Wilds an impossible riddle. They love it.",
+ jp:"帽子屋がワイルドたちに解けない謎をかけた。彼らはそれを喜んだ。",
+ rw:{exp:25,intimacy:20}},
+{day:23,type:'battle',luck:'',
+ en:"The 帽子屋 himself attacks! He throws hat after hat like blades.",
+ jp:"帽子屋自身が攻撃してきた！帽子を刃のように次々と投げつける。",
+ enemy:{name:'帽子屋',emoji:'🎩',hp:350,atk:80},rw:{exp:85,gold:70}},
+{day:24,type:'story',luck:'bad',
+ en:"Time is stuck at 6 o'clock. The clocks tick but never move forward.",
+ jp:"時間が6時で止まっている。時計は刻むが、前には進まない。",
+ rw:{exp:10,hpPct:-15}},
+{day:25,type:'choice',luck:'',npc:'🎩',
+ en:"帽子屋 offers you a seat at the eternal table. Join the mad tea party?",
+ jp:"帽子屋が永遠のテーブルに誘った。マッドティーパーティーに加わるか？",
+ cen:'Join the party, or press on?',
+ cjp:'パーティーに加わるか、先を急ぐか。',
+ b1en:'Join',b1jp:'加わる',b2en:'Press on',b2jp:'先へ行く',
+ srw:{exp:30,heal:100,intimacy:20},frw:{exp:40,gold:60},rate:1.0},
+{day:26,type:'story',luck:'',
+ en:"Painted roses line the path. Card soldiers paint them red in a panic.",
+ jp:"バラが道に並んでいた。トランプの兵士たちがパニックで赤く塗っている。",
+ rw:{exp:20,gold:25}},
+{day:27,type:'pet',luck:'lucky',npc:'🌹',
+ en:"A rose turns and speaks to your Wilds: 'You smell of adventure.'",
+ jp:"一本のバラが振り返ってワイルドたちに言った。「冒険の匂いがする」",
+ rw:{exp:25,intimacy:22}},
+{day:28,type:'battle',luck:'',
+ en:"A flock of card soldiers blocks the croquet ground.",
+ jp:"トランプの兵士たちがクロッケー場を封鎖した。",
+ enemy:{name:'Card Captain',emoji:'🃏',hp:380,atk:82},rw:{exp:90,gold:75}},
+{day:29,type:'rest',luck:'lucky',
+ en:"A paint brush left behind — the soldiers' work left unfinished.",
+ jp:"兵士が残していったペンキ刷毛。作業は未完成のままだった。",
+ rw:{exp:18,heal:80,relic:'paint_brush'}},
+{day:30,type:'boss',luck:'',
+ en:"The Knave of Hearts stands trial. But in Wonderland, the verdict comes first.",
+ jp:"ハートのジャックが裁判にかけられた。しかしワンダーランドでは判決が先だ。",
+ enemy:{name:'Knave of Hearts',emoji:'🃏',hp:750,atk:95,boss:true},
+ rw:{exp:180,gold:140}},
+
+// ═══ Ch.3 The Croquet Ground (31-45) ═══
+{day:31,type:'story',luck:'',
+ en:"Flamingos are used as croquet mallets. They keep turning to look at you.",
+ jp:"フラミンゴがクロッケーのマレット代わり。あなたをじっと見てくる。",
+ rw:{exp:25,gold:20}},
+{day:32,type:'pet',luck:'lucky',npc:'🦩',
+ en:"Your flamingo mallet begins to trust you. It stops wriggling.",
+ jp:"フラミンゴのマレットがあなたを信頼し始めた。暴れるのをやめた。",
+ rw:{exp:28,intimacy:22}},
+{day:33,type:'battle',luck:'',
+ en:"A hedgehog ball unrolls and charges at your Wilds.",
+ jp:"ハリネズミのボールが転がりを止めてワイルドたちに突進した。",
+ enemy:{name:'Hedgehog Ball',emoji:'🦔',hp:300,atk:78},rw:{exp:80,gold:65}},
+{day:34,type:'choice',luck:'',npc:'👸',
+ en:"The Queen demands you play croquet. Win or lose — off with your head?",
+ jp:"女王がクロッケーを要求した。勝っても負けても首が飛ぶ？",
+ cen:'Play by her rules, or refuse outright?',
+ cjp:'彼女のルールで遊ぶか、断るか。',
+ b1en:'Play along',b1jp:'従う',b2en:'Refuse',b2jp:'断る',
+ srw:{exp:35,gold:50,intimacy:15},frw:{exp:20,hpPct:-20},rate:0.6},
+{day:35,type:'rest',luck:'lucky',
+ en:"The Mock Turtle's tears fill a pool. Strangely, they are warm and healing.",
+ jp:"偽のウミガメの涙が水たまりを満たした。不思議と温かく、癒しの力があった。",
+ rw:{exp:20,heal:150,gold:20}},
+{day:36,type:'story',luck:'',
+ en:"The Gryphon dances with the Mock Turtle. Every step matches a word.",
+ jp:"グリフォンが偽のウミガメと踊った。一歩ごとに言葉が刻まれる。",
+ rw:{exp:25,gold:22}},
+{day:37,type:'battle',luck:'',
+ en:"The Gryphon swoops down with terrifying claws.",
+ jp:"グリフォンが恐ろしい爪で急降下してきた。",
+ enemy:{name:'Gryphon',emoji:'🦁',hp:420,atk:88},rw:{exp:100,gold:80}},
+{day:38,type:'pet',luck:'lucky',npc:'🐢',
+ en:"The Mock Turtle tells your Wilds a lesson in Reeling and Writhing.",
+ jp:"偽のウミガメがワイルドたちにリーリングとライジングの授業をした。",
+ rw:{exp:30,intimacy:25}},
+{day:39,type:'reward',luck:'lucky',
+ en:"A fragment of a vorpal blade — sharp with impossible keenness.",
+ jp:"ヴォーパルの剣の欠片。ありえないほどの切れ味を持っていた。",
+ rw:{exp:22,gold:50,relic:'vorpal_shard'}},
+{day:40,type:'story',luck:'bad',
+ en:"Evidence is presented at the trial. It makes no sense whatsoever.",
+ jp:"裁判で証拠が提出された。まったく意味をなさなかった。",
+ rw:{exp:12,hpPct:-12}},
+{day:41,type:'choice',luck:'',npc:'😸',
+ en:"The Cheshire Cat appears on the judge's bench. Do you plead your case?",
+ jp:"裁判官席にチェシャ猫が現れた。弁護するか？",
+ cen:'Plead your case, or stay silent?',
+ cjp:'弁護するか、黙っているか。',
+ b1en:'Speak up',b1jp:'弁護する',b2en:'Stay silent',b2jp:'黙る',
+ srw:{exp:35,intimacy:20,gold:40},frw:{exp:15,hpPct:-10},rate:0.6},
+{day:42,type:'battle',luck:'',
+ en:"The executioner's axe swings. Your Wilds deflect it just in time.",
+ jp:"死刑執行人の斧が振り下ろされた。ワイルドたちがギリギリ受け止めた。",
+ enemy:{name:'Royal Executioner',emoji:'⚔️',hp:450,atk:92},rw:{exp:105,gold:85}},
+{day:43,type:'rest',luck:'lucky',
+ en:"A piece of mushroom restores balance — at least for now.",
+ jp:"キノコの欠片が均衡を取り戻した――少なくとも今のところは。",
+ rw:{exp:22,heal:130,relic:'mushroom_cap'}},
+{day:44,type:'pet',luck:'lucky',npc:'🐇',
+ en:"The White Rabbit checks its watch: it's exactly the right time for this.",
+ jp:"白ウサギが時計を確認した。「今がちょうどいい時だ」",
+ rw:{exp:28,intimacy:25}},
+{day:45,type:'boss',luck:'',
+ en:"OFF WITH THEIR HEADS! The Queen unleashes her full fury.",
+ jp:"「首をはねよ！」女王が全力の怒りを解き放った。",
+ enemy:{name:'Queen of Hearts — Rage',emoji:'🔴',hp:900,atk:100,boss:true},
+ rw:{exp:220,gold:180}},
+
+// ═══ Ch.4 The Looking Glass (46-60) ═══
+{day:46,type:'story',luck:'',
+ en:"You step through the looking glass. Everything is reversed — left is right, right is wrong.",
+ jp:"鏡を抜けた。すべてが逆転している――左が右、右が間違い。",
+ rw:{exp:28,gold:25}},
+{day:47,type:'pet',luck:'lucky',npc:'🪞',
+ en:"Your reflection in the mirror waves first. Your Wilds are confused but delighted.",
+ jp:"鏡の中の反射が先に手を振った。ワイルドたちは戸惑いつつも喜んだ。",
+ rw:{exp:30,intimacy:25}},
+{day:48,type:'battle',luck:'',
+ en:"Tweedledee and Tweedledum challenge you to a battle about nothing.",
+ jp:"トゥイードルディーとトゥイードルダムが何もないことについて戦いを挑んだ。",
+ enemy:{name:'Tweedle Brothers',emoji:'👯',hp:500,atk:95},rw:{exp:110,gold:90}},
+{day:49,type:'reward',luck:'lucky',
+ en:"The Looking Glass itself grants a gift — a fragment of its power.",
+ jp:"鏡そのものが贈り物をくれた――その力の欠片。",
+ rw:{exp:25,gold:60,relic:'looking_glass'}},
+{day:50,type:'story',luck:'',
+ en:"The Red Queen runs without moving. To go forward, you must run twice as fast.",
+ jp:"赤の女王は走っても動かない。前に進むには、2倍速く走る必要がある。",
+ rw:{exp:30,gold:28}},
+{day:51,type:'choice',luck:'',npc:'👑',
+ en:"The Red Queen offers to make you a Queen — but at a cost.",
+ jp:"赤の女王があなたを女王にしようと申し出た――しかし代償がある。",
+ cen:'Accept the crown, or decline?',
+ cjp:'王冠を受け取るか、断るか。',
+ b1en:'Accept',b1jp:'受け取る',b2en:'Decline',b2jp:'断る',
+ srw:{exp:40,maxHp:50,intimacy:20},frw:{exp:30,atk:15},rate:1.0},
+{day:52,type:'pet',luck:'lucky',npc:'🐝',
+ en:"The White Queen is stung by a bee. Your Wilds comfort her.",
+ jp:"白の女王がハチに刺された。ワイルドたちが彼女を慰めた。",
+ rw:{exp:32,intimacy:28}},
+{day:53,type:'battle',luck:'',
+ en:"The Red Knight charges on a horse made entirely of playing cards.",
+ jp:"赤の騎士がトランプだけで作られた馬に乗って突進してきた。",
+ enemy:{name:'Red Knight',emoji:'♟️',hp:560,atk:98},rw:{exp:120,gold:95}},
+{day:54,type:'rest',luck:'lucky',
+ en:"The White Knight falls off his horse again — but he's oddly cheerful about it.",
+ jp:"白の騎士がまた馬から落ちた――しかし妙に陽気だった。",
+ rw:{exp:25,heal:140,gold:30}},
+{day:55,type:'story',luck:'',
+ en:"A train journey through a looking-glass world. Tickets cost a cough, not money.",
+ jp:"鏡の世界を列車で旅した。切符の代金は咳払い、お金ではない。",
+ rw:{exp:30,gold:30}},
+{day:56,type:'battle',luck:'',
+ en:"The Lion and the Unicorn fight for the crown. You are caught in the middle.",
+ jp:"ライオンとユニコーンが王冠を巡って戦っている。その間に挟まれた。",
+ enemy:{name:'Lion & Unicorn',emoji:'🦁',hp:620,atk:100,boss:false},rw:{exp:130,gold:100}},
+{day:57,type:'pet',luck:'lucky',npc:'🦄',
+ en:"The Unicorn declares it believes in you. Your Wilds glow with pride.",
+ jp:"ユニコーンがあなたを信じると宣言した。ワイルドたちは誇りで輝いた。",
+ rw:{exp:35,intimacy:30}},
+{day:58,type:'story',luck:'bad',
+ en:"Humpty Dumpty sits on a wall and tells you words mean whatever he wants.",
+ jp:"ハンプティ・ダンプティが壁に座り、言葉の意味は自分が決めると言った。",
+ rw:{exp:15,hpPct:-15}},
+{day:59,type:'reward',luck:'lucky',
+ en:"Humpty Dumpty falls — and leaves behind a looking glass shard.",
+ jp:"ハンプティ・ダンプティが落ちた。鏡のかけらを残して。",
+ rw:{exp:28,gold:70,relic:'looking_glass'}},
+{day:60,type:'boss',luck:'',
+ en:"ALL PAWNS ADVANCE. The chessboard erupts into chaos.",
+ jp:"「全ポーン前進！」チェス盤が混沌に包まれた。",
+ enemy:{name:'Chessboard Chaos',emoji:'♟️',hp:1000,atk:105,boss:true},
+ rw:{exp:260,gold:200}},
+
+// ═══ Ch.5 The Jabberwocky (61-75) ═══
+{day:61,type:'story',luck:'',
+ en:"'Twas brillig and the slithy toves did gyre and gimble in the wabe.",
+ jp:"「輝きの夜、ぬるぬるしたトーブたちが草地でジャイルし、ジンブルした」",
+ rw:{exp:32,gold:28}},
+{day:62,type:'pet',luck:'lucky',npc:'🐉',
+ en:"A baby Jabberwocky follows you. It seems to think you are its parent.",
+ jp:"ジャバウォッキーの赤ちゃんがついてくる。あなたを親だと思っているようだ。",
+ rw:{exp:35,intimacy:30}},
+{day:63,type:'battle',luck:'',
+ en:"The Bandersnatch lunges — frumious and unstoppable.",
+ jp:"バンダースナッチが突進してきた――凶暴で止まらない。",
+ enemy:{name:'Bandersnatch',emoji:'🐆',hp:680,atk:105},rw:{exp:140,gold:110}},
+{day:64,type:'rest',luck:'lucky',
+ en:"The vorpal blade gleams. You rest by the Tumtum tree.",
+ jp:"ヴォーパルの剣が輝いていた。タムタムの木のそばで休んだ。",
+ rw:{exp:28,heal:160,gold:35}},
+{day:65,type:'story',luck:'',
+ en:"The Jubjub bird screams in the distance. Your Wilds cover their ears.",
+ jp:"ジャブジャブ鳥が遠くで鳴き叫んだ。ワイルドたちは耳を塞いだ。",
+ rw:{exp:30,gold:30}},
+{day:66,type:'choice',luck:'',npc:'🗡️',
+ en:"A vorpal blade lies before you. Pick it up and hunt the Jabberwocky?",
+ jp:"ヴォーパルの剣が目の前にある。拾ってジャバウォッキーを狩るか？",
+ cen:'Take the blade and hunt, or leave it?',
+ cjp:'剣を取って狩るか、置いておくか。',
+ b1en:'Take it',b1jp:'拾う',b2en:'Leave it',b2jp:'置く',
+ srw:{exp:40,atk:20,relic:'vorpal_shard'},frw:{exp:25,def:12},rate:1.0},
+{day:67,type:'battle',luck:'',
+ en:"The Jabberwocky! Eyes of flame, claws like hooks! It comes whiffling!",
+ jp:"ジャバウォッキー！炎の目、鉤爪！ウィッフルしながら迫ってくる！",
+ enemy:{name:'Jabberwocky',emoji:'🐲',hp:750,atk:110,boss:false},rw:{exp:160,gold:130}},
+{day:68,type:'pet',luck:'lucky',npc:'🐉',
+ en:"One-two, one-two! Your Wilds strike through! The Jabberwock lies dead.",
+ jp:"「いち、に！いち、に！」ワイルドたちが打ち抜いた！ジャバウォックが倒れた。",
+ rw:{exp:40,intimacy:35}},
+{day:69,type:'rest',luck:'lucky',
+ en:"Callooh! Callay! You rest in frabjous joy.",
+ jp:"「カルー！カレー！」あなたはフラブジャスな喜びの中で休んだ。",
+ rw:{exp:28,heal:180,gold:40}},
+{day:70,type:'story',luck:'',
+ en:"The manxome foe is gone. But something larger stirs in the wabe.",
+ jp:"マンクソムな敵は去った。しかし草地でより大きな何かが蠢いている。",
+ rw:{exp:35,gold:35}},
+{day:71,type:'battle',luck:'',
+ en:"A mome rath — large, furious, and impossible to describe — attacks.",
+ jp:"モームラス。大きく、猛烈で、形容不可能な存在が攻撃してきた。",
+ enemy:{name:'Mome Rath',emoji:'🌀',hp:820,atk:112},rw:{exp:170,gold:135}},
+{day:72,type:'pet',luck:'lucky',npc:'🎩',
+ en:"The 帽子屋 appears again with new tea. Your Wilds grow stronger.",
+ jp:"帽子屋が新しいお茶を持って再び現れた。ワイルドたちが強くなった。",
+ rw:{exp:40,intimacy:35,atk:8}},
+{day:73,type:'reward',luck:'lucky',
+ en:"The Vorpal Shard glows after the battle. Another fragment joins it.",
+ jp:"戦いの後、ヴォーパルの欠片が輝いた。別の欠片が加わった。",
+ rw:{exp:30,gold:80,relic:'vorpal_shard'}},
+{day:74,type:'story',luck:'bad',
+ en:"The toves outgriabe. Something is very wrong in Wonderland.",
+ jp:"トーブたちがアウトグライブした。ワンダーランドで何かがひどくおかしい。",
+ rw:{exp:15,hpPct:-18}},
+{day:75,type:'boss',luck:'',
+ en:"The Jabberwocky returns — and it has brought friends.",
+ jp:"ジャバウォッキーが戻ってきた。そして仲間を連れていた。",
+ enemy:{name:'Jabberwocky — True Form',emoji:'🐲',hp:1200,atk:115,boss:true},
+ rw:{exp:300,gold:240}},
+
+// ═══ Ch.6 Through the Final Door (76-90) ═══
+{day:76,type:'story',luck:'',
+ en:"The door at the end of Wonderland shimmers. Beyond it: something real.",
+ jp:"ワンダーランドの果ての扉が輝いていた。その向こうに：何か本物のものが。",
+ rw:{exp:38,gold:35}},
+{day:77,type:'pet',luck:'lucky',npc:'🐇',
+ en:"The White Rabbit finally stops. It looks you in the eye and says: 'Thank you.'",
+ jp:"白ウサギがついに立ち止まり、目を見て言った。「ありがとう」",
+ rw:{exp:42,intimacy:40}},
+{day:78,type:'battle',luck:'',
+ en:"The entire deck of cards rises in a tornado of painted fury.",
+ jp:"トランプ全員が怒りの竜巻となって舞い上がった。",
+ enemy:{name:'Card Tornado',emoji:'🌪️',hp:900,atk:115},rw:{exp:180,gold:145}},
+{day:79,type:'rest',luck:'lucky',
+ en:"The Mad Tea（帽子屋のお茶） Party is finally over. Everyone rests in gentle silence.",
+ jp:"マッドティーパーティーがついに終わった。全員が穏やかな沈黙の中で休んだ。",
+ rw:{exp:35,heal:220,relic:'mad_tea'}},
+{day:80,type:'choice',luck:'',npc:'😸',
+ en:"The Cheshire Cat asks: which way do you want to go?",
+ jp:"チェシャ猫が聞いた。「どちらへ行きたい？」",
+ cen:"The short dangerous path, or the long safe one?",
+ cjp:'危険な近道か、安全な遠回りか。',
+ b1en:'Short path',b1jp:'近道',b2en:'Long path',b2jp:'遠回り',
+ srw:{exp:40,gold:50,hpPct:-15},frw:{exp:25,heal:200},rate:1.0},
+{day:81,type:'story',luck:'',
+ en:"The roses are all red now. No paint, no panic — just roses.",
+ jp:"バラはすべて赤くなっていた。ペンキもパニックも、ただバラだけ。",
+ rw:{exp:38,gold:35}},
+{day:82,type:'battle',luck:'',
+ en:"The Red Queen and White Queen fight each other — and then you.",
+ jp:"赤の女王と白の女王が互いに戦い――そしてあなたにも向かってきた。",
+ enemy:{name:'Two Queens',emoji:'👑',hp:1000,atk:118,boss:false},rw:{exp:200,gold:155}},
+{day:83,type:'pet',luck:'lucky',npc:'🦩',
+ en:"The flamingo mallet bows gracefully. Your Wilds have become truly strong.",
+ jp:"フラミンゴのマレットが優雅に頭を下げた。ワイルドたちは本当に強くなった。",
+ rw:{exp:45,intimacy:40}},
+{day:84,type:'rest',luck:'lucky',
+ en:"A final cup of tea, shared between all. The warmth feels permanent.",
+ jp:"最後の一杯のお茶を全員で分かち合った。その温もりは永遠のような気がした。",
+ rw:{exp:35,heal:250,gold:45}},
+{day:85,type:'reward',luck:'lucky',
+ en:"The looking glass shards reassemble. You can see your own world again.",
+ jp:"鏡の欠片が再び集まった。自分の世界が再び見えた。",
+ rw:{exp:40,gold:100,relic:'looking_glass'}},
+{day:86,type:'story',luck:'',
+ en:"IT'S ONLY A PACK OF CARDS! You finally see through the illusion.",
+ jp:"「所詮トランプの山じゃないか！」ついにその幻想を見通した。",
+ rw:{exp:42,gold:40}},
+{day:87,type:'battle',luck:'',
+ en:"The entire court rushes at you. Cards, hearts, spades, diamonds, clubs.",
+ jp:"法廷全体が突進してきた。カード、ハート、スペード、ダイヤ、クラブ。",
+ enemy:{name:'Full Card Court',emoji:'🃏',hp:1100,atk:118},rw:{exp:220,gold:170}},
+{day:88,type:'pet',luck:'lucky',npc:'😸',
+ en:"The Cheshire Cat grins one last time. Its smile stays forever.",
+ jp:"チェシャ猫が最後に微笑んだ。その笑みは永遠に残り続ける。",
+ rw:{exp:50,intimacy:50}},
+{day:89,type:'battle',luck:'',
+ en:"Wake up, Alice. Wake up. But the dream fights to keep you.",
+ jp:"「目を覚ませ、アリス。目を覚ませ。」しかし夢はあなたを引き留めようとする。",
+ enemy:{name:'The Dream Itself',emoji:'💤',hp:1300,atk:120},rw:{exp:250,gold:200}},
+{day:90,type:'boss',luck:'',
+ en:"OFF WITH THEIR HEADS — FOREVER. The Queen of Hearts at full power.",
+ jp:"「永遠に首をはねよ！」ハートの女王が全力で立ちはだかった。",
+ enemy:{name:'Queen of Hearts — FINAL',emoji:'🔴',hp:2000,atk:125,boss:true},
+ rw:{exp:999,gold:999}},
+];
+
+// ── SCREENS (v3 compat - already defined above) ──
+function _show_unused(id){
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  const el=$(id);
+  if(el) el.classList.add('active');
+}
+
+
+
+
+
+// launchAdventure() handles all game start logic (defined in META section above)
+
+
+
+
+
+
+
+// ── STATUS ──
+function updateStat(){
+  $('lvd').textContent=S.lv;
+  const hp=Math.max(0,Math.round(S.hp/S.hpMax*100));
+  const ex=Math.round(S.exp/S.expNext*100);
+  $('hpb').style.width=hp+'%';$('exb').style.width=ex+'%';
+  $('hppc').textContent=hp+'%';$('expc').textContent=ex+'%';
+  $('hpvl').textContent=S.hp+'/'+S.hpMax;
+  $('exvl').textContent=S.exp+'/'+S.expNext;
+  $('atkd').textContent=S.atk;$('defd').textContent=S.def;
+  $('gnum').textContent=S.gold;$('dpill').textContent=t('dl',S.day);
+  $('atkl').textContent=t('atk');$('defl').textContent=t('def');
+  $('hhpb').style.width=hp+'%';
+  S.pets.forEach(pt=>{
+    const el=$(pt.elId+'b')||document.querySelector('#'+pt.elId+' .chpf.pet')||document.querySelector('#'+pt.elId+' .chpf');
+    if(el) el.style.width=Math.max(0,pt.hp/pt.hpMax*100)+'%';
+  });
+}
+
+// ── DAY TRACK ──
+const TIC={story:'●',battle:'⚔',reward:'🎁',rest:'💧',choice:'🌿',boss:'💀',pet:'🐾',encounter:'👁'};
+function buildTrack(){
+  const tr=$('dtk');tr.innerHTML='';
+  for(let i=1;i<=90;i++){
+    if(i>1){const l=document.createElement('div');l.className='trl'+(i<=S.day?' done':'');tr.appendChild(l);}
+    const n=document.createElement('div');
+    n.className='dn'+(i===S.day?' cur':i<S.day?' done':'');
+    n.innerHTML=`<div class="dni">${TIC[EVS[i-1].type]||'●'}</div><div class="dnl">${i}</div>`;
+    tr.appendChild(n);
+  }
+}
+
+// ── FIELD BG ──
+const BGM={story:'ft',battle:'fb',rest:'ff',reward:'fr',choice:'ff',boss:'fbo'};
+function setBg(type,day){
+  const c=(day===8?'fn':(BGM[type]||'ft'));
+  $('fp1').className='fp '+c;$('fp2').className='fp '+c;
+  updateDeco(type,day);
+}
+
+const DECOS={
+  ft:[
+    {x:12,y:38,html:'<div style="position:absolute;bottom:38%;left:12%"><div style="width:38px;height:38px;background:#3a9a3a;border-radius:50%;margin:0 auto;position:relative;top:8px"></div><div style="width:12px;height:20px;background:#7a4a1a;margin:0 auto;border-radius:3px"></div></div>'},
+    {x:68,y:38,html:'<div style="position:absolute;bottom:38%;left:68%"><div style="width:90px;height:38px;background:#4a7cba;border-radius:6px 6px 0 0"></div><div style="width:80px;height:50px;background:#e8d8b8;border:3px solid #c0a878;border-radius:0 0 4px 4px"></div></div>'},
+  ],
+  ff:[
+    {html:'<div style="position:absolute;bottom:38%;left:8%"><div style="width:50px;height:50px;background:#2a8a2a;border-radius:50%;margin:0 auto;top:10px;position:relative"></div><div style="width:14px;height:24px;background:#6a3a1a;margin:0 auto;border-radius:3px"></div></div>'},
+    {html:'<div style="position:absolute;bottom:38%;left:60%"><div style="width:44px;height:44px;background:#1a7a1a;border-radius:50%;margin:0 auto;top:8px;position:relative"></div><div style="width:12px;height:20px;background:#7a4a1a;margin:0 auto;border-radius:3px"></div></div>'},
+    {html:'<div style="position:absolute;bottom:38%;left:35%;width:18px;height:40px;background:#8a7a5a;border-radius:4px;transform:rotate(-5deg)"></div>'},
+  ],
+  fr:[
+    {html:'<div style="position:absolute;bottom:38%;left:10%;width:50px;height:60px;background:#9a8060;border:3px solid #6a5040;border-radius:6px 6px 0 0;opacity:.8"></div>'},
+    {html:'<div style="position:absolute;bottom:38%;left:55%;width:30px;height:50px;background:#8a7050;border:2px solid #6a5030;border-radius:4px;opacity:.7"></div>'},
+    {html:'<div style="position:absolute;bottom:38%;left:72%;width:16px;height:30px;background:#9a8060;border-radius:3px;transform:rotate(8deg);opacity:.6"></div>'},
+  ],
+  fb:[
+    {html:'<div style="position:absolute;bottom:38%;left:8%;width:14px;height:35px;background:#8a2020;border-radius:3px;transform:rotate(-10deg)"></div>'},
+    {html:'<div style="position:absolute;bottom:38%;left:65%;width:12px;height:28px;background:#6a1010;border-radius:3px;transform:rotate(12deg)"></div>'},
+  ],
+  fbo:[
+    {html:'<div style="position:absolute;bottom:38%;left:10%;width:20px;height:50px;background:#3a0030;border-radius:4px;box-shadow:0 0 8px #a000a0"></div>'},
+    {html:'<div style="position:absolute;bottom:38%;left:65%;width:16px;height:40px;background:#2a0020;border-radius:3px;box-shadow:0 0 6px #c000c0"></div>'},
+  ],
+  fn:[
+    {html:'<div style="position:absolute;bottom:38%;left:15%;width:14px;height:40px;background:#1a1a2a;border-radius:3px;opacity:.7"></div>'},
+    {html:'<div style="position:absolute;bottom:38%;left:70%;font-size:20px;opacity:.4">🌙</div>'},
+  ],
+};
+
+function updateDeco(type,day){
+  const key=day===8?'fn':(BGM[type]||'ft');
+  const items=DECOS[key]||DECOS.ft;
+  const html=items.map(d=>d.html).join('');
+  $('dp1').innerHTML=html;$('dp2').innerHTML=html;
+}
+
+// ── LOG ──
+function addCard(html,cls){
+  const sc=$('ls');const c=document.createElement('div');
+  c.className='ec '+(cls||'');c.innerHTML=html;sc.appendChild(c);
+  applyLang();setTimeout(()=>sc.scrollTop=sc.scrollHeight,50);return c;
+}
+function rwTags(r){
+  if(!r) return '';const T=[];
+  const f=(i,c,tx)=>`<span class="rt ${c}">${i} ${tx}</span>`;
+  if(r.exp>0)    T.push(f('🟢','re',t('exp',r.exp)));
+  if(r.gold>0)   T.push(f('🟡','rg',t('gld',r.gold)));
+  if(r.gold<0)   T.push(f('🔴','rb',t('glm',r.gold)));
+  if(r.heal>0)   T.push(f('❤️','rhp',t('hp',r.heal)));
+  if(r.atk>0)    T.push(f('⚔️','ra',t('ap',r.atk)));
+  if(r.atk<0)    T.push(f('⚔️','rb',t('am',r.atk)));
+  if(r.def>0)    T.push(f('🛡️','rd',t('dp',r.def)));
+  if(r.maxHp>0)  T.push(f('❤️','rhp',t('mh',r.maxHp)));
+  if(r.atkPct>0) T.push(f('⚔️','ra',t('app',r.atkPct)));
+  if(r.hpPct<0)  T.push(f('❤️','rb',t('hpp',r.hpPct)));
+  if(r.relic)    T.push(`<span class="rt" style="background:#fff8e0;color:#a06010">✨ ${ALICE_RELICS[r.relic]?.name||r.relic}</span>`);
+  if(r.intimacy) T.push(f('💜','rhp','Intimacy +'+r.intimacy));
+  return T.length?`<div class="crw">${T.join('')}</div>`:'';
+}
+
+// ══════════════════════════════════════════════
+// RELIC SYSTEM (persistent across deaths)
+// ══════════════════════════════════════════════
+const ALICE_RELICS = {
+  tiny_key:     {id:'tiny_key',     name:'Tiny Key',        emoji:'🗝️',  desc:'+1% to all Tech stats',         effect:{techPct:1}},
+  rabbit_fur:   {id:'rabbit_fur',   name:'White Rabbit Fur',emoji:'🐇',  desc:'+30 Max HP',                     effect:{maxHpFlat:30}},
+  cheshire_smile:{id:'cheshire_smile',name:"Cheshire's Smile",emoji:'😸',desc:'+5% ATK',                       effect:{atkPct:5}},
+  vorpal_shard: {id:'vorpal_shard', name:'Vorpal Shard',    emoji:'⚔️',  desc:'+8 ATK',                        effect:{atkFlat:8}},
+  mad_tea:      {id:'mad_tea',      name:'Mad Tea（帽子屋のお茶）',         emoji:'🫖',  desc:'Heal 80 HP at start of each day',effect:{healPerDay:80}},
+  caterpillar_smoke:{id:'caterpillar_smoke',name:"Caterpillar's Smoke",emoji:'🐛',desc:'+5 DEF',              effect:{defFlat:5}},
+  looking_glass:{id:'looking_glass',name:'Looking Glass',   emoji:'🪞',  desc:'+15% Max HP',                   effect:{maxHpPct:15}},
+  mushroom_cap: {id:'mushroom_cap', name:'Mushroom Cap',    emoji:'🍄',  desc:'Restore 5% HP each turn',       effect:{healPctPerTurn:5}},
+  paint_brush:  {id:'paint_brush',  name:'Paint Brush',     emoji:'🖌️', desc:'+3% EXP gain',                  effect:{expPct:3}},
+  pocket_watch: {id:'pocket_watch', name:'Pocket Watch',    emoji:'⌚',  desc:'-1 enemy ATK per relic owned',  effect:{enemyAtkReduce:1}},
+};
+
+// レリック効果をS（ゲーム状態）に適用（冒険開始時に呼ぶ）
+function applyRelicEffects(){
+  let bonusMaxHp=0, bonusAtk=0, bonusDef=0;
+  Object.entries(META.relics).forEach(([id, count])=>{
+    if(!count) return;
+    const r=ALICE_RELICS[id];if(!r)return;
+    const e=r.effect;
+    if(e.maxHpFlat)  bonusMaxHp += e.maxHpFlat * count;
+    if(e.maxHpPct)   bonusMaxHp += Math.round(500 * e.maxHpPct/100 * count);
+    if(e.atkFlat)    bonusAtk += e.atkFlat * count;
+    if(e.atkPct)     bonusAtk += Math.round(100 * e.atkPct/100 * count);
+    if(e.defFlat)    bonusDef += e.defFlat * count;
+  });
+  S.hpMax = 500 + bonusMaxHp;
+  S.hp    = S.hpMax;
+  S.atk   = 100 + bonusAtk;
+  S.def   = 25  + bonusDef;
+}
+
+// 毎ターン回復レリック効果
+function applyRelicPerTurn(){
+  Object.entries(META.relics).forEach(([id, count])=>{
+    if(!count) return;
+    const r=ALICE_RELICS[id];if(!r)return;
+    if(r.effect.healPctPerTurn){
+      const h=Math.round(S.hpMax*r.effect.healPctPerTurn/100*count);
+      S.hp=Math.min(S.hpMax,S.hp+h);
+    }
+  });
+}
+
+// 毎日回復レリック効果
+function applyRelicPerDay(){
+  Object.entries(META.relics).forEach(([id, count])=>{
+    if(!count) return;
+    const r=ALICE_RELICS[id];if(!r)return;
+    if(r.effect.healPerDay){
+      S.hp=Math.min(S.hpMax,S.hp+r.effect.healPerDay*count);
+    }
+  });
+}
+
+// 敵ATK減少
+function getEnemyAtkReduction(){
+  let red=0;
+  const totalRelics=Object.values(META.relics).reduce((a,b)=>a+b,0);
+  Object.entries(META.relics).forEach(([id,count])=>{
+    if(!count)return;
+    const r=ALICE_RELICS[id];if(!r)return;
+    if(r.effect.enemyAtkReduce) red+=r.effect.enemyAtkReduce*totalRelics;
+  });
+  return Math.min(red, 50); // max 50 reduction
+}
+
+function gainRelic(relicId){
+  if(!ALICE_RELICS[relicId]) return;
+  META.relics[relicId]=(META.relics[relicId]||0)+1;
+  const r=ALICE_RELICS[relicId];
+  const count=META.relics[relicId];
+  addCard(`<div style="display:flex;align-items:center;gap:10px;padding:2px 0">
+    <span style="font-size:28px">${r.emoji}</span>
+    <div style="flex:1">
+      <div style="font-size:11px;font-weight:900;color:#c8901a;letter-spacing:.5px">✨ RELIC${count>1?' ×'+count:''}</div>
+      <div style="font-size:16px;font-weight:700;color:#3a2010">${r.name}</div>
+      <div style="font-size:10px;color:#7a6040;margin-top:2px">${r.desc}</div>
+    </div>
+  </div>`,'great');
+  setTimeout(()=>showLuck('great'),100);
+}
+
+// レリック一覧HTMLを生成
+function buildRelicListHTML(){
+  const entries=Object.entries(META.relics).filter(([,c])=>c>0);
+  if(!entries.length) return '<span style="color:#aaa;font-size:11px">No relics yet</span>';
+  return entries.map(([id,count])=>{
+    const r=ALICE_RELICS[id];
+    return `<div style="display:flex;align-items:center;gap:6px;padding:5px 0;border-bottom:1px solid #eee">
+      <span style="font-size:20px">${r.emoji}</span>
+      <div style="flex:1"><div style="font-size:12px;font-weight:700">${r.name}</div>
+        <div style="font-size:9px;color:#888">${r.desc}</div></div>
+      <span style="font-size:11px;font-weight:700;color:#c8901a">×${count}</span>
+    </div>`;
+  }).join('');
+}
+
+function applyRw(r){
+  if(!r) return;
+  if(r.exp){S.exp+=r.exp;lvup();}
+  if(r.gold){if(r.gold>0)coins(r.gold);S.gold=Math.max(0,S.gold+r.gold);}
+  if(r.heal) S.hp=Math.min(S.hpMax,S.hp+r.heal);
+  if(r.atk)  S.atk=Math.max(10,S.atk+r.atk);
+  if(r.def)  S.def=Math.max(5,S.def+r.def);
+  if(r.maxHp){S.hpMax+=r.maxHp;S.hp+=r.maxHp;}
+  if(r.atkPct) S.atk=Math.round(S.atk*(1+r.atkPct/100));
+  if(r.hpPct)  S.hp=Math.max(1,Math.round(S.hp*(1+r.hpPct/100)));
+  if(r.relic){
+    // バトル報酬でないrelic（story/rest/reward系）は即座に宝箱表示
+    if(S.phase!=='battling') setTimeout(()=>showRelicChest(r.relic),600);
+    else gainRelic(r.relic); // バトル中は直接（endBattleで宝箱表示するので通常は通らない）
+  }
+  if(r.intimacy){
+    META.intimacyTotal+=r.intimacy;
+    META.formation.forEach(id=>{
+      if(!id)return;
+      const w=META.wilds.find(x=>x.id===id);
+      if(w){w.intimacy=Math.min(w.intimacyMax,w.intimacy+r.intimacy);
+        if(w.type==='juvenile'&&w.intimacy>=w.intimacyMax) w.trialReady=true;}
+    });
+  }
+  updateStat();
+}
+function lvup(){
+  let up=false;
+  while(S.exp>=S.expNext){
+    S.exp-=S.expNext;S.lv++;S.expNext=Math.floor(S.expNext*1.35);
+    S.hpMax+=40;S.atk+=10;S.def+=4;S.hp=S.hpMax;up=true;
+  }
+  if(up){const o=$('lva');o.classList.remove('show');void o.offsetWidth;o.classList.add('show');
+    setTimeout(()=>o.classList.remove('show'),2100);}
+}
+
+
+// ── RELIC CHEST ──
+function showRelicChest(relicId){
+  _pendingRelic = relicId;
+  const chest = $('relic-chest');
+  chest.style.display = 'flex';
+  // アニメリセット
+  chest.style.animation = 'none';
+  void chest.offsetWidth;
+  chest.style.animation = 'chestPop .4s ease';
+}
+function openRelicChest(){
+  if(!_pendingRelic) return;
+  const id = _pendingRelic;
+  _pendingRelic = null;
+  $('relic-chest').style.display = 'none';
+  gainRelic(id);
+  updateDBadge();
+}
+
+// ── WORD COLLECTION ──
+let WORD_DB = {
+  common: [
+    {w:'ancient',   p:'/ˈeɪnʃənt/',  jp:'古代の'},
+    {w:'silent',    p:'/ˈsaɪlənt/',  jp:'静かな'},
+    {w:'brave',     p:'/breɪv/',      jp:'勇敢な'},
+    {w:'dark',      p:'/dɑːrk/',      jp:'暗い'},
+    {w:'deep',      p:'/diːp/',       jp:'深い'},
+    {w:'lost',      p:'/lɒst/',       jp:'迷った'},
+    {w:'hollow',    p:'/ˈhɒloʊ/',    jp:'空洞の'},
+    {w:'wander',    p:'/ˈwɒndər/',   jp:'さまよう'},
+    {w:'shadow',    p:'/ˈʃædoʊ/',    jp:'影'},
+    {w:'echo',      p:'/ˈekoʊ/',      jp:'こだま'},
+    {w:'dusk',      p:'/dʌsk/',       jp:'夕暮れ'},
+    {w:'mend',      p:'/mend/',        jp:'修復する'},
+    {w:'weary',     p:'/ˈwɪəri/',    jp:'疲れた'},
+    {w:'still',     p:'/stɪl/',       jp:'静止した'},
+    {w:'moss',      p:'/mɒs/',        jp:'苔'},
+    {w:'vale',      p:'/veɪl/',       jp:'谷'},
+    {w:'keen',      p:'/kiːn/',       jp:'鋭い'},
+    {w:'fleet',     p:'/fliːt/',      jp:'速い'},
+  ],
+  rare: [
+    {w:'vanish',    p:'/ˈvænɪʃ/',    jp:'消える'},
+    {w:'fragment',  p:'/ˈfræɡmənt/', jp:'欠片'},
+    {w:'reveal',    p:'/rɪˈviːl/',   jp:'明かす'},
+    {w:'guardian',  p:'/ˈɡɑːrdiən/',jp:'守護者'},
+    {w:'radiant',   p:'/ˈreɪdiənt/', jp:'輝く'},
+    {w:'eternal',   p:'/ɪˈtɜːrnəl/',jp:'永遠の'},
+    {w:'forge',     p:'/fɔːrdʒ/',    jp:'鍛える'},
+    {w:'sovereign', p:'/ˈsɒvrɪn/',  jp:'君主'},
+    {w:'omen',      p:'/ˈoʊmən/',    jp:'前兆'},
+    {w:'relic',     p:'/ˈrelɪk/',    jp:'遺物'},
+    {w:'veil',      p:'/veɪl/',       jp:'ベール'},
+    {w:'rift',      p:'/rɪft/',       jp:'亀裂'},
+    {w:'herald',    p:'/ˈherəld/',   jp:'先触れ'},
+  ],
+  epic: [
+    {w:'primordial',p:'/praɪˈmɔːrdiəl/',jp:'始原の'},
+    {w:'ethereal',  p:'/ɪˈθɪəriəl/', jp:'天上の'},
+    {w:'ineffable', p:'/ɪˈnefəbl/',  jp:'言葉にできない'},
+    {w:'liminal',   p:'/ˈlɪmɪnəl/',  jp:'境界の'},
+    {w:'elegy',     p:'/ˈelɪdʒi/',   jp:'哀歌'},
+    {w:'oracle',    p:'/ˈɒrəkəl/',   jp:'神託'},
+    {w:'solace',    p:'/ˈsɒlɪs/',    jp:'慰め'},
+    {w:'lament',    p:'/ləˈment/',   jp:'嘆き'},
+    {w:'zenith',    p:'/ˈziːnɪθ/',  jp:'頂点'},
+    {w:'abyss',     p:'/əˈbɪs/',     jp:'深淵'},
+  ],
+};
+
+let RARITY_CONFIG = {
+  common: {label:'Common', color:'#a0c0a0', bg:'#e8f0e8', border:'#80b080', chance:0.60},
+  rare:   {label:'Rare',   color:'#6080e0', bg:'#e8ecff', border:'#5070d0', chance:0.30},
+  epic:   {label:'Epic',   color:'#c060e0', bg:'#f5eaff', border:'#a040c0', chance:0.10},
+};
+
+// 収集済み単語
+// collectedWords already declared
+
+function pickWord(forcedRarity) {
+  const r = forcedRarity || (()=>{
+    const roll = Math.random();
+    return roll < 0.10 ? 'epic' : roll < 0.40 ? 'rare' : 'common';
+  })();
+  const pool = WORD_DB[r].filter(w => !collectedWords.find(c=>c.w===w.w));
+  if (!pool.length) return pickWord(r==='epic'?'rare':r==='rare'?'common':null);
+  const word = pool[Math.floor(Math.random()*pool.length)];
+  return {...word, rarity: r};
+}
+
+function collectWord(word) {
+  if (collectedWords.find(c=>c.w===word.w)) return;
+  collectedWords.push(word);
+  updateDBadge();
+}
+
+function triggerWordFind(day, forcedRarity) {
+  const word = pickWord(forcedRarity);
+  if (!word) return;
+  collectWord(word);
+  const rc = RARITY_CONFIG[word.rarity];
+  addCard(
+    `<div style="display:flex;align-items:center;gap:10px">
+      <div style="flex:1">
+        <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px">
+          <span style="font-size:10px;font-weight:900;color:${rc.color};
+            background:${rc.bg};border:1px solid ${rc.border};
+            border-radius:6px;padding:1px 7px;letter-spacing:.5px">${rc.label}</span>
+          <span style="font-size:11px;color:#888">Word Fragment</span>
+        </div>
+        <div style="font-size:22px;font-weight:900;color:#3a2060">${word.w}</div>
+        <div style="font-size:10px;color:#9a8080;margin-top:1px">${word.p}</div>
+        <div style="font-size:13px;color:#5a3080;font-weight:700;margin-top:3px">${word.jp}</div>
+      </div>
+      <div style="font-size:28px">📖</div>
+    </div>`,
+    word.rarity === 'epic' ? 'great' : word.rarity === 'rare' ? 'lucky' : ''
+  );
+  if (word.rarity === 'epic') setTimeout(()=>showLuck('great'), 100);
+  else if (word.rarity === 'rare') setTimeout(()=>showLuck('lucky'), 100);
+  // TTS
+  if (voiceOn) setTimeout(()=>speakWord(word.w), 400);
+}
+
+
+function updateDBadge(){$('dbadge').textContent=Object.values(META.relics).reduce((a,b)=>a+b,0);}
+
+// ── DICT ──
+
+function openRelicList(){ showRelicList(); }
+function showRelicList(){
+  // sdict画面を流用してレリック一覧表示
+  const dl=$('dl');dl.innerHTML='';
+  $('dcnt').textContent='Relics: '+Object.values(META.relics).reduce((a,b)=>a+b,0);
+  const entries=Object.entries(META.relics).filter(([,c])=>c>0);
+  if(!entries.length){
+    dl.innerHTML='<div style="text-align:center;color:rgba(255,255,255,.4);padding:40px;font-size:14px">No relics yet.<br>Keep adventuring!</div>';
+  } else {
+    entries.forEach(([id,count])=>{
+      const r=ALICE_RELICS[id];if(!r)return;
+      const c=document.createElement('div');c.className='dcard';
+      c.innerHTML=`<div style="flex:1">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">
+          <span style="font-size:24px">${r.emoji}</span>
+          <div><div class="dw" style="font-size:14px">${r.name}</div>
+            <div class="djp" style="font-size:11px">${r.desc}</div></div>
+        </div>
+      </div>
+      <span style="font-size:16px;font-weight:700;color:#c8901a;align-self:center">×${count}</span>`;
+      dl.appendChild(c);
+    });
+  }
+  show('sdict');
+}
+
+function openDict_unused(){  // disabled
+  const dl=$('dl');dl.innerHTML='';
+  $('dcnt').textContent=collectedWords.length+' words collected';
+  if(!collectedWords.length){
+    dl.innerHTML='<div style="text-align:center;color:rgba(255,255,255,.4);padding:40px;font-size:14px">No words found yet.</div>';
+  } else {
+    // Epic → Rare → Common の順でソート
+    const order={epic:0,rare:1,common:2};
+    [...collectedWords].sort((a,b)=>order[a.rarity]-order[b.rarity]).forEach(w=>{
+      const rc=RARITY_CONFIG[w.rarity];
+      const c=document.createElement('div');c.className='dcard';
+      c.style.borderColor=rc.border;
+      c.onclick=()=>speakWord(w.w);
+      c.innerHTML=`<div style="flex:1">
+        <div style="display:flex;align-items:center;gap:6px;margin-bottom:3px">
+          <span style="font-size:9px;font-weight:900;color:${rc.color};
+            background:${rc.bg};border:1px solid ${rc.border};
+            border-radius:5px;padding:1px 6px">${rc.label}</span>
+        </div>
+        <div class="dw">${w.w}</div>
+        <div class="dpron">${w.p}</div>
+        <div class="djp">${w.jp}</div>
+      </div>
+      <span style="font-size:20px;align-self:center">🔊</span>`;
+      dl.appendChild(c);
+    });
+  }
+  show('sdict');
+}
+function closeDict(){show('sg');}
+
+// ── PRESENT DAY ──
+function addCard(html,cls){
+  const sc=$('ls');const c=document.createElement('div');
+  c.className='ec '+(cls||'');c.innerHTML=html;sc.appendChild(c);
+  applyLang();setTimeout(()=>sc.scrollTop=sc.scrollHeight,50);return c;
+}
+function rwTags(r){
+  if(!r) return '';const T=[];
+  const f=(i,c,tx)=>`<span class="rt ${c}">${i} ${tx}</span>`;
+  if(r.exp>0)    T.push(f('🟢','re',t('exp',r.exp)));
+  if(r.gold>0)   T.push(f('🟡','rg',t('gld',r.gold)));
+  if(r.gold<0)   T.push(f('🔴','rb',t('glm',r.gold)));
+  if(r.heal>0)   T.push(f('❤️','rhp',t('hp',r.heal)));
+  if(r.atk>0)    T.push(f('⚔️','ra',t('ap',r.atk)));
+  if(r.atk<0)    T.push(f('⚔️','rb',t('am',r.atk)));
+  if(r.def>0)    T.push(f('🛡️','rd',t('dp',r.def)));
+  if(r.maxHp>0)  T.push(f('❤️','rhp',t('mh',r.maxHp)));
+  if(r.atkPct>0) T.push(f('⚔️','ra',t('app',r.atkPct)));
+  if(r.hpPct<0)  T.push(f('❤️','rb',t('hpp',r.hpPct)));
+  if(r.relic)    T.push(`<span class="rt" style="background:#fff8e0;color:#a06010">✨ ${ALICE_RELICS[r.relic]?.name||r.relic}</span>`);
+  if(r.intimacy) T.push(f('💜','rhp','Intimacy +'+r.intimacy));
+  return T.length?`<div class="crw">${T.join('')}</div>`:'';
+}
+function applyRw(r){
+  if(!r) return;
+  if(r.exp){S.exp+=r.exp;lvup();}
+  if(r.gold){if(r.gold>0)coins(r.gold);S.gold=Math.max(0,S.gold+r.gold);}
+  if(r.heal) S.hp=Math.min(S.hpMax,S.hp+r.heal);
+  if(r.atk)  S.atk=Math.max(10,S.atk+r.atk);
+  if(r.def)  S.def=Math.max(5,S.def+r.def);
+  if(r.maxHp){S.hpMax+=r.maxHp;S.hp+=r.maxHp;}
+  if(r.atkPct) S.atk=Math.round(S.atk*(1+r.atkPct/100));
+  if(r.hpPct)  S.hp=Math.max(1,Math.round(S.hp*(1+r.hpPct/100)));
+  if(r.relic){
+    // バトル報酬でないrelic（story/rest/reward系）は即座に宝箱表示
+    if(S.phase!=='battling') setTimeout(()=>showRelicChest(r.relic),600);
+    else gainRelic(r.relic); // バトル中は直接（endBattleで宝箱表示するので通常は通らない）
+  }
+  if(r.intimacy){
+    META.intimacyTotal+=r.intimacy;
+    META.formation.forEach(id=>{
+      if(!id)return;
+      const w=META.wilds.find(x=>x.id===id);
+      if(w){w.intimacy=Math.min(w.intimacyMax,w.intimacy+r.intimacy);
+        if(w.type==='juvenile'&&w.intimacy>=w.intimacyMax) w.trialReady=true;}
+    });
+  }
+  updateStat();
+}
+function lvup(){
+  let up=false;
+  while(S.exp>=S.expNext){
+    S.exp-=S.expNext;S.lv++;S.expNext=Math.floor(S.expNext*1.35);
+    S.hpMax+=40;S.atk+=10;S.def+=4;S.hp=S.hpMax;up=true;
+  }
+  if(up){const o=$('lva');o.classList.remove('show');void o.offsetWidth;o.classList.add('show');
+    setTimeout(()=>o.classList.remove('show'),2100);}
+}
+
+
+// ── RELIC CHEST ──
+let _pendingRelic = null;
+function showRelicChest(relicId){
+  _pendingRelic = relicId;
+  const chest = $('relic-chest');
+  chest.style.display = 'flex';
+  // アニメリセット
+  chest.style.animation = 'none';
+  void chest.offsetWidth;
+  chest.style.animation = 'chestPop .4s ease';
+}
+function openRelicChest(){
+  if(!_pendingRelic) return;
+  const id = _pendingRelic;
+  _pendingRelic = null;
+  $('relic-chest').style.display = 'none';
+  gainRelic(id);
+  updateDBadge();
+}
+
+// ── WORD COLLECTION ──
+WORD_DB = {
+  common: [
+    {w:'ancient',   p:'/ˈeɪnʃənt/',  jp:'古代の'},
+    {w:'silent',    p:'/ˈsaɪlənt/',  jp:'静かな'},
+    {w:'brave',     p:'/breɪv/',      jp:'勇敢な'},
+    {w:'dark',      p:'/dɑːrk/',      jp:'暗い'},
+    {w:'deep',      p:'/diːp/',       jp:'深い'},
+    {w:'lost',      p:'/lɒst/',       jp:'迷った'},
+    {w:'hollow',    p:'/ˈhɒloʊ/',    jp:'空洞の'},
+    {w:'wander',    p:'/ˈwɒndər/',   jp:'さまよう'},
+    {w:'shadow',    p:'/ˈʃædoʊ/',    jp:'影'},
+    {w:'echo',      p:'/ˈekoʊ/',      jp:'こだま'},
+    {w:'dusk',      p:'/dʌsk/',       jp:'夕暮れ'},
+    {w:'mend',      p:'/mend/',        jp:'修復する'},
+    {w:'weary',     p:'/ˈwɪəri/',    jp:'疲れた'},
+    {w:'still',     p:'/stɪl/',       jp:'静止した'},
+    {w:'moss',      p:'/mɒs/',        jp:'苔'},
+    {w:'vale',      p:'/veɪl/',       jp:'谷'},
+    {w:'keen',      p:'/kiːn/',       jp:'鋭い'},
+    {w:'fleet',     p:'/fliːt/',      jp:'速い'},
+  ],
+  rare: [
+    {w:'vanish',    p:'/ˈvænɪʃ/',    jp:'消える'},
+    {w:'fragment',  p:'/ˈfræɡmənt/', jp:'欠片'},
+    {w:'reveal',    p:'/rɪˈviːl/',   jp:'明かす'},
+    {w:'guardian',  p:'/ˈɡɑːrdiən/',jp:'守護者'},
+    {w:'radiant',   p:'/ˈreɪdiənt/', jp:'輝く'},
+    {w:'eternal',   p:'/ɪˈtɜːrnəl/',jp:'永遠の'},
+    {w:'forge',     p:'/fɔːrdʒ/',    jp:'鍛える'},
+    {w:'sovereign', p:'/ˈsɒvrɪn/',  jp:'君主'},
+    {w:'omen',      p:'/ˈoʊmən/',    jp:'前兆'},
+    {w:'relic',     p:'/ˈrelɪk/',    jp:'遺物'},
+    {w:'veil',      p:'/veɪl/',       jp:'ベール'},
+    {w:'rift',      p:'/rɪft/',       jp:'亀裂'},
+    {w:'herald',    p:'/ˈherəld/',   jp:'先触れ'},
+  ],
+  epic: [
+    {w:'primordial',p:'/praɪˈmɔːrdiəl/',jp:'始原の'},
+    {w:'ethereal',  p:'/ɪˈθɪəriəl/', jp:'天上の'},
+    {w:'ineffable', p:'/ɪˈnefəbl/',  jp:'言葉にできない'},
+    {w:'liminal',   p:'/ˈlɪmɪnəl/',  jp:'境界の'},
+    {w:'elegy',     p:'/ˈelɪdʒi/',   jp:'哀歌'},
+    {w:'oracle',    p:'/ˈɒrəkəl/',   jp:'神託'},
+    {w:'solace',    p:'/ˈsɒlɪs/',    jp:'慰め'},
+    {w:'lament',    p:'/ləˈment/',   jp:'嘆き'},
+    {w:'zenith',    p:'/ˈziːnɪθ/',  jp:'頂点'},
+    {w:'abyss',     p:'/əˈbɪs/',     jp:'深淵'},
+  ],
+};
+
+RARITY_CONFIG = {
+  common: {label:'Common', color:'#a0c0a0', bg:'#e8f0e8', border:'#80b080', chance:0.60},
+  rare:   {label:'Rare',   color:'#6080e0', bg:'#e8ecff', border:'#5070d0', chance:0.30},
+  epic:   {label:'Epic',   color:'#c060e0', bg:'#f5eaff', border:'#a040c0', chance:0.10},
+};
+
+// 収集済み単語
+// [dup removed]
+
+function pickWord(forcedRarity) {
+  const r = forcedRarity || (()=>{
+    const roll = Math.random();
+    return roll < 0.10 ? 'epic' : roll < 0.40 ? 'rare' : 'common';
+  })();
+  const pool = WORD_DB[r].filter(w => !collectedWords.find(c=>c.w===w.w));
+  if (!pool.length) return pickWord(r==='epic'?'rare':r==='rare'?'common':null);
+  const word = pool[Math.floor(Math.random()*pool.length)];
+  return {...word, rarity: r};
+}
+
+function collectWord(word) {
+  if (collectedWords.find(c=>c.w===word.w)) return;
+  collectedWords.push(word);
+  updateDBadge();
+}
+
+function triggerWordFind(day, forcedRarity) {
+  const word = pickWord(forcedRarity);
+  if (!word) return;
+  collectWord(word);
+  const rc = RARITY_CONFIG[word.rarity];
+  addCard(
+    `<div style="display:flex;align-items:center;gap:10px">
+      <div style="flex:1">
+        <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px">
+          <span style="font-size:10px;font-weight:900;color:${rc.color};
+            background:${rc.bg};border:1px solid ${rc.border};
+            border-radius:6px;padding:1px 7px;letter-spacing:.5px">${rc.label}</span>
+          <span style="font-size:11px;color:#888">Word Fragment</span>
+        </div>
+        <div style="font-size:22px;font-weight:900;color:#3a2060">${word.w}</div>
+        <div style="font-size:10px;color:#9a8080;margin-top:1px">${word.p}</div>
+        <div style="font-size:13px;color:#5a3080;font-weight:700;margin-top:3px">${word.jp}</div>
+      </div>
+      <div style="font-size:28px">📖</div>
+    </div>`,
+    word.rarity === 'epic' ? 'great' : word.rarity === 'rare' ? 'lucky' : ''
+  );
+  if (word.rarity === 'epic') setTimeout(()=>showLuck('great'), 100);
+  else if (word.rarity === 'rare') setTimeout(()=>showLuck('lucky'), 100);
+  // TTS
+  if (voiceOn) setTimeout(()=>speakWord(word.w), 400);
+}
+
+
+function updateDBadge(){$('dbadge').textContent=Object.values(META.relics).reduce((a,b)=>a+b,0);}
+
+// ── DICT ──
+
+function openRelicList(){ showRelicList(); }
+function showRelicList(){
+  // sdict画面を流用してレリック一覧表示
+  const dl=$('dl');dl.innerHTML='';
+  $('dcnt').textContent='Relics: '+Object.values(META.relics).reduce((a,b)=>a+b,0);
+  const entries=Object.entries(META.relics).filter(([,c])=>c>0);
+  if(!entries.length){
+    dl.innerHTML='<div style="text-align:center;color:rgba(255,255,255,.4);padding:40px;font-size:14px">No relics yet.<br>Keep adventuring!</div>';
+  } else {
+    entries.forEach(([id,count])=>{
+      const r=ALICE_RELICS[id];if(!r)return;
+      const c=document.createElement('div');c.className='dcard';
+      c.innerHTML=`<div style="flex:1">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">
+          <span style="font-size:24px">${r.emoji}</span>
+          <div><div class="dw" style="font-size:14px">${r.name}</div>
+            <div class="djp" style="font-size:11px">${r.desc}</div></div>
+        </div>
+      </div>
+      <span style="font-size:16px;font-weight:700;color:#c8901a;align-self:center">×${count}</span>`;
+      dl.appendChild(c);
+    });
+  }
+  show('sdict');
+}
+
+function openDict_unused(){  // disabled
+  const dl=$('dl');dl.innerHTML='';
+  $('dcnt').textContent=collectedWords.length+' words collected';
+  if(!collectedWords.length){
+    dl.innerHTML='<div style="text-align:center;color:rgba(255,255,255,.4);padding:40px;font-size:14px">No words found yet.</div>';
+  } else {
+    // Epic → Rare → Common の順でソート
+    const order={epic:0,rare:1,common:2};
+    [...collectedWords].sort((a,b)=>order[a.rarity]-order[b.rarity]).forEach(w=>{
+      const rc=RARITY_CONFIG[w.rarity];
+      const c=document.createElement('div');c.className='dcard';
+      c.style.borderColor=rc.border;
+      c.onclick=()=>speakWord(w.w);
+      c.innerHTML=`<div style="flex:1">
+        <div style="display:flex;align-items:center;gap:6px;margin-bottom:3px">
+          <span style="font-size:9px;font-weight:900;color:${rc.color};
+            background:${rc.bg};border:1px solid ${rc.border};
+            border-radius:5px;padding:1px 6px">${rc.label}</span>
+        </div>
+        <div class="dw">${w.w}</div>
+        <div class="dpron">${w.p}</div>
+        <div class="djp">${w.jp}</div>
+      </div>
+      <span style="font-size:20px;align-self:center">🔊</span>`;
+      dl.appendChild(c);
+    });
+  }
+  show('sdict');
+}
+function closeDict(){show('sg');}
+
+// ── PRESENT DAY ──
+function presentDay(){
+  applyRelicPerDay();
+  const ev=EVS[S.day-1];
+  buildTrack();setBg(ev.type,S.day);updateStat();
+  // BGM切り替え（battle/bossは静止、ボタン押下時に戦闘曲へ）
+  if(ev.type==='story'||ev.type==='rest'||ev.type==='reward'||ev.type==='choice'){
+    playAdventureBGM();
+  } else {
+    stopBGM(); // battle/boss は「バトル」ボタンを押すまで無音
+  }
+  $('eu').style.display='none';
+  $('npc-unit').style.display='none';
+  // 歩み再開＋スクロール再開
+  document.querySelectorAll('#ally-zone .cu').forEach(e=>{
+    if(e.style.display!=='none'){e.classList.remove('stopped');e.classList.add('wlk');}
+  });
+  $('fsa').style.animationPlayState='running';
+  $('deco-scroll').style.animationPlayState='running';
+  // cbtrow 確実にリセット
+  const cr=$('cbtrow');cr.style.display='none';cr.dataset.idx='';
+  $('mb').disabled=false;$('mb').style.opacity='';
+  $('fgtxt').style.display='none';$('bstxt').style.display='none';
+  $('tnbdg').style.display='none';S.pendingChoice=false;
+
+  if(ev.type==='battle'||ev.type==='boss'){
+    S.phase='battle_ready';S.eHp=ev.enemy.hp;S.eHpMax=ev.enemy.hp;
+    $('eemi').textContent=ev.enemy.emoji;$('ename').textContent=ev.enemy.name;
+    $('ehpb').style.width='100%';$('eu').style.display='flex';balanceLayout();
+    const cls=ev.type==='boss'?'ec bt great':'ec bt';
+    addCard(`<div class="cday">${t('dl',ev.day)}</div>
+      <div class="cjp">${ev.jp}</div><div class="cen">${ev.en}</div>`,cls);
+    setTimeout(()=>logSpeak(ev.en),300);
+    if(ev.type==='boss'){
+      const bt=$('bstxt');bt.style.display='block';bt.classList.add('show');
+      setTimeout(()=>{bt.style.display='none';bt.classList.remove('show');},1600);
+    }
+    setBtn(ev.type==='boss'?t('bos'):t('bt'),ev.type==='boss'?'bos':'btl');
+    $('mb').disabled=false;$('mb').style.opacity='';
+
+  } else if(ev.type==='relic'){
+    // Relic discovery event
+    S.phase='idle';applyRw(ev.rw||{});
+    if(ev.relic) gainRelic(ev.relic);
+    const luckBadge='<span class="lbdg" style="background:#f0c84a;color:#3a2000">📿 Relic!</span>';
+    addCard(`<div class="cday">${t('dl',ev.day)}</div>
+      <div class="cen">${ev.en}</div>
+      <div class="cjp">${ev.jp}</div>
+      ${ev.relic?`<div style="background:#fff8e8;border:1.5px solid #e8d070;border-radius:10px;padding:8px 10px;margin-top:6px">
+        <div style="font-size:16px;font-weight:900">${ev.relic.emoji} ${ev.relic.name}</div>
+        <div style="font-size:11px;color:#886010;margin-top:2px">${ev.relic.desc}</div>
+      </div>`:''}
+      ${rwTags(ev.rw||{})}${luckBadge}`,'great');
+    setTimeout(()=>showLuck('great'),100);
+    setTimeout(()=>logSpeak(ev.en),300);
+    setBtn(S.day>=90?t('cl'):t('nd'),'');$('mb').disabled=false;$('mb').style.opacity='';
+    setTimeout(()=>playAdventureBGM(),100);
+
+  } else if(ev.type==='intimacy'){
+    // Intimacy boost event
+    S.phase='idle';applyRw(ev.rw||{});
+    if(ev.npc){
+      const npc=$('npc-unit');
+      npc.style.display='flex';npc.style.right='60px';npc.style.left='auto';
+      $('npc-emoji').textContent=ev.npc;
+    }
+    document.querySelectorAll('#ally-zone .cu').forEach(e=>{
+      if(e.style.display!=='none'){e.classList.remove('wlk');e.classList.add('stopped');}
+    });
+    $('fsa').style.animationPlayState='paused';
+    $('deco-scroll').style.animationPlayState='paused';
+    const intimacyGain=ev.rw.intimacy||0;
+    if(intimacyGain>0){
+      META.totalIntimacy+=intimacyGain;
+      // Boost all formation wilds
+      META.formation.forEach(id=>{
+        if(!id) return;
+        const w=META.wilds.find(x=>x.id===id);
+        if(w){w.intimacy=Math.min(w.intimacyMax,w.intimacy+intimacyGain);
+          if(w.type==='juvenile'&&w.intimacy>=w.intimacyMax) w.trialReady=true;}
+      });
+      renderTrialNotif();
+    }
+    addCard(`<div class="cday">${t('dl',ev.day)}</div>
+      <div class="cen">${ev.en}</div>
+      <div class="cjp">${ev.jp}</div>
+      <div style="background:#f8eeff;border:1.5px solid #c090e0;border-radius:10px;padding:6px 10px;margin-top:6px;font-size:12px;color:#6020a0;font-weight:700">
+        💜 Intimacy +${intimacyGain} (Total: ${META.totalIntimacy})
+      </div>
+      ${rwTags(ev.rw||{})}`,'lucky');
+    setTimeout(()=>logSpeak(ev.en),300);
+    setTimeout(()=>showLuck('lucky'),100);
+    setTimeout(()=>{
+      $('npc-unit').style.display='none';
+      document.querySelectorAll('#ally-zone .cu').forEach(e=>{
+        if(e.style.display!=='none'){e.classList.remove('stopped');e.classList.add('wlk');}
+      });
+      $('fsa').style.animationPlayState='running';
+      $('deco-scroll').style.animationPlayState='running';
+    },1200);
+    setBtn(S.day>=90?t('cl'):t('nd'),'');$('mb').disabled=false;$('mb').style.opacity='';
+    setTimeout(()=>playAdventureBGM(),100);
+
+  } else if(ev.type==='pet'){
+    // petイベントはchoiceフィールドがある場合はchoiceと同様に扱う
+    if(ev.b1en){
+      // choice-style pet event
+      S.phase='idle';S.pendingChoice=true;
+      if(ev.npc){const npc=$('npc-unit');npc.style.display='flex';npc.style.right='60px';npc.style.left='auto';$('npc-emoji').textContent=ev.npc;}
+      document.querySelectorAll('#ally-zone .cu').forEach(e=>{if(e.style.display!=='none'){e.classList.remove('wlk');e.classList.add('stopped');}});
+      $('fsa').style.animationPlayState='paused';$('deco-scroll').style.animationPlayState='paused';
+      addCard(`<div class="cday">${t('dl',ev.day)}</div>
+        <div class="cen">${ev.en}</div><div class="cjp">${ev.jp}</div>
+        <div class="cen" style="color:#7060a0;margin-top:5px">${ev.cen||''}</div>
+        <div class="cjp" style="color:#5a4080;margin-top:2px">${ev.cjp||''}</div>`,'ch');
+      setTimeout(()=>logSpeak(ev.en),300);
+      $('mb').style.height='0';$('mb').style.margin='0';$('mb').style.padding='0';$('mb').style.overflow='hidden';$('cbtrow').style.display='flex';
+      $('cbtrow').dataset.idx=ev.day-1;$('cbtrow').dataset.type='choice';
+      $('cbtrow').children[0].textContent=S.lang==='jp'?(ev.b1jp||t('cl2')):(ev.b1en||'Option A');
+      $('cbtrow').children[1].textContent=S.lang==='jp'?(ev.b2jp||t('cp')):(ev.b2en||'Option B');
+      setTimeout(()=>playAdventureBGM(),100);
+      return;
+    }
+    S.phase='idle';
+    applyRw(ev.rw||{});
+    if(ev.npc){
+      const npc=$('npc-unit');
+      npc.style.display='flex';npc.style.right='60px';npc.style.left='auto';
+      $('npc-emoji').textContent=ev.npc;
+    }
+    document.querySelectorAll('#ally-zone .cu').forEach(e=>{
+      if(e.style.display!=='none'){e.classList.remove('wlk');e.classList.add('stopped');}
+    });
+    $('fsa').style.animationPlayState='paused';
+    $('deco-scroll').style.animationPlayState='paused';
+    addCard(`<div class="cday">${t('dl',ev.day)}</div>
+      <div class="cen">${ev.en}</div>
+      <div class="cjp">${ev.jp}</div>`,'lucky');
+    setTimeout(()=>logSpeak(ev.en),300);
+    setTimeout(()=>{
+      $('npc-unit').style.display='none';
+      document.querySelectorAll('#ally-zone .cu').forEach(e=>{
+        if(e.style.display!=='none'){e.classList.remove('stopped');e.classList.add('wlk');}
+      });
+      $('fsa').style.animationPlayState='running';
+      $('deco-scroll').style.animationPlayState='running';
+    },1200);
+    setBtn(S.day>=90?t('cl'):t('nd'),'');
+    $('mb').disabled=false;$('mb').style.opacity='';
+    setTimeout(()=>playAdventureBGM(),100);
+
+  } else if(ev.type==='choice'){
+    S.phase='idle';S.pendingChoice=true;
+    document.querySelectorAll('#ally-zone .cu').forEach(e=>{
+      if(e.style.display!=='none'){e.classList.remove('wlk');e.classList.add('stopped');}
+    });
+    $('fsa').style.animationPlayState='paused';
+    $('deco-scroll').style.animationPlayState='paused';
+    const npc=$('npc-unit');
+    npc.style.display='flex';
+    npc.style.right='60px';npc.style.left='auto';
+    $('npc-emoji').textContent=ev.npc||'🌿';
+    addCard(`<div class="cday">${t('dl',ev.day)}</div>
+      <div class="cen">${ev.en}</div>
+      <div class="cjp">${ev.jp}</div>
+      <div class="cen" style="color:#8060a0;margin-top:5px">${ev.cen||''}</div>
+      <div class="cjp" style="color:#5a4080;margin-top:2px">${ev.cjp||''}</div>`,'ch');
+    setTimeout(()=>logSpeak(ev.cen||ev.en),300);
+    $('mb').disabled=true;$('mb').style.opacity='.4';
+    $('cbtrow').style.display='flex';
+    $('cbtrow').dataset.idx=ev.day-1;
+    $('cbtrow').dataset.type='choice';
+    $('cbtrow').children[0].textContent=t('cl2');
+    $('cbtrow').children[1].textContent=t('cp');
+
+  } else {
+    S.phase='idle';applyRw(ev.rw);
+    const lc=ev.luck==='great'?'great':ev.luck==='lucky'?'lucky':ev.luck==='bad'?'bad':'';
+    const lk=ev.luck==='great'?'lbg':ev.luck==='lucky'?'lbl':ev.luck==='bad'?'lbb':'';
+    const lb=lk?`<span class="lbdg">${t(lk)}</span>`:'';
+    addCard(`<div class="cday">${t('dl',ev.day)}</div>
+      <div class="cen">${ev.en}</div>
+      <div class="cjp">${ev.jp}</div>
+      ${rwTags(ev.rw)}${lb}`,lc);
+    setTimeout(()=>logSpeak(ev.en),300);
+    if(ev.luck&&ev.luck!=='') setTimeout(()=>showLuck(ev.luck),100);
+    setBtn(S.day>=90?t('cl'):t('nd'),'');
+    $('mb').disabled=false;$('mb').style.opacity='';
+  }
+
+  // 安全網：choiceとbattle以外は必ずボタンを表示
+  if(S.phase==='idle'&&!S.pendingChoice){
+    $('mb').disabled=false;$('mb').style.opacity='';
+    if(!$('mb').textContent) setBtn(S.day>=90?t('cl'):t('nd'),'');
+  }
+}
+
+// ── CHOICE ──
+function resolveChoice(pray,idx){
+  // pet イベントか choice イベントかを判定
+  if($('cbtrow').dataset.type==='pet'){
+    resolvePetChoice(pray,idx);
+    return;
+  }
+  const ev=EVS[idx];
+  // 選択ボタン非表示・次の日ボタン復活
+  const cr=$('cbtrow');
+  cr.style.display='none';
+  cr.dataset.idx='';
+  $('mb').style.height='';$('mb').style.margin='';$('mb').style.padding='';$('mb').style.overflow='';
+  $('mb').disabled=false;$('mb').style.opacity='';
+  // NPC非表示、歩み再開、スクロール再開
+  $('npc-unit').style.display='none';
+  document.querySelectorAll('#ally-zone .cu').forEach(e=>{
+    if(e.style.display!=='none'){e.classList.remove('stopped');e.classList.add('wlk');}
+  });
+  $('fsa').style.animationPlayState='running';
+  $('deco-scroll').style.animationPlayState='running';
+
+  // 去る(pray=false)→何も起きない　祈る(pray=true)→成否判定
+  if(!pray){
+    const _ev2=EVS[idx];
+    const leaveJp=_ev2&&_ev2.b2jp?_ev2.b2jp+'…':'その場を静かに去った。';
+    const leaveEn=_ev2&&_ev2.b2en?_ev2.b2en+'…':'You quietly left.';
+    addCard(`<div class="cen">${leaveEn}</div><div class="cjp">${leaveJp}</div>`,'');
+    S.pendingChoice=false;
+    setBtn(S.day>=90?t('cl'):t('nd'),'');
+    return;
+  }
+  const ok=Math.random()<(ev.rate||0.5);
+  const r=ok?ev.srw:ev.frw;
+  applyRw(r);
+  // テキスト：sjp/fjp があればそれを、なければ b1/b2 ラベルで代用
+  const jtxt=ok?(ev.sjp||ev.b1jp||'成功！'):(ev.fjp||ev.b2jp||'失敗…');
+  const etxt=ok?(ev.sen||ev.b1en||'Success!'):(ev.fen||ev.b2en||'Failed...');
+  addCard(`<div class="cen">${etxt}</div><div class="cjp">${jtxt}</div>${rwTags(r)}`,ok?'lucky':'bad');
+  setTimeout(()=>logSpeak(etxt),200);
+  S.pendingChoice=false;
+  setBtn(S.day>=90?t('cl'):t('nd'),'');
+}
+
+// ── ADD NEW PET ──
+function canAddPet(){
+  const az=$('ally-zone');
+  return az ? az.querySelectorAll('.cu[id^="pu"]').length < 5 : false;
+}
+function addNewPet(ev){
+  const np=ev.newPet;
+  // パーティーに仲間追加カードを出す
+  const L=S.lang==='en';
+  addCard(`<div style="text-align:center;padding:6px 0">
+    <div style="font-size:36px;margin-bottom:4px">${np.emoji}</div>
+    <div style="font-size:14px;font-weight:900;color:#2a6a0a;margin-bottom:2px">${L?np.en||np.jp:np.jp}</div>
+    <div style="font-size:11px;color:#5a8a2a">${L?np.nameEn:np.name} が仲間に加わった！</div>
+  </div>`,'vc');
+
+  // ally-zone に仲間追加
+  const az=$('ally-zone');
+  const petCount=az.querySelectorAll('.cu[id^="pu"]').length;
+  const newId='pu'+(petCount+1);
+  // pets配列に追加
+  const ps=np.stats||{hp:600,def:50,atk:30,healer:false};
+  S.pets.push({hp:ps.hp,hpMax:ps.hp,def:ps.def,
+    atk:ps.atk||0,healer:ps.healer||false,elId:newId});
+  S.hasPet=true;
+  const div=document.createElement('div');
+  div.className='cu wlk';div.id=newId;
+  div.style.display='flex';
+    div.innerHTML=`<div class="chpw" style="width:44px"><div class="chpf pet" id="ph${newId}" style="width:100%"></div></div>
+    <span style="font-size:34px;display:block;text-align:center">${np.emoji}</span>
+    <div class="shad" style="width:26px;height:5px"></div>`;
+  // row: hero の直後に挿入 = 視覚的に主人公の右隣(前列)
+  const hu=$('hu');
+  if(hu&&hu.nextSibling) az.insertBefore(div,hu.nextSibling);
+  else az.appendChild(div);
+  balanceLayout();
+
+  // 次章へ進む（ボタンを次の日に戻す）
+  S.phase='idle';
+  $('mb').disabled=false;$('mb').style.opacity='';
+  $('mb').className='';  // fighting-btn クラスを確実にクリア
+  setBtn(S.day>=90?t('cl'):t('nd'),'');
+  balanceLayout();
+}
+
+// ── COMPANION ACTIONS ──
+// 仲間が毎日何かを行動し、小さな結果を生む
+const COMPANION_ACTIONS = [
+  // 発見系
+  {w:['🐇','🦔','🐦','🐢','🦋','🦎','🦇','🐍','🦊','🐺','🦅','🦌','🐉','🦄','🐋','🦩','🐬','✨','🦁','🐾'],
+   jp:(e)=>`${e}が茂みの中から光る石を見つけてきた。`,
+   en:(e)=>`${e} nosed through the undergrowth and brought back a glowing stone.`,
+   rw:{gold:20}},
+  {w:['🐦','🦅','🦇','🦄','🌟'],
+   jp:(e)=>`${e}が空高く偵察し、近くに泉があることを知らせてくれた。`,
+   en:(e)=>`${e} scouted high above and signaled that a spring lay nearby.`,
+   rw:{heal:60}},
+  {w:['🦉','🦋','🦌','🦩','✨'],
+   jp:(e)=>`${e}が傷ついた仲間を静かに癒してくれた。`,
+   en:(e)=>`${e} quietly healed the wounded among your companions.`,
+   rw:{heal:80}},
+  {w:['🐺','🦁','🐉','🐍','🦊'],
+   jp:(e)=>`${e}が夜番をしてくれたおかげで、全員がぐっすり眠れた。`,
+   en:(e)=>`${e} kept watch through the night, letting everyone sleep soundly.`,
+   rw:{heal:50,exp:10}},
+  {w:['🐢','🦔','🦌','🐋'],
+   jp:(e)=>`${e}がどこからか古いコインを掘り出してきた。`,
+   en:(e)=>`${e} dug up a handful of old coins from somewhere unexpected.`,
+   rw:{gold:35}},
+  {w:['🐦','🦅','🦇'],
+   jp:(e)=>`${e}が廃墟の高所から地図の一部を発見してきた。`,
+   en:(e)=>`${e} found a fragment of a map in the ruins above.`,
+   rw:{gold:25,exp:15}},
+  {w:['🐍','🦎','🦊','🐺'],
+   jp:(e)=>`${e}が敵の気配をいち早く察知し、危険を回避できた。`,
+   en:(e)=>`${e} sensed danger early, and the threat was avoided entirely.`,
+   rw:{exp:20}},
+  {w:['🦋','✨','🦩','🌟'],
+   jp:(e)=>`${e}が言葉の欠片を見つけ、持ち帰ってくれた。`,
+   en:(e)=>`${e} found a fragment of ancient words and carried it back to you.`,
+   rw:{exp:30}},
+  {w:['🐋','🐬','🦄'],
+   jp:(e)=>`${e}が古い泉の場所を教えてくれた。みんなで水を飲んだ。`,
+   en:(e)=>`${e} led the group to an old spring. Everyone drank together.`,
+   rw:{heal:100,gold:10}},
+  {w:['🦔','🐢','🦌','🐇'],
+   jp:(e)=>`${e}が食料になる木の実を大量に集めてきた。`,
+   en:(e)=>`${e} gathered a large pile of edible berries for the group.`,
+   rw:{heal:70,gold:15}},
+  // 経験値系
+  {w:null, // 全員対象
+   jp:(e)=>`${e}が古い石碑の文字を解読しようとしていた。何かを伝えようとしているようだ。`,
+   en:(e)=>`${e} studied the ancient letters on a stone tablet, as if trying to understand their message.`,
+   rw:{exp:25}},
+  {w:null,
+   jp:(e)=>`${e}がずっと前から気になっていた場所を調べて戻ってきた。`,
+   en:(e)=>`${e} investigated a place that had caught their eye for a while and returned with new knowledge.`,
+   rw:{exp:20,gold:10}},
+  {w:null,
+   jp:(e)=>`${e}が旅の仲間たちと遊びながら、新しい動きを身につけたようだ。`,
+   en:(e)=>`${e} played with the other companions and seemed to learn new movements along the way.`,
+   rw:{exp:15,atk:3}},
+  {w:null,
+   jp:(e)=>`${e}が眠っている間に夢を見ていたようだ。目覚めると、少し強くなっていた。`,
+   en:(e)=>`${e} seemed to be dreaming deeply. When they woke, something had grown stronger within them.`,
+   rw:{exp:20}},
+  {w:null,
+   jp:(e)=>`${e}が言葉の光を浴びて、力が増したようだ。`,
+   en:(e)=>`${e} bathed in the light of ancient words and grew noticeably stronger.`,
+   rw:{exp:18,atk:5}},
+];
+
+function companionAction(){
+  if(S.pets.length===0||S.pets.every(p=>p.hp<=0)) return;
+  const alive=S.pets.filter(p=>p.hp>0);
+  const pet=alive[Math.floor(Math.random()*alive.length)];
+  // ペットの絵文字を取得
+  const el=$(pet.elId);
+  const emoEl=el?el.querySelector('span'):null;
+  const emoji=emoEl?emoEl.textContent.trim():'🐾';
+  // 行動を選ぶ（ペットに合うものを優先）
+  const matching=COMPANION_ACTIONS.filter(a=>!a.w||a.w.includes(emoji));
+  const action=matching[Math.floor(Math.random()*matching.length)]
+    ||COMPANION_ACTIONS[Math.floor(Math.random()*COMPANION_ACTIONS.length)];
+  // 報酬適用
+  applyRw(action.rw);
+  // カード追加
+  addCard(`<div class="cjp" style="font-size:11px;color:#4a3060">
+      <span style="font-size:16px">${emoji}</span> ${action.jp(emoji)}
+    </div>
+    <div class="cen" style="font-size:10px;color:#7a60a0">
+      ${action.en(emoji)}
+    </div>
+    ${rwTags(action.rw)}`,'lucky');
+}
+
+
+
+
+
+
+
+
+
+
+
+
+// ── PET CHOICE RESOLUTION ──
+function resolvePetChoice(help, idx){
+  const ev=EVS[idx];
+  const cr=$('cbtrow');
+  cr.style.display='none';cr.dataset.idx='';cr.dataset.type='';
+  $('mb').disabled=false;$('mb').style.opacity='';
+  $('npc-unit').style.display='none';
+  document.querySelectorAll('#ally-zone .cu').forEach(e=>{
+    if(e.style.display!=='none'){e.classList.remove('stopped');e.classList.add('wlk');}
+  });
+  $('fsa').style.animationPlayState='running';
+  $('deco-scroll').style.animationPlayState='running';
+  S.pendingChoice=false;
+
+  if(help){
+    // 助ける → 仲間加入
+    applyRw(ev.rw);
+    const L=S.lang==='en';
+    addCard(`<div class="cen" style="font-weight:700;color:#107030">${ev.newPet?ev.newPet.en||ev.newPet.nameEn+' joined your party!':''}</div>
+      <div class="cjp" style="font-weight:700;color:#107030">${ev.newPet?ev.newPet.jp||ev.newPet.name+'が仲間に加わった！':''}</div>
+      ${rwTags(ev.rw)}`,'vc');
+    if(ev.newPet) setTimeout(()=>addNewPet(ev),400);
+  } else {
+    // 放置 → leaveRw 適用
+    applyRw(ev.leaveRw||{});
+    addCard(`<div class="cen">${ev.leaveEn||'You walked on.'}</div>
+      <div class="cjp">${ev.leaveJp||'先へ進んだ。'}</div>
+      ${rwTags(ev.leaveRw||{})}`,'');
+  }
+  setBtn(S.day>=90?t('cl'):t('nd'),'');
+}
+
+
+// ── SUMMON PUZZLE ──
+// 音節パズルで仲間召喚
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+// ── BOSS BATTLE PUZZLE (realtime) ──
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+// ── BATTLE LOG ──
+let _battleLogEl = null;
+function initBattleLog(enemyName){
+  const sc = $('ls');
+  _battleLogEl = document.createElement('div');
+  _battleLogEl.className = 'ec';
+  _battleLogEl.style.cssText = 'padding:6px 10px;background:#1a1030;border-color:#4a3060;font-size:11px;line-height:1.8';
+  _battleLogEl.innerHTML = `<div style="font-size:10px;font-weight:900;color:#a080d0;letter-spacing:.5px;margin-bottom:4px">⚔️ BATTLE LOG — Turn by Turn</div>`;
+  sc.appendChild(_battleLogEl);
+  sc.scrollTop = sc.scrollHeight;
+}
+function addBattleLog(type, attacker, target, dmg, heal, isAoe){
+  if(!_battleLogEl) return;
+  let line = '';
+  if(type === 'ally'){
+    line = `<div style="color:#5de68a">▶ ${attacker} → <span style="color:#aaa">${target}</span> <span style="color:#5de68a;font-weight:700">-${dmg} HP</span></div>`;
+  } else if(type === 'enemy'){
+    const aoeTag = isAoe ? ' <span style="color:#ff8060">[AOE]</span>' : '';
+    line = `<div style="color:#ff6060">◀ ${attacker}${aoeTag} → <span style="color:#aaa">${target}</span> <span style="color:#ff6060;font-weight:700">-${dmg} HP</span></div>`;
+  } else if(type === 'heal'){
+    line = `<div style="color:#60d0ff">💊 ${attacker} <span style="color:#60d0ff;font-weight:700">+${heal} HP</span></div>`;
+  }
+  _battleLogEl.innerHTML += line;
+  $('ls').scrollTop = $('ls').scrollHeight;
+}
+
+// ── BATTLE ──
+function startBattle(){
+  const ev=EVS[S.day-1];S.phase='battling';S.turn=0;
+  initBattleLog(ev.enemy.name);
+  if(ev.type==='boss') playBossBGM(); else playBattleBGM();
+  setBtn(t('fg'),'fgt');
+  const ft=$('fgtxt');ft.style.display='block';ft.classList.add('pop');
+  setTimeout(()=>{ft.style.display='none';ft.classList.remove('pop');},1200);
+  $('tnbdg').style.display='block';
+
+  function alivePets(){ return S.pets.filter(p=>p.hp>0); }
+  function frontPet(){ const a=alivePets();return a.length?a[a.length-1]:null; }
+  // 防御係数：防御値が高いほど軽減（最大70%）
+  function calcDmg(baseAtk, def){
+    const reduction = Math.min(0.65, def/(def+80));
+    const variance = 0.85 + Math.random()*0.30;
+    return Math.max(1, Math.round(baseAtk*(1-reduction)*variance));
+  }
+
+  function tick(){
+    if(S.eHp<=0||S.hp<=0||S.turn>=S.maxT){endBattle(ev);return;}
+    S.turn++;$('tnbdg').textContent=t('tb',S.turn,S.maxT);
+
+    // ─ 味方攻撃 ─
+    shake('hu');
+    const petBonus=alivePets().reduce((s,p)=>s+p.atk,0);
+    const pd=Math.max(1,S.atk+petBonus+Math.floor(Math.random()*20)-5);
+    S.eHp=Math.max(0,S.eHp-pd);
+    $('ehpb').style.width=(S.eHp/S.eHpMax*100)+'%';
+    dmg(260,70,pd,'dg');
+    addBattleLog('ally','😊 YOU',ev.enemy.name,pd,null);
+
+    // ヒーラーペットの回復（毎3ターン）
+    const healer=S.pets.find(p=>p.healer&&p.hp>0);
+    if(healer&&S.turn%3===0){
+      const hl=Math.floor(S.hpMax*.12);
+      S.hp=Math.min(S.hpMax,S.hp+hl);
+      dmg(100,150,hl,'dh');
+      addBattleLog('heal','Healer',null,null,hl);
+    }
+
+    setTimeout(()=>{
+      if(S.eHp<=0){endBattle(ev);return;}
+      shake('eu');
+      const boss=ev.enemy.boss, aoe=boss&&S.turn%3!==0; // ボスは2/3の確率でAOE
+
+      if(aoe){
+        // 全体攻撃
+        const af=$('aoef');af.classList.remove('show');void af.offsetWidth;af.classList.add('show');
+        const eh=calcDmg(ev.enemy.atk*0.7, S.def);
+        S.hp=Math.max(0,S.hp-eh);dmg(100,130,eh,'dr');
+        addBattleLog('enemy',ev.enemy.name,'ALL',eh,null,true);
+        // 全ペットにダメージ
+        S.pets.forEach(pt=>{
+          if(pt.hp<=0) return;
+          const ep=calcDmg(ev.enemy.atk*0.6, pt.def);
+          pt.hp=Math.max(0,pt.hp-ep);
+          const el=$(pt.elId);if(el) shake(pt.elId);
+          dmg(50+Math.random()*60,120,ep,'dr');
+          if(pt.hp<=0) killPetById(pt.elId);
+        });
+      } else {
+        // 単体攻撃：最前列ペットが受ける。なければ主人公
+        const fp=frontPet();
+        if(fp){
+          const ep=calcDmg(ev.enemy.atk, fp.def);
+          fp.hp=Math.max(0,fp.hp-ep);
+          dmg(210,120,ep,'dr');shake(fp.elId);
+          addBattleLog('enemy',ev.enemy.name,'Wild',ep,null);
+          if(fp.hp<=0) killPetById(fp.elId);
+        } else {
+          const eh=calcDmg(ev.enemy.atk, S.def);
+          S.hp=Math.max(0,S.hp-eh);dmg(110,120,eh,'dr');shake('hu');
+          addBattleLog('enemy',ev.enemy.name,'YOU',eh,null);
+        }
+      }
+      updateStat();setTimeout(tick,750);
+    },560);
+  }
+  setTimeout(tick,1300);
+}
+
+// キャラ数に応じてレイアウトを動的調整
+function balanceLayout(){
+  const az=$('ally-zone');
+  const ez=$('enemy-zone');
+  const allyCount=az?az.querySelectorAll('.cu').filter
+    ? [...az.querySelectorAll('.cu')].filter(e=>e.style.display!=='none').length
+    : 1 : 1;
+  const hasEnemy=$('eu')&&$('eu').style.display!=='none';
+  // gapをキャラ数で調整
+  const pa=$('pa');
+  if(!pa) return;
+  if(allyCount>=3) pa.style.gap='16px';
+  else if(allyCount>=2) pa.style.gap='24px';
+  else pa.style.gap='40px';
+  if(az) az.style.gap=allyCount>=3?'6px':'10px';
+}
+
+// 最前列ペット（row配置で主人公直前 = DOM上最後のpu = 視覚的に主人公の左隣・敵に近い）
+function getFrontPetEl(){
+  const az=$('ally-zone');if(!az) return null;
+  const list=[...az.querySelectorAll('.cu[id^="pu"]')]
+    .filter(el=>el.style.display!=='none');
+  return list.length?list[list.length-1]:null; // DOM末尾=視覚右端=前列
+}
+function getFrontUnit(){ return getFrontPetEl()?'pet':'hero'; }
+// IDでペットを吹き飛ばす
+function killPetById(elId){
+  const el=$(elId);if(!el) return;
+  el.classList.remove('wlk','usk');void el.offsetWidth;
+  el.classList.add('flyoff');
+  setTimeout(()=>{el.style.display='none';},650);
+  S.hasPet=S.pets.some(p=>p.elId!==elId&&p.hp>0);
+}
+// 互換用
+function killFrontPet(){ const fp=frontPet&&typeof frontPet==='function'?null:null; }
+function killPet(){ killPetById('pu'); }
+
+function endBattle(ev){
+  stopBGM(); // バトルBGM停止、冒険BGMは logSpeak終了後に再開
+  $('tnbdg').style.display='none';$('eu').style.display='none';
+  document.querySelectorAll('#ally-zone .cu').forEach(e=>{
+    e.classList.remove('usk');
+    if(e.style.display!=='none') e.classList.add('wlk');
+  });
+  if(S.eHp<=0){
+    applyRw(ev.rw);
+    addCard(`<div class="cday" style="color:#107030">${t('vc')}</div>${rwTags(ev.rw)}`,'vc');
+    setTimeout(()=>playAdventureBGM(), 600);
+    S.phase='idle';
+    
+    if(ev.type==='boss'){
+      if(ev.newPet){
+        // ボタンを一時的にニュートラルに戻してからペット加入
+        $('mb').className='';
+        $('mb').disabled=true;$('mb').style.opacity='.4'; // addNewPet内で再表示
+        setTimeout(()=>addNewPet(ev),800);
+      }
+      else if(ev.day>=90) setTimeout(()=>showResult(true),1400);
+      else{setBtn(S.day>=90?t('cl'):t('nd'),'');$('mb').disabled=false;$('mb').style.opacity='';}
+    }
+    else{setBtn(S.day>=90?t('cl'):t('nd'),'');$('mb').disabled=false;$('mb').style.opacity='';}
+  } else if(S.hp<=0){
+    S.phase='defeat';
+    addCard(`<div class="cday" style="color:#c02020">${t('df')}</div>
+      <div class="cjp">${UI.jp.dfm}</div><div class="cen">${UI.en.dfm}</div>`,'bad');
+    setTimeout(()=>showResult(false),800);
+  } else {
+    addCard(`<div class="cday" style="color:#806000">${t('dr')}</div>
+      <div class="cjp">${UI.jp.drm}</div><div class="cen">${UI.en.drm}</div>`,'');
+    S.phase='idle';setBtn(t('nd'),'');$('mb').disabled=false;$('mb').style.opacity='';
+    setTimeout(()=>playAdventureBGM(), 600);
+  }
+  updateStat();
+}
+
+// ── RESULT ──
+function showResult(win){
+  if(S.day<1) return;
+  const L=S.lang==='en'?'en':'jp';const u=UI[L];
+  if(S.day>S.bestDays) S.bestDays=S.day;
+  $('rcrown').textContent=win?'👑':'💔';
+  $('rtit').textContent=win?u.rw:u.rl;
+  $('rch').textContent=win?'第1章 完了':'第1章';
+  $('rlbl').textContent=u.rdl;
+  $('rdays').textContent=S.day;$('runit').textContent=u.ru;
+  $('rmax').textContent=u.rm(S.bestDays);$('rbb').textContent=u.rb;
+  $('rbo').className='rbo'+(win?'':' df');
+  $('rrw').innerHTML=`<div class="rrb"><span class="rrbi">🪙</span><span class="rrbv">x${S.gold}</span></div>
+    <div class="rrb"><span class="rrbi">📖</span><span class="rrbv">${S.dict.length}語</span></div>`
+    +(win?'<div class="rrb"><span class="rrbi">🏆</span><span class="rrbv">CLEAR</span></div>':'');
+  setTimeout(()=>show('sres'),400);
+}
+
+// ── BTN ──
+function setBtn(lbl,cls){const b=$('mb');b.textContent=lbl;b.className=cls||'';}
+function onBtn(){
+  if(S.pendingChoice||S.phase==='battling') return;
+  if(S.phase==='defeat'){backToHome();return;}
+  if(S.phase==='battle_ready'){startBattle();return;}
+  if(S.day<90){S.day++;presentDay();}
+}
+
+// ── VFX ──
+const shakeTimers={};
+function shake(id){
+  const e=$(id);if(!e||e.style.display==='none') return;
+  if(shakeTimers[id]) clearTimeout(shakeTimers[id]);
+  e.classList.remove('usk','wlk');void e.offsetWidth;e.classList.add('usk');
+  shakeTimers[id]=setTimeout(()=>{
+    e.classList.remove('usk');
+    if(e.style.display!=='none') e.classList.add('wlk');
+    delete shakeTimers[id];
+  },450);
+}
+function dmg(x,y,val,cls){
+  const e=document.createElement('div');e.className='dmg '+cls;
+  e.textContent=(cls==='dh'?'+':'-')+Math.abs(val);
+  e.style.left=x+'px';e.style.top=y+'px';e.style.position='absolute';
+  $('fld').appendChild(e);setTimeout(()=>e.remove(),950);
+}
+function coins(amount){
+  const cnt=Math.min(8,Math.max(3,Math.floor(amount/20)));
+  const cr=$('gcref').getBoundingClientRect();
+  const dx=cr.left+cr.width/2,dy=cr.top+cr.height/2;
+  const fr=$('fld').getBoundingClientRect();
+  const sx=fr.left+fr.width*.5,sy=fr.top+fr.height*.5;
+  for(let i=0;i<cnt;i++){
+    setTimeout(()=>{
+      const c=document.createElement('div');c.className='cfx';
+      const cx=sx+(Math.random()-.5)*80,cy=sy+(Math.random()-.5)*40;
+      c.style.left=cx+'px';c.style.top=cy+'px';
+      document.body.appendChild(c);
+      c.animate([{transform:'translate(0,0) scale(1)',opacity:1},
+        {transform:`translate(${dx-cx}px,${dy-cy}px) scale(.4)`,opacity:.7}],
+        {duration:600,easing:'ease-in',fill:'forwards'});
+      setTimeout(()=>c.remove(),700);
+    },i*80);
+  }
+}
+function showLuck(type){
+  const o=$('lo'),tx=$('ltxt'),bg=$('lbg'),sp=$('lsp');
+  o.className='';void o.offsetWidth;
+  const lbl={great:t('lg'),lucky:t('ll'),bad:t('lb')};
+  tx.textContent=lbl[type]||'';
+  tx.className='ltxt '+(type==='great'?'lgreat':type==='lucky'?'llucky':'lbad');
+  bg.className=type==='great'?'lbgg':type==='lucky'?'lbgl':'lbgb';
+  sp.innerHTML='';
+  const ics=type==='great'?['✨','⭐','🌟','💫','✨','⭐']
+    :type==='lucky'?['✨','💙','⭐','💫']:['💨','🌧️','⚡','💨'];
+  ics.forEach((ic,i)=>{
+    const s=document.createElement('div');s.className='lsp';s.textContent=ic;
+    s.style.left=(15+Math.random()*70)+'%';s.style.top=(20+Math.random()*60)+'%';
+    s.style.animationDelay=(i*.1)+'s';sp.appendChild(s);
+  });
+  o.classList.add(type==='great'?'sg':type==='lucky'?'sl':'sb');
+  setTimeout(()=>{o.className='';},1650);
+}
+
+// ── BATTLE BGM (Web Audio API) ──
+audioCtx=null, bgmNodes=[], bgmPlaying=false, bgmType='', bgmGen=0, bgmLoopId=null;
+
+
+function getAudioCtx(){
+  if(!audioCtx) audioCtx=new(window.AudioContext||window.webkitAudioContext)();
+  return audioCtx;
+}
+
+function stopBGM(){
+  bgmGen++;                          // 旧ループを世代番号で無効化
+  bgmPlaying=false; bgmType='';
+  if(bgmLoopId){ clearTimeout(bgmLoopId); bgmLoopId=null; }
+  bgmNodes.forEach(n=>{try{n.stop();}catch(e){}});
+  bgmNodes=[];
+}
+
+// 汎用BGMスケジューラ
+function scheduleBGM(noteList, tempo, waveType, vol, bassVol){
+  const ctx=getAudioCtx();
+  if(ctx.state==='suspended') ctx.resume();
+  const myGen=bgmGen;               // このループの世代番号を記憶
+  let time=ctx.currentTime+0.05;
+  function loop(){
+    if(!bgmPlaying || bgmGen!==myGen) return;  // 世代が変わったら即終了
+    noteList.forEach((freq,i)=>{
+      if(!freq) return;
+      const osc=ctx.createOscillator();
+      const g=ctx.createGain();
+      osc.type=waveType||'square';
+      osc.frequency.value=freq;
+      g.gain.setValueAtTime(0,time+i*tempo);
+      g.gain.linearRampToValueAtTime(vol,time+i*tempo+0.02);
+      g.gain.linearRampToValueAtTime(0,time+i*tempo+tempo*0.88);
+      osc.connect(g);g.connect(ctx.destination);
+      osc.start(time+i*tempo);osc.stop(time+i*tempo+tempo);
+      bgmNodes.push(osc);
+      if(bassVol&&i%2===0){
+        const b=ctx.createOscillator();
+        const bg=ctx.createGain();
+        b.type='triangle';b.frequency.value=freq/2;
+        bg.gain.setValueAtTime(0,time+i*tempo);
+        bg.gain.linearRampToValueAtTime(bassVol,time+i*tempo+0.02);
+        bg.gain.linearRampToValueAtTime(0,time+i*tempo+tempo*0.7);
+        b.connect(bg);bg.connect(ctx.destination);
+        b.start(time+i*tempo);b.stop(time+i*tempo+tempo);
+        bgmNodes.push(b);
+      }
+    });
+    time+=noteList.length*tempo;
+    if(bgmPlaying && bgmGen===myGen)
+      bgmLoopId=setTimeout(loop,(noteList.length*tempo-0.4)*1000);
+  }
+  loop();
+}
+
+// ── バトルBGM：速くて緊張感のある矩形波 ──
+function playBattleBGM(){
+  if(bgmPlaying&&bgmType==='battle') return;
+  stopBGM();bgmPlaying=true;bgmType='battle';
+  try{
+    // 短調・テンポ速め
+    const notes=[
+      330,294,262,294, 330,330,330,0,
+      294,294,294,0,   330,392,392,0,
+      330,294,262,294, 330,330,330,330,
+      294,294,330,294, 262,0,262,0
+    ];
+    scheduleBGM(notes, 0.14, 'square', 0.07, 0.04);
+  }catch(e){console.log('BGM:',e);}
+}
+
+// ── 冒険BGM：穏やかな三角波 ──
+function playAdventureBGM(){
+  if(bgmPlaying&&bgmType==='adventure') return;
+  stopBGM();bgmPlaying=true;bgmType='adventure';
+  try{
+    // 長調・ゆったり・森っぽい
+    const notes=[
+      262,294,330,349, 392,349,330,294,
+      262,0,262,330,   294,0,294,392,
+      440,392,349,330, 294,330,262,0,
+      262,294,330,262, 294,349,330,0
+    ];
+    scheduleBGM(notes, 0.28, 'triangle', 0.055, 0.025);
+  }catch(e){console.log('BGM:',e);}
+}
+
+// ── ボスBGM：激しい矩形波 ──
+function playBossBGM(){
+  if(bgmPlaying&&bgmType==='boss') return;
+  stopBGM();bgmPlaying=true;bgmType='boss';
+  try{
+    const notes=[
+      220,0,220,0, 233,0,220,0,
+      196,0,196,0, 185,0,196,0,
+      220,220,220,233, 220,196,185,196,
+      220,0,220,220, 196,185,196,220
+    ];
+    scheduleBGM(notes, 0.11, 'sawtooth', 0.065, 0.05);
+  }catch(e){console.log('BGM:',e);}
+}
+
+function stopBattleBGM(){ stopBGM(); }
+
+// ── TTS ──
+// [dup removed]
+function initV(){
+  const vs=speechSynthesis.getVoices();
+  ttsV=vs.find(v=>v.lang==='en-US'&&/samantha|zira|karen|female/i.test(v.name))
+    ||vs.find(v=>v.lang==='en-US')||vs.find(v=>v.lang.startsWith('en'))||null;
+  ttsW=vs.find(v=>v.lang==='en-GB'&&/kate|serena|female/i.test(v.name))
+    ||vs.find(v=>v.lang==='en-GB')||ttsV;
+}
+if(typeof speechSynthesis!=='undefined'){speechSynthesis.onvoiceschanged=initV;initV();}
+function logSpeak(txt){
+  if(!voiceOn||typeof speechSynthesis==='undefined') return;
+  speechSynthesis.cancel();
+
+  const clean=txt
+    .replace(/<[^>]*>/g,'')
+    .replace(/&#39;/g,"'")
+    .replace(/&amp;/g,'&')
+    .replace(/&lt;/g,'<')
+    .replace(/&gt;/g,'>')
+    .replace(/&nbsp;/g,' ')
+    .replace(/\s+/g,' ')
+    .trim();
+  const u=new SpeechSynthesisUtterance(clean);
+  u.lang='en-US';u.rate=1.5;u.pitch=2.0;if(ttsV) u.voice=ttsV;
+
+  speechSynthesis.speak(u);
+}
+function speakWord(word){
+  if(typeof speechSynthesis==='undefined') return;
+  speechSynthesis.cancel();
+  const u=new SpeechSynthesisUtterance(word);
+  u.lang='en-US';u.rate=1.3;u.pitch=1.8;if(ttsW) u.voice=ttsW;
+  speechSynthesis.speak(u);
+}
+function toggleVoice(){
+  voiceOn=!voiceOn;const b=$('vbtn');
+  b.textContent=voiceOn?'🔊':'🔇';
+  voiceOn?b.classList.remove('mt'):b.classList.add('mt');
+  if(!voiceOn&&typeof speechSynthesis!=='undefined') speechSynthesis.cancel();
+}
+
+// ページ非表示・タブ切替・閉じた時にBGMを停止
+document.addEventListener('visibilitychange',()=>{
+  if(document.hidden) stopBGM();
+});
+window.addEventListener('pagehide',()=>stopBGM());
+window.addEventListener('beforeunload',()=>stopBGM());
+// ══════════════════════════════════
+// INIT
+// ══════════════════════════════════
+function initGame(){
+  S.lang='jp';
+  META.wilds.push({
+    id:'j1',type:'juvenile',familyId:'spek',
+    name:'見る幼体',intimacy:65,intimacyMax:100,hp:100,hpMax:100,trialReady:true,
+  });
+  META.wilds.push({
+    id:'j2',type:'juvenile',familyId:'gwei',
+    name:'生きる幼体',intimacy:30,intimacyMax:100,hp:80,hpMax:80,trialReady:false,
+  });
+  META.wilds.push({
+    id:'a1',type:'adult',familyId:'kap',
+    wordData:PIE_FAMILIES.kap.adult_pool[0],
+    name:'Captain',rarity:378,hp:150,hpMax:150,intimacy:45,intimacyMax:200,trialReady:false,
+  });
+  renderHomeScreen();
+  renderTrialNotif();
+  setInterval(()=>{META.pendingCoins=Math.min(META.pendingCoins+5,9999);},10000);
+  // 起動時：自動編成してアリス世界で即冒険開始
+  META.currentWorld='alice';
+  META.formation=[null,null,null,null];
+  META.wilds.forEach((w,i)=>{ if(i<4) META.formation[i]=w.id; });
+  launchAdventure();
+}
+
+document.addEventListener('visibilitychange',()=>{if(document.hidden) stopBGM();});
+window.addEventListener('pagehide',()=>stopBGM());
+
+initGame();
+</script>
+</body>
+</html>

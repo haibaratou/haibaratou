@@ -1,0 +1,840 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>エティモリンゴ コア検証プロト</title>
+<style>
+/* ============================================================
+ * エティモリンゴ 古代ことば図鑑 — コア遊び検証プロトタイプ
+ *
+ * lexicopia-hakoniwa.html(デモ映像用)とは別物。実際に遊ぶための
+ * コアメカニクスを3パターン実装し、どれが面白いかを検証する。
+ *   A ヒラメキ遠征   … 事件に どのことばで応えるか(Scribblenauts / The Oregon Trail / Reigns)
+ *   B ことばレゾナンス … 同語源チェインの自動戦闘(Luck be a Landlord / Super Auto Pets)
+ *   C ことば錬金     … 断片を組んで単語を発見(Infinite Craft / Little Alchemy)
+ * 共通基盤: 箱庭+下段エティモンドック(タップで生産)+仲間化で施設拡張+報酬3択
+ * 詳細: docs/game/core_mechanics_patterns.md
+ * ============================================================ */
+:root{
+  --ink:#241f26; --ink2:#5c5462; --paper:#fffdf8; --paper2:#fff6ea;
+  --coral:#ff5470; --yellow:#ffd23e; --mint:#3ecfa5; --sky:#4aa8ff;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{width:100%;height:100%;overflow:hidden;background:#2c2633}
+body{font-family:"Zen Maru Gothic","Hiragino Maru Gothic ProN","BIZ UDGothic",sans-serif;
+  color:var(--ink);user-select:none;-webkit-user-select:none;touch-action:manipulation}
+img{-webkit-user-drag:none;pointer-events:none}
+button{font-family:inherit;cursor:pointer}
+#wrap{position:fixed;inset:0;overflow:hidden}
+#stage{position:absolute;left:50%;top:50%;width:1920px;height:1080px;
+  transform-origin:center center;overflow:hidden;background:#bfe4f5}
+
+/* ---- 共通UIパーツ(エティモペディア意匠) ---- */
+.ebtn{display:inline-flex;align-items:center;gap:8px;font-weight:900;font-size:26px;color:var(--ink);
+  background:#fff;border:3px solid var(--ink);border-radius:16px;padding:12px 26px;
+  box-shadow:4px 4px 0 var(--ink);transition:transform .08s}
+.ebtn:active{transform:translate(3px,3px);box-shadow:1px 1px 0 var(--ink)}
+.ebtn.coral{background:var(--coral);color:#fff}
+.ebtn.yellow{background:var(--yellow)}
+.ebtn.dis{opacity:.4;pointer-events:none}
+.chip{display:inline-block;font-size:16px;font-weight:900;color:#fff;border-radius:999px;padding:2px 14px}
+
+/* ---- ホーム(箱庭) ---- */
+#home{position:absolute;inset:0}
+#homeBg{position:absolute;inset:0;background:linear-gradient(#bfe4f5 0%,#dff2fb 34%,#b9df9e 36%,#93c97a 100%)}
+#homeBg img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+#hud{position:absolute;top:22px;left:30px;right:30px;display:flex;gap:16px;align-items:flex-start;z-index:40}
+#hud .title{font-size:34px;font-weight:900;color:#fff;-webkit-text-stroke:8px #3c3046;paint-order:stroke fill}
+#hud .spacer{flex:1}
+.hudPill{background:#fffdf8;border:3px solid var(--ink);border-radius:999px;box-shadow:3px 3px 0 var(--ink);
+  font-size:24px;font-weight:900;padding:8px 24px;display:flex;align-items:center;gap:10px}
+/* 施設(エティモンを仲間にすると増える) */
+.fac{position:absolute;text-align:center;z-index:5;animation:facIn .6s cubic-bezier(.2,1.5,.4,1) both}
+@keyframes facIn{from{transform:scale(0)}to{transform:scale(1)}}
+.fac .fIcon{width:150px;height:150px;margin:0 auto;background:#fffdf8;border:4px solid var(--ink);border-radius:26px;
+  box-shadow:5px 5px 0 rgba(36,31,38,.4);display:flex;align-items:center;justify-content:center;font-size:84px}
+.fac .fName{display:inline-block;margin-top:6px;background:#3c3046;color:#fff;font-size:19px;font-weight:900;
+  border-radius:999px;padding:3px 16px}
+.fac .fChar{position:absolute;right:-64px;bottom:8px;width:120px;height:120px;animation:bob 2.6s ease-in-out infinite}
+.fac .fChar img{width:100%;height:100%;object-fit:contain}
+@keyframes bob{0%,100%{transform:translateY(0)}50%{transform:translateY(-10px)}}
+/* 下段エティモンドック(タップで生産) */
+#dock{position:absolute;left:0;right:0;bottom:0;z-index:50;background:#fffdf8;border-top:5px solid var(--ink);
+  padding:14px 26px 18px;display:flex;gap:16px;align-items:flex-end;justify-content:center}
+.dk{width:132px;border:none;background:transparent;text-align:center;position:relative;transition:transform .1s}
+.dk:active{transform:scale(.94)}
+.dk .dkFace{width:118px;height:118px;margin:0 auto;background:#fff;border:4px solid var(--ink);border-radius:50%;
+  box-shadow:0 5px 0 var(--ink);display:flex;align-items:center;justify-content:center;overflow:hidden;position:relative}
+.dk .dkFace img{width:96%;height:96%;object-fit:contain}
+.dk .dkName{font-size:19px;font-weight:900;margin-top:6px}
+.dk .dkJp{font-size:14px;font-weight:900;color:#fff;border-radius:999px;padding:1px 10px;display:inline-block}
+.dk.locked .dkFace{background:#e8e2ee}
+.dk.locked .dkFace img{filter:brightness(0) opacity(.25)}
+.dk.locked .dkName,.dk.locked .dkJp{opacity:.45}
+.dk .dkQ{position:absolute;top:34px;left:0;right:0;font-size:48px;font-weight:900;color:#8a7b90}
+.dk .dkN{position:absolute;top:-6px;right:2px;background:var(--coral);color:#fff;font-size:17px;font-weight:900;
+  border-radius:999px;min-width:30px;height:30px;display:flex;align-items:center;justify-content:center;padding:0 7px}
+#homeBtns{position:absolute;right:30px;bottom:196px;display:flex;flex-direction:column;gap:14px;z-index:45}
+
+/* ---- 生産シート ---- */
+.modalBg{position:absolute;inset:0;background:rgba(40,30,50,.55);z-index:900;display:none;align-items:center;justify-content:center}
+.modalBg.open{display:flex}
+.sheet{background:var(--paper);background-image:radial-gradient(#00000009 1.6px,transparent 1.6px);background-size:26px 26px;
+  border:4px solid var(--ink);border-radius:28px;box-shadow:14px 14px 0 rgba(36,31,38,.3);
+  width:1500px;max-height:940px;padding:30px 40px;display:flex;flex-direction:column}
+.sheetHead{display:flex;align-items:center;gap:20px;margin-bottom:16px}
+.sheetHead h2{font-size:38px;font-weight:900;flex:1}
+.closeX{width:60px;height:60px;background:#fff;border:3px solid var(--ink);border-radius:16px;
+  box-shadow:3px 3px 0 var(--ink);font-size:26px;font-weight:900}
+#prodWords{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;overflow-y:auto;padding:4px}
+.pw{display:flex;align-items:center;gap:16px;background:#fff;border:3px solid var(--ink);border-radius:18px;
+  padding:12px 18px;box-shadow:4px 4px 0 var(--ink);text-align:left;transition:transform .1s;position:relative}
+.pw:active{transform:translate(3px,3px);box-shadow:1px 1px 0 var(--ink)}
+.pw .ic{width:84px;height:84px;flex:0 0 auto;background:var(--paper2);border:2.5px solid var(--ink);border-radius:14px;
+  display:flex;align-items:center;justify-content:center;font-size:48px;overflow:hidden}
+.pw .ic img{width:90%;height:90%;object-fit:contain}
+.pw .tx{flex:1;min-width:0}
+.pw .en{font-size:27px;font-weight:900;display:block}
+.pw .jp{font-size:16px;font-weight:800;color:var(--ink2);display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pw .st{font-size:14px;color:#f2c14e;letter-spacing:1px}
+.pw .own{position:absolute;top:-10px;right:-8px;background:var(--ink);color:#fff;font-size:16px;font-weight:900;
+  border-radius:999px;min-width:30px;height:30px;display:flex;align-items:center;justify-content:center;padding:0 8px}
+/* 入手ポップ */
+#getFx{position:absolute;inset:0;z-index:1200;display:none;align-items:center;justify-content:center;pointer-events:none}
+#getFx.show{display:flex}
+#getFx .gcard{background:#fff;border:4px solid var(--ink);border-radius:22px;box-shadow:10px 10px 0 rgba(36,31,38,.35);
+  padding:26px 40px;text-align:center;animation:gpop .9s cubic-bezier(.2,1.5,.4,1) both}
+@keyframes gpop{0%{transform:scale(0) rotate(-8deg)}60%{transform:scale(1.08)}100%{transform:scale(1)}}
+#getFx .gic{font-size:100px;height:130px;display:flex;align-items:center;justify-content:center}
+#getFx .gic img{height:120px;object-fit:contain}
+#getFx .gt{font-size:34px;font-weight:900}
+#getFx .gs{font-size:18px;font-weight:900;color:var(--ink2);margin-top:4px}
+
+/* ---- CR:K式キュー/断片チップ ---- */
+.qslot{width:150px;height:96px;background:#fff;border:3px solid var(--ink);border-radius:16px;box-shadow:3px 3px 0 var(--ink);
+  display:flex;align-items:center;justify-content:center;text-align:center;font-size:18px;font-weight:900;line-height:1.4}
+.qslot.empty{background:var(--paper2);color:#b9aec4;box-shadow:none;border-style:dashed}
+.qslot.done{background:var(--yellow);cursor:pointer;font-family:inherit;border:3px solid var(--ink)}
+.fchip{font-family:Georgia,serif;font-style:italic;background:#fff;border:3px solid var(--ink);border-radius:999px;
+  box-shadow:3px 3px 0 var(--ink);font-size:24px;font-weight:900;padding:8px 22px;cursor:pointer}
+.fchip small{font-family:"Zen Maru Gothic",sans-serif;font-style:normal;font-size:15px;color:var(--ink2)}
+
+/* ---- モード選択 ---- */
+#modeSheet .modes{display:flex;gap:24px;margin-top:6px}
+.modeCard{flex:1;background:#fff;border:4px solid var(--ink);border-radius:24px;box-shadow:6px 6px 0 var(--ink);
+  padding:26px 24px;text-align:center;transition:transform .12s}
+.modeCard:hover{transform:translateY(-6px)}
+.modeCard .mIc{font-size:86px}
+.modeCard h3{font-size:32px;font-weight:900;margin-top:6px}
+.modeCard .mDesc{font-size:19px;font-weight:800;color:var(--ink2);line-height:1.7;margin-top:10px;min-height:130px;text-align:left}
+.modeCard .mRef{font-size:15px;font-weight:900;background:var(--paper2);border:2px solid var(--ink);border-radius:12px;
+  padding:6px 10px;margin-top:10px;line-height:1.6}
+
+/* ---- 遠征共通 ---- */
+.play{position:absolute;inset:0;display:none;flex-direction:column;background:#dff2fb}
+.play.on{display:flex}
+.playTop{flex:1;position:relative;overflow:hidden}
+.playTop .bgi{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.playBar{display:flex;align-items:center;gap:18px;padding:12px 28px;background:#fffdf8;border-bottom:4px solid var(--ink);z-index:5;position:relative}
+.playBar h2{font-size:30px;font-weight:900;flex:1}
+.meter{flex:2;height:34px;background:#fff;border:3px solid var(--ink);border-radius:99px;overflow:hidden;position:relative}
+.meter i{position:absolute;left:0;top:0;bottom:0;background:linear-gradient(90deg,var(--mint),var(--sky));width:0%;transition:width .5s ease}
+.meter span{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:17px;font-weight:900}
+/* 手札ストリップ(下段・タップ使用) */
+#handStrip{background:#fffdf8;border-top:5px solid var(--ink);padding:12px 20px 14px;display:flex;gap:12px;
+  overflow-x:auto;align-items:stretch;min-height:190px}
+.hc{flex:0 0 150px;background:#fff;border:3px solid var(--ink);border-radius:16px;box-shadow:4px 4px 0 var(--ink);
+  padding:8px;text-align:center;transition:transform .1s;position:relative}
+.hc:active{transform:translateY(3px);box-shadow:1px 1px 0 var(--ink)}
+.hc .ic{height:78px;display:flex;align-items:center;justify-content:center;font-size:56px}
+.hc .ic img{height:74px;object-fit:contain}
+.hc .en{font-size:20px;font-weight:900;line-height:1.05}
+.hc .jp{font-size:13px;font-weight:800;color:var(--ink2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.hc.sel{outline:5px solid var(--yellow);transform:translateY(-6px)}
+.hc .rt{position:absolute;top:-9px;left:-7px;width:26px;height:26px;border-radius:50%;border:2.5px solid #fff}
+/* イベントカード(モードA) */
+#evCard{position:absolute;left:50%;top:44%;transform:translate(-50%,-50%);width:640px;background:#fffdf8;
+  border:4px solid var(--ink);border-radius:26px;box-shadow:10px 10px 0 rgba(36,31,38,.35);padding:26px 30px;text-align:center;z-index:6}
+#evCard .eIc{font-size:110px;line-height:1.1}
+#evCard .eT{font-size:31px;font-weight:900;margin-top:6px;line-height:1.5}
+#evCard .eS{font-size:19px;font-weight:900;color:var(--ink2);margin-top:8px}
+#evOut{position:absolute;left:50%;top:44%;transform:translate(-50%,-50%);width:760px;background:#fffdf8;border:4px solid var(--ink);
+  border-radius:26px;box-shadow:10px 10px 0 rgba(36,31,38,.35);padding:30px 34px;text-align:center;z-index:8;display:none}
+#evOut.show{display:block;animation:gpop .5s cubic-bezier(.2,1.4,.4,1) both}
+#evOut .oT{font-size:33px;font-weight:900;line-height:1.6}
+#evOut .oP{font-size:44px;font-weight:900;color:var(--coral);margin-top:8px}
+/* モードB バトル */
+#foe{position:absolute;left:50%;top:36%;transform:translateX(-50%);text-align:center;z-index:6}
+#foe .fIc{font-size:170px;filter:drop-shadow(0 10px 8px rgba(20,10,30,.35))}
+#foe .fHp{width:520px;height:34px;background:#fff;border:3px solid var(--ink);border-radius:99px;overflow:hidden;position:relative;margin:8px auto 0}
+#foe .fHp i{position:absolute;left:0;top:0;bottom:0;background:linear-gradient(90deg,#ff8fa5,var(--coral));width:100%;transition:width .3s}
+#foe .fHp span{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:17px;font-weight:900}
+#foe.hit .fIc{animation:foeHit .3s ease}
+@keyframes foeHit{30%{transform:translateX(-16px) rotate(-6deg)}70%{transform:translateX(12px) rotate(4deg)}}
+.dmg{position:absolute;font-size:52px;font-weight:900;color:#fff;-webkit-text-stroke:9px var(--coral);paint-order:stroke fill;
+  z-index:9;pointer-events:none;animation:dmgUp 1s ease-out forwards}
+.dmg.chain{-webkit-text-stroke-color:#e8a20c;font-size:66px}
+@keyframes dmgUp{to{transform:translateY(-130px);opacity:0}}
+#chainBanner{position:absolute;left:50%;top:16%;transform:translateX(-50%) scale(0);z-index:10;font-size:52px;font-weight:900;
+  color:#fff;-webkit-text-stroke:10px #e8a20c;paint-order:stroke fill;white-space:nowrap}
+#chainBanner.show{animation:gpop .5s cubic-bezier(.2,1.6,.4,1) both}
+/* モードC 錬金 */
+#craftBoard{position:absolute;inset:70px 120px 40px;display:flex;gap:60px;align-items:center;justify-content:center;z-index:6}
+.chipCol{display:flex;flex-direction:column;gap:18px}
+.mchip{background:#fff;border:4px solid var(--ink);border-radius:999px;box-shadow:5px 5px 0 var(--ink);
+  font-size:36px;font-weight:900;padding:14px 40px;font-family:Georgia,serif;font-style:italic;transition:transform .1s}
+.mchip:active{transform:translate(3px,3px);box-shadow:1px 1px 0 var(--ink)}
+.mchip.sel{outline:6px solid var(--yellow);transform:translateY(-4px)}
+.mchip.used{opacity:.25;pointer-events:none}
+#craftMid{font-size:80px;font-weight:900;color:#fff;-webkit-text-stroke:10px #3c3046;paint-order:stroke fill;text-align:center}
+#craftMsg{position:absolute;left:0;right:0;bottom:210px;text-align:center;font-size:34px;font-weight:900;color:#fff;
+  -webkit-text-stroke:9px #3c3046;paint-order:stroke fill;z-index:7;min-height:50px}
+/* 結果・報酬 */
+#resultSheet .rTitle{font-size:52px;font-weight:900;text-align:center}
+#resultSheet .rSub{font-size:24px;font-weight:900;color:var(--ink2);text-align:center;margin-top:8px}
+#rewardRow{display:flex;gap:22px;justify-content:center;margin-top:24px}
+.rw{width:330px;background:#fff;border:4px solid var(--ink);border-radius:22px;box-shadow:6px 6px 0 var(--ink);
+  padding:22px 18px;text-align:center;transition:transform .12s}
+.rw:hover{transform:translateY(-6px)}
+.rw .ic{height:130px;display:flex;align-items:center;justify-content:center;font-size:90px}
+.rw .ic img{height:124px;object-fit:contain}
+.rw .t{font-size:27px;font-weight:900;margin-top:6px}
+.rw .d{font-size:17px;font-weight:800;color:var(--ink2);margin-top:4px;line-height:1.6}
+.rw .tag{margin-top:8px}
+#rotateHint{position:fixed;inset:0;z-index:9000;background:rgba(20,16,25,.93);color:#fff;display:none;
+  align-items:center;justify-content:center;text-align:center;font-size:1.1rem;font-weight:800;line-height:2}
+@media (orientation:portrait){#rotateHint{display:flex}}
+</style>
+</head>
+<body>
+<div id="wrap">
+<div id="stage">
+
+  <div id="home">
+    <div id="homeBg"></div>
+    <div id="hud">
+      <div class="title">エティモリンゴ<br><span style="font-size:22px">コア検証プロト</span></div>
+      <div class="spacer"></div>
+      <div class="hudPill">📖 ことば図鑑 <b id="zukanN">0</b></div>
+      <div class="hudPill">🃏 カード <b id="cardN">0</b></div>
+      <div class="hudPill">🧩 断片 <b id="fragN">0</b></div>
+      <div class="hudPill">🪙 かけら <b id="shardN">0</b></div>
+    </div>
+    <div id="facLayer"></div>
+    <div id="homeBtns">
+      <button class="ebtn coral" style="font-size:32px;padding:16px 34px" onclick="openModes()">🗺 遠征に出る</button>
+      <button class="ebtn yellow" onclick="openCraft()">⚗️ ことば工房</button>
+      <button class="ebtn" onclick="openBuild()">🏗 復興ショップ</button>
+      <button class="ebtn" onclick="openGallery()">🃏 もちもの</button>
+    </div>
+    <div id="dock"></div>
+  </div>
+
+  <!-- 断片づくり(語根施設。CR:K 木こり小屋方式) -->
+  <div class="modalBg" id="prodBg"><div class="sheet" style="width:1560px">
+    <div class="sheetHead"><h2 id="prodTitle"></h2><button class="closeX" onclick="closeSheet('prodBg')">✕</button></div>
+    <div style="display:flex;gap:14px;margin-bottom:14px" id="fragQ"></div>
+    <div id="fragList" style="display:grid;grid-template-columns:repeat(3,1fr);gap:16px;overflow-y:auto;padding:4px"></div>
+  </div></div>
+
+  <!-- ことば工房(CR:K スミシー方式+錬金発見) -->
+  <div class="modalBg" id="craftBg"><div class="sheet" style="width:1560px">
+    <div class="sheetHead"><h2>⚗️ ことば工房 — 断片をあわせて ことばを生む</h2><button class="closeX" onclick="closeSheet('craftBg')">✕</button></div>
+    <div id="crfSlots" style="display:flex;gap:16px;align-items:center;justify-content:center;margin-bottom:8px"></div>
+    <div id="crfPick" style="display:flex;gap:10px;flex-wrap:wrap;justify-content:center;min-height:56px;margin-bottom:8px"></div>
+    <div style="display:flex;gap:14px;margin-bottom:12px;align-items:center"><b style="font-size:22px">製作台:</b><div id="wqRow" style="display:flex;gap:14px"></div></div>
+    <div style="font-size:22px;font-weight:900;margin-bottom:8px">📖 発見ずみレシピ</div>
+    <div id="recList" style="display:grid;grid-template-columns:repeat(3,1fr);gap:14px;overflow-y:auto;padding:4px"></div>
+  </div></div>
+
+  <!-- 復興ショップ(CR:K 建設方式) -->
+  <div class="modalBg" id="buildBg"><div class="sheet" style="width:1300px">
+    <div class="sheetHead"><h2>🏗 復興ショップ — ことばの力で 世界をもどす</h2><button class="closeX" onclick="closeSheet('buildBg')">✕</button></div>
+    <div id="buildList" style="display:flex;flex-direction:column;gap:14px;overflow-y:auto;padding:4px"></div>
+  </div></div>
+
+  <!-- もちもの -->
+  <div class="modalBg" id="galBg"><div class="sheet">
+    <div class="sheetHead"><h2>🃏 もちものカード</h2><button class="closeX" onclick="closeSheet('galBg')">✕</button></div>
+    <div id="galRow" style="display:flex;gap:12px;flex-wrap:wrap;overflow-y:auto;padding:4px"></div>
+  </div></div>
+
+  <!-- モード選択 -->
+  <div class="modalBg" id="modeBg"><div class="sheet" id="modeSheet" style="width:1660px">
+    <div class="sheetHead"><h2>🗺 どの遊びかたで 遠征する?(コア検証)</h2><button class="closeX" onclick="closeSheet('modeBg')">✕</button></div>
+    <div class="modes">
+      <button class="modeCard" onclick="startRun()">
+        <div class="mIc">🪨</div><h3>A ヒラメキ遠征</h3>
+        <div class="mDesc">道中で起きる事件に、手持ちの<b>どの「ことば」で応えるかは自由</b>。キャベツは食べても投げてもいい。意外な組み合わせほど大きく進む。</div>
+        <div class="mRef">参考: Scribblenauts / The Oregon Trail / Reigns</div>
+      </button>
+      <button class="modeCard" onclick="startBattle()">
+        <div class="mIc">🌀</div><h3>B ことばレゾナンス</h3>
+        <div class="mDesc">6枚のデッキを組んで自動バトル。<b>同じ祖先のことばが続くと共鳴して威力アップ</b>。「実は同語源」を知っているほど強い。</div>
+        <div class="mRef">参考: Luck be a Landlord / Super Auto Pets</div>
+      </button>
+
+    </div>
+  </div></div>
+
+  <!-- モードA: ヒラメキ遠征 -->
+  <div class="play" id="runP">
+    <div class="playBar"><h2>🪨 ヒラメキ遠征</h2>
+      <div class="meter"><i id="runBarI"></i><span id="runBarT"></span></div>
+      <button class="ebtn" onclick="endToHome()">やめる</button></div>
+    <div class="playTop"><img class="bgi" id="runBg" alt="">
+      <div id="evCard"><div class="eIc" id="evIc"></div><div class="eT" id="evT"></div><div class="eS">↓ どの ことばで 応える?(なんでもいい)</div></div>
+      <div id="evOut"><div class="oT" id="evOutT"></div><div class="oP" id="evOutP"></div></div>
+    </div>
+    <div id="handStrip"></div>
+  </div>
+
+  <!-- モードB: ことばレゾナンス -->
+  <div class="play" id="btlP">
+    <div class="playBar"><h2>🌀 ことばレゾナンス</h2>
+      <div class="meter"><i id="btlBarI" style="background:linear-gradient(90deg,#ffd23e,#ff9c54)"></i><span id="btlBarT"></span></div>
+      <button class="ebtn" onclick="endToHome()">やめる</button></div>
+    <div class="playTop"><img class="bgi" id="btlBg" alt="">
+      <div id="foe"><div class="fIc">👾</div>
+        <div style="font-size:26px;font-weight:900;color:#fff;-webkit-text-stroke:8px #3c3046;paint-order:stroke fill">ジャバウォックの手先</div>
+        <div class="fHp"><i id="foeHpI"></i><span id="foeHpT"></span></div></div>
+      <div id="chainBanner"></div>
+    </div>
+    <div id="handStrip2" style="background:#fffdf8;border-top:5px solid var(--ink);padding:12px 20px 14px;display:flex;gap:12px;overflow-x:auto;align-items:stretch;min-height:190px"></div>
+  </div>
+
+  <!-- モードC: ことば錬金 -->
+  <div class="play" id="crfP">
+    <div class="playBar"><h2>⚗️ ことば錬金</h2>
+      <div class="meter"><i id="crfBarI" style="background:linear-gradient(90deg,#c9a0f0,#8f6ee0)"></i><span id="crfBarT"></span></div>
+      <button class="ebtn" onclick="endToHome()">やめる</button></div>
+    <div class="playTop" style="background:linear-gradient(#3c3046,#584a66)">
+      <div id="craftBoard">
+        <div class="chipCol" id="crfL"></div>
+        <div id="craftMid">+</div>
+        <div class="chipCol" id="crfR"></div>
+      </div>
+      <div id="craftMsg"></div>
+    </div>
+  </div>
+
+  <!-- 結果+報酬3択 -->
+  <div class="modalBg" id="resultBg"><div class="sheet" id="resultSheet" style="width:1300px">
+    <div class="rTitle" id="resT"></div>
+    <div class="rSub" id="resS"></div>
+    <div id="rewardRow"></div>
+    <div style="text-align:center;margin-top:22px"><button class="ebtn" id="resClose" onclick="closeResult()" style="display:none">拠点へもどる</button></div>
+  </div></div>
+
+  <div id="getFx"><div class="gcard"><div class="gic" id="getIc"></div><div class="gt" id="getT"></div><div class="gs" id="getS"></div></div></div>
+</div>
+</div>
+<div id="rotateHint">📱 → 🔄<br>横向きにして あそんでね</div>
+
+<script>
+"use strict";
+/* ================= データ(app/data/*.csv から生成した埋め込み) ================= */
+const DATA={"WILDS": [{"id": "kaput", "root": "*kaput-", "clan_jp": "頭", "clan_color": "#e8875a", "name": "カプト", "img": "ch_kaput"}, {"id": "ane", "root": "*ane-", "clan_jp": "息をする", "clan_color": "#9fd1c7", "name": "アーネ", "img": "ch_ane"}, {"id": "bha", "root": "*bha-", "clan_jp": "話す", "clan_color": "#f2a444", "name": "バーファ", "img": "ch_bha"}, {"id": "gwei", "root": "*gwei-", "clan_jp": "生きる", "clan_color": "#7cba62", "name": "グウェイ", "img": "ch_gwei"}, {"id": "oino", "root": "*oi-no-", "clan_jp": "ひとつ", "clan_color": "#7f8ff0", "name": "オイノ", "img": "ch_oino"}, {"id": "reg", "root": "*reg-", "clan_jp": "まっすぐ", "clan_color": "#5aa7e8", "name": "レーグ", "img": "ch_reg"}, {"id": "weid", "root": "*weid-", "clan_jp": "見る・知る", "clan_color": "#a06ee0", "name": "ウェイド", "img": "ch_weid"}, {"id": "ye", "root": "*ye-", "clan_jp": "投げる", "clan_color": "#f26d99", "name": "イェート", "img": "ch_ye"}, {"id": "mori", "root": "*mori-", "clan_jp": "水域", "clan_color": "#46b8d8", "name": "モーリ", "img": "ch_mori"}, {"id": "men", "root": "*men-", "clan_jp": "考える", "clan_color": "#9b8bd8", "name": "メーン", "img": "ch_men"}, {"id": "do", "root": "*do-", "clan_jp": "与える", "clan_color": "#d99a3d", "name": "ドー", "img": "ch_do"}], "ITEMS": {"cabbage": {"name": "キャベツ", "en": "Cabbage", "def": "キャベツ", "rarity": 2, "icon": "word/cabbage.png"}, "cap": {"name": "キャップ", "en": "Cap", "def": "帽子、ふた", "rarity": 3, "icon": "word/cap.png"}, "capital": {"name": "キャピタル", "en": "Capital", "def": "首都、資本", "rarity": 7, "icon": "word/capital.png"}, "kappa": {"name": "カッパ", "en": "Kappa", "def": "合羽、雨合羽", "rarity": 10, "icon": "word/kappa.png"}, "captain": {"name": "キャプテン", "en": "Captain", "def": "船長、キャプテン、主将", "rarity": 4, "icon": "word/captain.png"}, "chef": {"name": "シェフ", "en": "Chef", "def": "料理長、シェフ", "rarity": 4, "icon": "word/chef.png"}, "chief": {"name": "チーフ", "en": "Chief", "def": "長・主要な", "rarity": 4, "icon": "word/chief.png"}, "breath": {"name": "ブレス", "en": "Breath", "def": "息、呼吸", "rarity": 2, "icon": "word/breath.png"}, "fable": {"name": "フェイブル", "en": "Fable", "def": "寓話", "rarity": 3, "icon": "word/fable.png"}, "vivid": {"name": "ビビッド", "en": "Vivid", "def": "鮮やかな", "rarity": 2, "icon": "word/vivid.png"}, "unique": {"name": "ユニーク", "en": "Unique", "def": "唯一の", "rarity": 6, "icon": "word/unique.png"}, "idea": {"name": "アイデア", "en": "Idea", "def": "考え、アイデア", "rarity": 5, "icon": "word/idea.png"}, "jet": {"name": "ジェット", "en": "Jet", "def": "噴出、ジェット機", "rarity": 7, "icon": "word/jet.png"}, "merlin": {"name": "マーリン", "en": "Merlin", "def": "魔法使いマーリン", "rarity": 9, "icon": "word/merlin.png"}, "excalibur": {"name": "エクスカリバー", "en": "Excalibur", "def": "聖剣エクスカリバー", "rarity": 10, "icon": "word/excalibur.png"}, "grail": {"name": "聖杯", "en": "Grail", "def": "聖杯", "rarity": 10, "icon": "word/grail.png"}, "apple": {"name": "リンゴ", "en": "Apple", "def": "リンゴ", "rarity": 1, "icon": "word/apple.png"}, "smartphone": {"name": "スマートフォン", "en": "Smartphone", "def": "スマートフォン", "rarity": 6, "icon": "word/smartphone.png"}, "animation": {"name": "アニメーション", "en": "Animation", "def": "アニメーション", "rarity": 5, "icon": "word/animation.png"}, "animal": {"name": "アニマル", "en": "Animal", "def": "動物", "rarity": 2, "icon": "word/animal.png"}, "rule": {"name": "ルール", "en": "Rule", "def": "規則、支配する", "rarity": 2, "icon": "word/rule.png"}, "wizard": {"name": "ウィザード", "en": "Wizard", "def": "魔法使い", "rarity": 5, "icon": "word/wizard.png"}, "submarine": {"name": "サブマリン", "en": "Submarine", "def": "潜水艦", "rarity": 6, "icon": "word/submarine.png"}, "aquamarine": {"name": "アクアマリン", "en": "Aquamarine", "def": "藍玉(海色の宝石)", "rarity": 7, "icon": "word/aquamarine.png"}, "marine": {"name": "マリン", "en": "Marine", "def": "海の", "rarity": 6, "icon": "word/marine.png"}, "monster": {"name": "モンスター", "en": "Monster", "def": "怪物", "rarity": 8, "icon": "word/monster.png"}, "inject": {"name": "インジェクト", "en": "Inject", "def": "注入する", "rarity": 5, "icon": "word/inject.png"}, "donor": {"name": "ドナー", "en": "Donor", "def": "提供者、寄付者", "rarity": 3, "icon": "word/donor.png"}, "donation": {"name": "ドネーション", "en": "Donation", "def": "寄付、寄贈", "rarity": 4, "icon": "word/donation.png"}, "data": {"name": "データ", "en": "Data", "def": "データ、資料", "rarity": 2, "icon": "word/data.png"}, "date": {"name": "デート", "en": "Date", "def": "日付、年月日", "rarity": 2, "icon": "word/date.png"}, "antidote": {"name": "アンチドート", "en": "Antidote", "def": "解毒剤、対抗策", "rarity": 6, "icon": "word/antidote.png"}, "mandate": {"name": "マンデート", "en": "Mandate", "def": "命令、委任", "rarity": 5, "icon": "word/mandate.png"}, "pandora": {"name": "パンドラ", "en": "Pandora", "def": "パンドラ", "rarity": 8, "icon": "word/pandora.png"}, "danna": {"name": "旦那", "en": "Danna", "def": "旦那、檀那", "rarity": 7, "icon": "word/danna.png"}, "pardon": {"name": "パードン", "en": "Pardon", "def": "許し、許す", "rarity": 4, "icon": "word/pardon.png"}}, "REC": {"kaput": ["cabbage", "cap", "capital", "kappa", "captain", "chef", "chief"], "ane": ["animal", "animation"], "bha": ["fable", "smartphone"], "gwei": ["vivid"], "oino": ["unique"], "reg": ["rule"], "weid": ["idea", "wizard"], "mori": ["submarine", "marine", "merlin"], "men": ["monster"], "ye": ["jet", "inject"], "do": ["donor", "pandora", "danna", "donation", "data", "date", "antidote", "mandate", "pardon"]}, "SPLITS": [{"w": "captain", "root": "kaput", "split_a": "capt", "split_b": "ain", "jp": "船長、キャプテン、主将"}, {"w": "cabbage", "root": "kaput", "split_a": "cabb", "split_b": "age", "jp": "キャベツ"}, {"w": "capital", "root": "kaput", "split_a": "capit", "split_b": "al", "jp": "首都、資本、大文字"}, {"w": "animal", "root": "ane", "split_a": "anim", "split_b": "al", "jp": "動物"}, {"w": "animation", "root": "ane", "split_a": "anim", "split_b": "ation", "jp": "アニメーション"}, {"w": "animate", "root": "ane", "split_a": "anim", "split_b": "ate", "jp": "命を吹き込む"}, {"w": "unanimous", "root": "ane", "split_a": "uni", "split_b": "anim", "jp": "満場一致の"}, {"w": "smartphone", "root": "bha", "split_a": "smart", "split_b": "phone", "jp": "スマートフォン"}, {"w": "fame", "root": "bha", "split_a": "fam", "split_b": "e", "jp": "名声"}, {"w": "telephone", "root": "bha", "split_a": "tele", "split_b": "phone", "jp": "電話"}, {"w": "infant", "root": "bha", "split_a": "in", "split_b": "fant", "jp": "幼児"}, {"w": "fable", "root": "bha", "split_a": "fab", "split_b": "le", "jp": "寓話"}, {"w": "prophet", "root": "bha", "split_a": "pro", "split_b": "phet", "jp": "預言者"}, {"w": "vivid", "root": "gwei", "split_a": "viv", "split_b": "id", "jp": "鮮やかな、生き生きした"}, {"w": "survive", "root": "gwei", "split_a": "sur", "split_b": "vive", "jp": "生きのびる"}, {"w": "unique", "root": "oino", "split_a": "uni", "split_b": "que", "jp": "唯一の"}, {"w": "union", "root": "oino", "split_a": "uni", "split_b": "on", "jp": "結合、連合"}, {"w": "alone", "root": "oino", "split_a": "al", "split_b": "one", "jp": "ひとりで"}, {"w": "regal", "root": "reg", "split_a": "reg", "split_b": "al", "jp": "王者の、堂々たる"}, {"w": "direct", "root": "reg", "split_a": "di", "split_b": "rect", "jp": "導く、直接の"}, {"w": "wise", "root": "weid", "split_a": "wis", "split_b": "e", "jp": "賢い"}, {"w": "idea", "root": "weid", "split_a": "ide", "split_b": "a", "jp": "考え、アイデア"}, {"w": "video", "root": "weid", "split_a": "vid", "split_b": "eo", "jp": "動画、映像"}, {"w": "wizard", "root": "weid", "split_a": "wiz", "split_b": "ard", "jp": "魔法使い"}, {"w": "history", "root": "weid", "split_a": "hist", "split_b": "ory", "jp": "歴史"}, {"w": "project", "root": "ye", "split_a": "pro", "split_b": "ject", "jp": "計画、投影(する)"}, {"w": "inject", "root": "ye", "split_a": "in", "split_b": "ject", "jp": "注入する"}, {"w": "subject", "root": "ye", "split_a": "sub", "split_b": "ject", "jp": "主題、科目"}, {"w": "merlin", "root": "mori", "split_a": "mer", "split_b": "lin", "jp": "魔法使いマーリン"}, {"w": "marine", "root": "mori", "split_a": "mar", "split_b": "ine", "jp": "海の・海に関する"}, {"w": "remember", "root": "men", "split_a": "re", "split_b": "member", "jp": "思い出す"}, {"w": "monster", "root": "men", "split_a": "mon", "split_b": "ster", "jp": "怪物"}, {"w": "mantra", "root": "men", "split_a": "man", "split_b": "tra", "jp": "マントラ"}, {"w": "donor", "root": "do", "split_a": "don", "split_b": "or", "jp": "提供者、寄付者、ドナー"}, {"w": "donation", "root": "do", "split_a": "don", "split_b": "ation", "jp": "寄付、寄贈"}, {"w": "data", "root": "do", "split_a": "dat", "split_b": "a", "jp": "データ、資料"}, {"w": "pandora", "root": "do", "split_a": "pan", "split_b": "dora", "jp": "パンドラ"}, {"w": "date", "root": "do", "split_a": "dat", "split_b": "e", "jp": "日付、年月日"}, {"w": "antidote", "root": "do", "split_a": "anti", "split_b": "dote", "jp": "解毒剤、対抗策"}, {"w": "mandate", "root": "do", "split_a": "man", "split_b": "date", "jp": "命令、委任、権限を与える"}, {"w": "danna", "root": "do", "split_a": "dan", "split_b": "na", "jp": "旦那、檀那"}, {"w": "pardon", "root": "do", "split_a": "par", "split_b": "don", "jp": "許し、許す"}, {"w": "kappa", "root": "kaput", "split_a": "kap", "split_b": "pa", "jp": "合羽、雨合羽"}, {"w": "polygon", "root": "genu", "split_a": "poly", "split_b": "gon", "jp": "多角形"}, {"w": "diagonal", "root": "genu", "split_a": "dia", "split_b": "gonal", "jp": "対角線・斜めの"}, {"w": "pentagon", "root": "genu", "split_a": "penta", "split_b": "gon", "jp": "五角形"}, {"w": "hexagon", "root": "genu", "split_a": "hexa", "split_b": "gon", "jp": "六角形"}, {"w": "octagon", "root": "genu", "split_a": "octa", "split_b": "gon", "jp": "八角形"}, {"w": "trigonometry", "root": "genu", "split_a": "tri", "split_b": "gonometry", "jp": "三角法"}, {"w": "orthogonal", "root": "genu", "split_a": "ortho", "split_b": "gonal", "jp": "直交する"}], "CHIMG": {"kaput": "chara/T_ch_kaput_head.png", "ane": "chara/T_ch_ane_breath.png", "bha": "chara/T_ch_bha_speak.png", "gwei": "chara/T_ch_gwei_live.png", "oino": "chara/T_ch_oi-no_one.png", "reg": "chara/T_ch_reg_straight.png", "weid": "chara/T_ch_weid_see.png", "ye": "chara/T_ch_ye_throw.png", "mori": "chara/T_ch_mori_water.png", "men": "chara/T_ch_men_think.png", "do": "chara/T_ch_do_give.png"}, "BG": "ground/T_BG_base_ground.png", "BGEXP": "ground/T_BG_base_expedition.png"};
+const ASSET="../assets/";
+const $=s=>document.querySelector(s);
+const WILDS=DATA.WILDS, ITEMS=DATA.ITEMS, REC=DATA.REC, SPLITS=DATA.SPLITS, CHIMG=DATA.CHIMG;
+const rootOf={};Object.keys(REC).forEach(rid=>REC[rid].forEach(it=>rootOf[it]=rid));
+const wildBy=id=>WILDS.find(w=>w.id===id);
+
+/* ことばの性質タグ(モードAで使用。カードに説明は出さない=答えは出さない) */
+const TAGS={
+ cabbage:["food","throw"],apple:["food","throw"],vivid:["food","light"],
+ cap:["wear","cover"],kappa:["cover","water"],capital:["build","order"],
+ captain:["lead"],chef:["food","lead"],chief:["lead"],
+ breath:["heal","air"],fable:["story"],smartphone:["info","light"],
+ animation:["heal","story"],animal:["friend"],unique:["special"],
+ idea:["think"],jet:["fly","fast"],inject:["throw","heal"],
+ rule:["measure","order"],wizard:["magic","think"],
+ submarine:["water","vehicle"],marine:["water"],merlin:["magic","story","water"],
+ aquamarine:["light","water"],monster:["scare"],mantra:["think","story"],
+ mind:["think"],remember:["think","story"],
+ donor:["give","heal"],donation:["give"],data:["info","think"],pandora:["scare","special","give"],
+ excalibur:["special","lead","magic"],grail:["special","heal"],danna:["give","story"]
+};
+
+/* 施設(仲間にすると箱庭がひろがる) */
+const FACS={
+ kaput:{ic:"🎩",name:"ぼうしのアトリエ",x:200,y:430},
+ ane:{ic:"🌬",name:"いきの風車",x:480,y:330},
+ bha:{ic:"📻",name:"おはなしラジオ塔",x:760,y:430},
+ gwei:{ic:"🌱",name:"いのちのはたけ",x:1040,y:330},
+ oino:{ic:"🗿",name:"ひとつのモノリス",x:1320,y:430},
+ men:{ic:"📚",name:"かんがえ堂",x:1600,y:150},
+ do:{ic:"🎁",name:"おくりものポスト",x:1600,y:430},
+ reg:{ic:"🏰",name:"まっすぐのとりで",x:300,y:620},
+ weid:{ic:"🔭",name:"みはらし天文台",x:640,y:610},
+ ye:{ic:"🎯",name:"なげっこ広場",x:980,y:620},
+ mori:{ic:"🎣",name:"つりぼり",x:1310,y:610}
+};
+
+/* ================= セーブ ================= */
+let S={owned:{},recruited:["kaput","ane","ye"],zukan:{},exp:0,frags:{},shards:600,built:{},q:{},wq:[]};
+try{const r=localStorage.getItem("lexicopia-core-v1");if(r)S=Object.assign(S,JSON.parse(r));}catch(e){}
+S.frags=S.frags||{};S.built=S.built||{};S.q=S.q||{};S.wq=S.wq||[];if(S.shards==null)S.shards=600;
+function save(){try{localStorage.setItem("lexicopia-core-v1",JSON.stringify(S));}catch(e){}}
+const ownedList=()=>Object.keys(S.owned).filter(k=>S.owned[k]>0&&ITEMS[k]);
+
+/* ================= ステージ拡縮 ================= */
+function fit(){const s=Math.min(innerWidth/1920,innerHeight/1080);
+  $("#stage").style.transform=`translate(-50%,-50%) scale(${s})`;}
+addEventListener("resize",fit);fit();
+
+/* ================= ホーム ================= */
+function iconHTML(id,fs){
+  const it=ITEMS[id];
+  if(it&&it.icon&&!it.icon.startsWith("it_"))return `<img src="${ASSET}${it.icon}" onerror="this.outerHTML='🔤'" alt="">`;
+  return `<span style="font-size:${fs||48}px">🔤</span>`;
+}
+function renderHome(){
+  const bg=$("#homeBg");
+  bg.innerHTML=DATA.BG?`<img src="${ASSET}${DATA.BG}" alt="">`:"";
+  /* 施設: 復興ショップで建てたものだけ建つ。未建設の仲間は そばに立っている */
+  $("#facLayer").innerHTML=S.recruited.map(id=>{
+    const f=FACS[id];if(!f)return "";
+    if(S.built[id]){
+      return `<div class="fac" style="left:${f.x}px;top:${f.y}px">
+        <div class="fIcon">${f.ic}</div><div class="fName">${f.name}</div>
+        <div class="fChar"><img src="${ASSET}${CHIMG[id]}" alt=""></div></div>`;
+    }
+    return `<div class="fac" style="left:${f.x+34}px;top:${f.y+66}px">
+      <div class="fChar" style="position:static;width:132px;height:132px"><img src="${ASSET}${CHIMG[id]}" alt=""></div></div>`;
+  }).join("");
+  /* ドック: バッジ=うけとれる断片スロット数 */
+  $("#dock").innerHTML=WILDS.map(w=>{
+    const on=S.recruited.includes(w.id);
+    const done=(S.q[w.id]||[]).filter(s=>s.endAt<=Date.now()).length;
+    return `<button class="dk ${on?"":"locked"}" onclick="${on?`openProd('${w.id}')`:`lockedMsg()`}">
+      ${on&&done?`<span class="dkN">${done}</span>`:""}
+      <div class="dkFace"><img src="${ASSET}${CHIMG[w.id]}" alt="">${on?"":'<div class="dkQ">?</div>'}</div>
+      <div class="dkName">${w.name}</div>
+      <span class="dkJp" style="background:${on?w.clan_color:"#8a7b90"}">${on?w.clan_jp:"???"}</span>
+    </button>`;
+  }).join("");
+  $("#zukanN").textContent=Object.keys(S.zukan).length;
+  $("#cardN").textContent=ownedList().reduce((a,k)=>a+S.owned[k],0);
+  $("#fragN").textContent=Object.values(S.frags).reduce((a,n)=>a+n,0);
+  $("#shardN").textContent=S.shards;
+}
+window.lockedMsg=function(){toastGet("❓","まだ であっていない 祖先","遠征で であえるかも");};
+
+/* ---- 断片づくり(CR:K 木こり小屋方式): タイマー×キュー4枠 ---- */
+const FAST=/[?&]fast/.test(location.search)?10:1;   // ?fast で10倍速(検証・撮影用)
+const FRAG_T=30,FRAG_COST=20,CRAFT_T=20,BUILD_FRAGS=6,BUILD_SHARDS=500;
+function fragsOfRoot(id){
+  const s=new Set();
+  SPLITS.filter(x=>x.root===id).forEach(x=>{s.add(x.split_a);if(x.split_b)s.add(x.split_b);});
+  return [...s];
+}
+let prodRoot=null;
+window.openProd=function(rid){
+  prodRoot=rid;renderProdSheet();
+  $("#prodBg").classList.add("open");
+};
+function renderProdSheet(){
+  const rid=prodRoot;if(!rid)return;
+  const w=wildBy(rid);
+  const q=S.q[rid]||(S.q[rid]=[]);
+  const built=!!S.built[rid];
+  $("#prodTitle").innerHTML=`<span class="chip" style="background:${w.clan_color};font-size:22px;vertical-align:6px">「${w.clan_jp}」</span> ${w.name} の 断片づくり${built?` <span class="chip" style="background:var(--mint);font-size:16px;vertical-align:6px">施設ボーナス ×2</span>`:""}`;
+  let slots="";
+  for(let i=0;i<4;i++){
+    const s=q[i];
+    if(!s){slots+=`<div class="qslot empty">あき</div>`;continue;}
+    const r=(s.endAt-Date.now())/1000;
+    slots+= r<=0
+      ?`<button class="qslot done" onclick="collectFrag('${rid}',${i})">✨ ${s.frag}<br>うけとる</button>`
+      :`<div class="qslot"><div><b style="font-family:Georgia,serif;font-style:italic">${s.frag}</b><br>${Math.ceil(r)}秒</div></div>`;
+  }
+  $("#fragQ").innerHTML=slots;
+  $("#fragList").innerHTML=fragsOfRoot(rid).map(f=>`
+    <button class="pw" onclick="produceFrag('${rid}','${f}')">
+      ${S.frags[f]?`<span class="own">×${S.frags[f]}</span>`:""}
+      <span class="ic" style="font-size:28px;font-weight:900;font-style:italic;font-family:Georgia,serif">${f}</span>
+      <span class="tx"><span class="en" style="font-size:24px">断片「${f}」×2</span>
+      <span class="jp">🪙${FRAG_COST} ・ ⏱${Math.ceil(FRAG_T/(built?2:1)/FAST)}秒</span></span>
+    </button>`).join("")||`<div style="font-size:22px;font-weight:900;color:var(--ink2)">この祖先の断片データがまだない</div>`;
+}
+window.produceFrag=function(rid,f){
+  const q=S.q[rid]||(S.q[rid]=[]);
+  if(q.length>=4){toastGet("⏳","キューが いっぱい","できた断片を うけとろう");return;}
+  if(S.shards<FRAG_COST){toastGet("🪙","かけらが たりない","遠征で あつめよう");return;}
+  S.shards-=FRAG_COST;
+  const t=FRAG_T/(S.built[rid]?2:1)/FAST*1000;
+  q.push({frag:f,endAt:Date.now()+t,total:t});
+  save();renderProdSheet();renderHome();
+};
+window.collectFrag=function(rid,i){
+  const q=S.q[rid]||[];const s=q[i];
+  if(!s||s.endAt>Date.now())return;
+  q.splice(i,1);
+  S.frags[s.frag]=(S.frags[s.frag]||0)+2;
+  save();
+  toastGet(`<span style="font-style:italic;font-family:Georgia,serif">${s.frag}</span>`,`断片「${s.frag}」×2 を うけとった!`,"ことば工房で 単語にできる");
+  renderProdSheet();renderHome();
+};
+
+/* ---- ことば工房(CR:K スミシー方式+錬金発見) ---- */
+let crfL=null,crfR=null,crfPicking=null;
+window.openCraft=function(){crfL=crfR=null;crfPicking=null;renderCraft();$("#craftBg").classList.add("open");};
+function renderCraft(){
+  $("#crfSlots").innerHTML=`
+    <button class="mchip" style="min-width:170px" onclick="pickFrag('L')">${crfL||"?"}</button>
+    <span style="font-size:52px;font-weight:900">+</span>
+    <button class="mchip" style="min-width:170px" onclick="pickFrag('R')">${crfR||"?"}</button>
+    <button class="ebtn coral" onclick="tryCraft()">⚗️ つくってみる</button>`;
+  const fr=Object.keys(S.frags).filter(f=>S.frags[f]>0);
+  $("#crfPick").innerHTML=crfPicking
+    ?(fr.map(f=>`<button class="fchip" onclick="setFrag('${f}')">${f} <small>×${S.frags[f]}</small></button>`).join("")||`<span style="font-weight:900;color:var(--ink2)">断片がない。下のエティモンに つくってもらおう</span>`)
+    :"";
+  let ws="";
+  for(let i=0;i<2;i++){
+    const s=S.wq[i];
+    if(!s){ws+=`<div class="qslot empty">あき</div>`;continue;}
+    const r=(s.endAt-Date.now())/1000;
+    ws+= r<=0
+      ?`<button class="qslot done" onclick="collectWord(${i})">✨ ${s.w}<br>うけとる</button>`
+      :`<div class="qslot"><div><b>${s.w}</b><br>${Math.ceil(r)}秒</div></div>`;
+  }
+  $("#wqRow").innerHTML=ws;
+  const known=SPLITS.filter(x=>S.zukan[x.w]);
+  $("#recList").innerHTML=known.map(x=>`
+    <button class="pw" onclick="makeKnown('${x.w}')">
+      <span class="ic">${ITEMS[x.w]?iconHTML(x.w):"📖"}</span>
+      <span class="tx"><span class="en" style="font-size:24px">${x.w}</span>
+      <span class="jp">${x.split_a} + ${x.split_b} ・ ⏱${Math.ceil(CRAFT_T/FAST)}秒</span></span>
+    </button>`).join("")||`<div style="font-size:20px;font-weight:900;color:var(--ink2)">まだレシピがない。上の「? + ?」で発見しよう</div>`;
+}
+window.pickFrag=function(side){crfPicking=side;renderCraft();};
+window.setFrag=function(f){if(crfPicking==="L")crfL=f;else if(crfPicking==="R")crfR=f;crfPicking=null;renderCraft();};
+window.tryCraft=function(){
+  if(!crfL||!crfR){toastGet("⚗️","断片を 2つ えらんでね","「?」をタップして 断片をセット");return;}
+  if(S.wq.length>=2){toastGet("⏳","製作台が いっぱい","できた単語を うけとろう");return;}
+  const need2=crfL===crfR;
+  if((S.frags[crfL]||0)<(need2?2:1)||(S.frags[crfR]||0)<1){toastGet("🧩","断片が たりない","");return;}
+  const hit=SPLITS.find(x=>x.split_a===crfL&&x.split_b===crfR&&!S.zukan[x.w]);
+  S.frags[crfL]--;S.frags[crfR]--;
+  crfL=crfR=null;
+  if(hit){
+    S.wq.push({w:hit.w,endAt:Date.now()+CRAFT_T/FAST*1000});
+    toastGet("⚗️","なにかが うまれそうだ…!","製作台で できあがりを まとう");
+  }else{
+    toastGet("💨","なにも うまれなかった…","べつの 組み合わせは?(断片は消費された)");
+  }
+  save();renderCraft();
+};
+window.makeKnown=function(w){
+  const x=SPLITS.find(v=>v.w===w);if(!x)return;
+  if(S.wq.length>=2){toastGet("⏳","製作台が いっぱい","");return;}
+  const need2=x.split_a===x.split_b;
+  if((S.frags[x.split_a]||0)<(need2?2:1)||(S.frags[x.split_b]||0)<1){toastGet("🧩","断片が たりない",`「${x.split_a}」と「${x.split_b}」が いる`);return;}
+  S.frags[x.split_a]--;S.frags[x.split_b]--;
+  S.wq.push({w,endAt:Date.now()+CRAFT_T/FAST*1000});
+  save();renderCraft();
+};
+window.collectWord=function(i){
+  const s=S.wq[i];if(!s||s.endAt>Date.now())return;
+  S.wq.splice(i,1);
+  const x=SPLITS.find(v=>v.w===s.w);
+  const first=!S.zukan[s.w];
+  S.zukan[s.w]=1;
+  let sub=x?`「${x.jp}」 図鑑に登録`:"図鑑に登録";
+  if(ITEMS[s.w]){S.owned[s.w]=(S.owned[s.w]||0)+1;sub+=" +カード入手";}
+  if(first){S.shards+=50;sub+=" +はっけんボーナス🪙50";}
+  save();
+  toastGet(ITEMS[s.w]?iconHTML(s.w,90):"✨",`${x?x.split_a+" + "+x.split_b+" = ":""}${s.w}!`,sub);
+  renderCraft();renderHome();
+};
+
+/* ---- 復興ショップ(CR:K 建設方式)。カードは所持条件(知識は減らない) ---- */
+window.openBuild=function(){renderBuild();$("#buildBg").classList.add("open");};
+function rootFragCount(id){return fragsOfRoot(id).reduce((a,f)=>a+(S.frags[f]||0),0);}
+function renderBuild(){
+  $("#buildList").innerHTML=S.recruited.filter(id=>FACS[id]&&!S.built[id]).map(id=>{
+    const w=wildBy(id),f=FACS[id];
+    const hasCard=(REC[id]||[]).some(x=>S.owned[x]>0);
+    const fr=rootFragCount(id);
+    const ok=hasCard&&fr>=BUILD_FRAGS&&S.shards>=BUILD_SHARDS;
+    return `<div class="pw" style="cursor:default">
+      <span class="ic" style="font-size:52px">${f.ic}</span>
+      <span class="tx"><span class="en" style="font-size:26px">${f.name}</span>
+        <span class="jp">条件: 「${w.clan_jp}」のことばカードを知っている ${hasCard?"✅":"❌"} ・ 「${w.clan_jp}」の断片 ${Math.min(fr,BUILD_FRAGS)}/${BUILD_FRAGS} ・ 🪙${BUILD_SHARDS}</span>
+        <span class="jp">建てると ${w.name} の断片づくりが 2倍速に</span></span>
+      <button class="ebtn ${ok?"coral":"dis"}" style="font-size:20px;flex:0 0 auto" onclick="doBuild('${id}')">🏗 復興</button>
+    </div>`;
+  }).join("")||`<div style="font-size:22px;font-weight:900;color:var(--ink2);padding:20px">いま復興できる施設はない(遠征で あたらしい祖先と 出会おう)</div>`;
+}
+window.doBuild=function(id){
+  const hasCard=(REC[id]||[]).some(x=>S.owned[x]>0);
+  if(!hasCard||rootFragCount(id)<BUILD_FRAGS||S.shards<BUILD_SHARDS)return;
+  let need=BUILD_FRAGS;
+  for(const f of fragsOfRoot(id)){
+    const take=Math.min(need,S.frags[f]||0);
+    if(take){S.frags[f]-=take;need-=take;}
+    if(!need)break;
+  }
+  S.shards-=BUILD_SHARDS;
+  S.built[id]=1;save();
+  closeSheet("buildBg");
+  const f=FACS[id],w=wildBy(id);
+  toastGet(f.ic,`${f.name} が 復興した!`,`${w.name} の断片づくりが 2倍速に`);
+  renderHome();
+};
+
+/* 開いているシートのタイマーをライブ更新 */
+setInterval(()=>{
+  if($("#prodBg").classList.contains("open"))renderProdSheet();
+  if($("#craftBg").classList.contains("open"))renderCraft();
+},600);
+
+window.closeSheet=id=>$("#"+id).classList.remove("open");
+["prodBg","galBg","modeBg","craftBg","buildBg"].forEach(id=>{
+  $("#"+id).addEventListener("pointerdown",e=>{if(e.target.id===id)closeSheet(id);});
+});
+let getT=null;
+function toastGet(ic,t,s){
+  $("#getIc").innerHTML=ic;$("#getT").textContent=t;$("#getS").textContent=s;
+  const g=$("#getFx");g.classList.remove("show");void g.offsetWidth;g.classList.add("show");
+  clearTimeout(getT);getT=setTimeout(()=>g.classList.remove("show"),1400);
+}
+window.openGallery=function(){
+  $("#galRow").innerHTML=ownedList().map(x=>`
+    <div class="hc" style="flex:0 0 150px"><div class="ic">${iconHTML(x)}</div>
+      <div class="en">${ITEMS[x].en}</div><div class="jp">${ITEMS[x].def||ITEMS[x].name}</div>
+      <span class="own" style="position:absolute;top:-9px;right:-7px;background:var(--ink);color:#fff;font-size:15px;font-weight:900;border-radius:999px;padding:2px 8px">×${S.owned[x]}</span></div>`).join("")
+    ||`<div style="font-size:24px;font-weight:900;color:var(--ink2);padding:30px">まだカードがない。下のエティモンをタップして生産しよう</div>`;
+  $("#galBg").classList.add("open");
+};
+window.openModes=function(){
+  if(!ownedList().length){toastGet("🃏","カードが 1まいもない!","断片をあつめて ことば工房で つくろう");return;}
+  $("#modeBg").classList.add("open");
+};
+
+/* ================= 遠征共通 ================= */
+function showPlay(id){
+  ["runP","btlP","crfP"].forEach(p=>$("#"+p).classList.remove("on"));
+  $("#home").style.display=id?"none":"";
+  if(id)$("#"+id).classList.add("on");
+}
+window.endToHome=function(){showPlay(null);renderHome();};
+function handHTML(onclickName){
+  return ownedList().map(x=>{
+    const w=wildBy(rootOf[x]);
+    return `<button class="hc" data-x="${x}" onclick="${onclickName}('${x}')">
+      <span class="rt" style="background:${w?w.clan_color:"#ccc"}"></span>
+      <div class="ic">${iconHTML(x)}</div>
+      <div class="en">${ITEMS[x].en}</div><div class="jp">${ITEMS[x].def||ITEMS[x].name}</div></button>`;
+  }).join("");
+}
+
+/* ================= モードA: ヒラメキ遠征 ================= */
+const EVENTS=[
+ {ic:"🪨",t:"おおきな岩が 道をふさいでいる!",a:{throw:["ぶつけたら くだけた!",120],fly:["ふわりと とびこえた!",110],measure:["回りこむ道を みつけた",90],magic:["岩が ひょいと どいた",100],lead:["みんなで 押した!",80]},d:["よじのぼって 時間をつかった…",30]},
+ {ic:"🌊",t:"ながれの はやい 川だ",a:{water:["すいすい わたった!",120],vehicle:["乗りものが 大かつやく!",130],fly:["上から らくらく",110],build:["はしを かけた!",100]},d:["浅せを さがして とおまわり…",30]},
+ {ic:"🐌",t:"ティースネイルの軍団が ゆっくり せまってくる",a:{scare:["おどかしたら 一目散ににげた!",120],throw:["投げつけて 蹴散らした!",100],lead:["隊列を組んで 突破!",90],fast:["先回りして すりぬけた",90]},d:["ゆっくり避けた(むこうも おそい)",40]},
+ {ic:"🕳",t:"まっくらな 洞窟。なにも見えない",a:{light:["あかりで 道が見えた!",120],info:["地図が ひかった!",100],magic:["ふしぎな力で 照らした",90]},d:["手さぐりで すすんだ…",20]},
+ {ic:"🍽",t:"おなかが ぺこぺこで 歩けない",a:{food:["もぐもぐ。げんき100倍!",120],heal:["すこし らくになった",80],give:["わけあったら 元気が出た",90]},d:["がまんして すすんだ…",20]},
+ {ic:"💤",t:"ねむくなる 花のかおり…",a:{story:["おはなしで 目がさめた!",110],air:["しんこきゅうで しゃっきり",100],fast:["息を止めて かけぬけた!",90],think:["考えごとで ねむけが飛んだ",80]},d:["うとうと しちゃった…",20]},
+ {ic:"🦁",t:"なぞなぞスフィンクス「答えねば 通さぬ」",a:{think:["ひらめきで 大正解!",130],info:["しらべたら のってた!",100],story:["とんちで 笑わせた",80],special:["「世界にひとつの答え」で納得",110]},d:["とんちんかんな 答えだった…",20]},
+ {ic:"🌲",t:"おなじ景色が つづく 迷いの森",a:{measure:["まっすぐ 線をひいて脱出!",120],order:["道じるしを 整理した",110],friend:["森のなかまが 案内してくれた",100],think:["冷静に 考えて突破",90]},d:["ぐるぐる まわった…",30]},
+ {ic:"⛰",t:"切り立った 崖が そびえる",a:{fly:["ひとっとび!",130],vehicle:["乗りもので登った",90],build:["足場を つくった",80],cover:["風をしのいで じっくり登坂",70]},d:["遠くの坂道まで あるいた…",25]},
+ {ic:"🧚",t:"妖精の市場。なにかを ほしがっている",a:{special:["めずらしさに 大よろこび!",120],give:["おくりものが 大成功!",130],food:["ごちそうで にっこり",90],story:["おはなしの お礼に近道を教わった",100]},d:["ひやかしただけ だった…",30]},
+];
+let run=null;
+window.startRun=function(){
+  closeSheet("modeBg");
+  const evs=[...EVENTS].sort(()=>Math.random()-.5).slice(0,6);
+  run={evs,idx:0,dist:0,goal:400,busy:false};
+  $("#runBg").src=ASSET+DATA.BGEXP;
+  $("#handStrip").innerHTML=handHTML("useRun");
+  showPlay("runP");renderRun();
+};
+function renderRun(){
+  const ev=run.evs[run.idx];
+  $("#evIc").textContent=ev.ic;$("#evT").textContent=ev.t;
+  $("#runBarI").style.width=Math.min(100,100*run.dist/run.goal)+"%";
+  $("#runBarT").textContent=`すすんだ距離 ${run.dist} / ${run.goal}(のこり事件 ${run.evs.length-run.idx}件)`;
+}
+window.useRun=function(x){
+  if(run.busy)return;run.busy=true;
+  const ev=run.evs[run.idx];
+  const tags=TAGS[x]||[];
+  let out=null;
+  for(const t of tags){if(ev.a[t]){out=ev.a[t];break;}}
+  const [txt,pts]=out||ev.d;
+  run.dist+=pts;
+  $("#evOutT").innerHTML=`<b style="color:var(--coral)">${ITEMS[x].en}</b>!<br>${txt}`;
+  $("#evOutP").textContent=(out?"+":"+")+pts;
+  $("#evOut").classList.add("show");
+  setTimeout(()=>{
+    $("#evOut").classList.remove("show");
+    run.idx++;run.busy=false;
+    if(run.idx>=run.evs.length)finishMode(run.dist>=run.goal,`すすんだ距離 ${run.dist}`,run.dist>=run.goal?"みごとに 踏破した!":"今回は とどかなかった…");
+    else renderRun();
+  },1600);
+};
+
+/* ================= モードB: ことばレゾナンス ================= */
+let btl=null;
+window.startBattle=function(){
+  closeSheet("modeBg");
+  btl={deck:[],hp:320,max:320,ticks:0,maxTicks:18,last:null,chain:0,running:false};
+  $("#btlBg").src=ASSET+DATA.BGEXP;
+  $("#btlBarT").textContent="デッキを 6まい えらんでね(同じ祖先が つづくと 共鳴!)";
+  $("#btlBarI").style.width="0%";
+  $("#foeHpI").style.width="100%";$("#foeHpT").textContent="320 / 320";
+  const strip=$("#handStrip2");
+  strip.innerHTML=handHTML("pickDeck")+`<button class="ebtn coral" id="btlGo" style="align-self:center;flex:0 0 auto;margin-left:10px" onclick="goBattle()">たたかう!</button>`;
+  showPlay("btlP");
+};
+window.pickDeck=function(x){
+  if(btl.running)return;
+  const el=document.querySelector(`#handStrip2 .hc[data-x="${x}"]`);
+  const i=btl.deck.indexOf(x);
+  if(i>=0){btl.deck.splice(i,1);el.classList.remove("sel");}
+  else if(btl.deck.length<6){btl.deck.push(x);el.classList.add("sel");}
+  $("#btlBarT").textContent=`デッキ ${btl.deck.length} / 6`;
+};
+window.goBattle=function(){
+  if(btl.deck.length<1||btl.running)return;
+  btl.running=true;$("#btlGo").classList.add("dis");
+  const tick=()=>{
+    if(!$("#btlP").classList.contains("on"))return;
+    btl.ticks++;
+    const x=btl.deck[Math.floor(Math.random()*btl.deck.length)];
+    const it=ITEMS[x],r=rootOf[x];
+    if(btl.last&&r===btl.last)btl.chain++;else btl.chain=0;
+    btl.last=r;
+    const base=it.rarity*3+6;
+    const dmg=Math.round(base*(1+btl.chain*0.6));
+    btl.hp=Math.max(0,btl.hp-dmg);
+    const foe=$("#foe");foe.classList.remove("hit");void foe.offsetWidth;foe.classList.add("hit");
+    const d=document.createElement("div");
+    d.className="dmg"+(btl.chain?" chain":"");
+    d.textContent=(btl.chain?`共鳴×${btl.chain+1}! `:"")+dmg;
+    d.style.left=(46+Math.random()*8)+"%";d.style.top="30%";
+    $("#btlP .playTop").appendChild(d);setTimeout(()=>d.remove(),1000);
+    if(btl.chain>=1){
+      const w=wildBy(r),b=$("#chainBanner");
+      b.textContent=`同じ祖先「${w.clan_jp}」が 共鳴!`;
+      b.classList.remove("show");void b.offsetWidth;b.classList.add("show");
+    }
+    $("#foeHpI").style.width=(100*btl.hp/btl.max)+"%";
+    $("#foeHpT").textContent=`${btl.hp} / ${btl.max}`;
+    $("#btlBarI").style.width=(100*btl.ticks/btl.maxTicks)+"%";
+    $("#btlBarT").textContent=`のこり ${btl.maxTicks-btl.ticks} ターン`;
+    if(btl.hp<=0)return finishMode(true,`${btl.maxTicks-btl.ticks}ターン のこして勝利`,"ジャバウォックの手先を おいはらった!");
+    if(btl.ticks>=btl.maxTicks)return finishMode(false,`あと ${btl.hp} けずれなかった`,"手先は 闇へ もどっていった…");
+    setTimeout(tick,700);
+  };
+  setTimeout(tick,500);
+};
+
+/* ================= モードC: ことば錬金 ================= */
+let crf=null;
+window.startCraft=function(){
+  closeSheet("modeBg");
+  const pool=SPLITS.filter(s=>S.recruited.includes(s.root)&&!S.zukan[s.w]);
+  if(pool.length<3){toastGet("⚗️","いま作れることばを 発見しつくした!","新しい祖先を 仲間にしよう");return;}
+  const pick=[...pool].sort(()=>Math.random()-.5).slice(0,4);
+  crf={pairs:pick,found:0,sel:null,miss:0};
+  $("#crfL").innerHTML=pick.map((p,i)=>`<button class="mchip" data-i="${i}" onclick="crfPick('L',${i})">${p.split_a}</button>`).join("");
+  $("#crfR").innerHTML=[...pick].sort(()=>Math.random()-.5).map(p=>`<button class="mchip" data-w="${p.w}" data-b="${p.split_b}" onclick="crfPick('R','${p.w}')">${p.split_b}</button>`).join("");
+  $("#craftMsg").textContent="左と右を えらんで、ことばを 生みだそう";
+  $("#crfBarI").style.width="0%";$("#crfBarT").textContent=`はっけん 0 / ${pick.length}`;
+  showPlay("crfP");
+};
+window.crfPick=function(side,v){
+  if(side==="L"){
+    crf.sel=v;
+    document.querySelectorAll("#crfL .mchip").forEach(c=>c.classList.toggle("sel",+c.dataset.i===v));
+    return;
+  }
+  if(crf.sel==null){$("#craftMsg").textContent="さきに 左の断片を えらんでね";return;}
+  const L=crf.pairs[crf.sel];
+  if(L.w===v){
+    const el=document.querySelector(`#crfR .mchip[data-w="${v}"]`);
+    el.classList.add("used");
+    document.querySelector(`#crfL .mchip[data-i="${crf.sel}"]`).classList.add("used");
+    crf.sel=null;crf.found++;
+    S.zukan[L.w]=1;
+    let sub=`「${L.jp}」を はっけん! 図鑑に登録`;
+    if(ITEMS[L.w]){S.owned[L.w]=(S.owned[L.w]||0)+1;sub+="(カードも入手!)";}
+    save();
+    toastGet(ITEMS[L.w]?iconHTML(L.w,90):"✨",`${L.split_a} + ${L.split_b} = ${L.w}!`,sub);
+    $("#craftMsg").textContent=`${L.w}「${L.jp}」が うまれた!`;
+    $("#crfBarI").style.width=(100*crf.found/crf.pairs.length)+"%";
+    $("#crfBarT").textContent=`はっけん ${crf.found} / ${crf.pairs.length}`;
+    if(crf.found>=crf.pairs.length)setTimeout(()=>finishMode(true,`ことばを ${crf.found}こ 発見`,"あたらしい ことばが 世界にもどった!"),900);
+  }else{
+    crf.miss++;
+    $("#craftMsg").textContent="…なにも うまれなかった。べつの組み合わせは?";
+  }
+};
+
+/* ================= 結果+報酬3択 ================= */
+function finishMode(winv,sub,msg){
+  showPlay(null);$("#home").style.display="none";
+  S.exp++;
+  const gain=winv?300:100;S.shards+=gain;save();
+  $("#resT").textContent=winv?"🎉 遠征せいこう!":"…遠征しっぱい";
+  $("#resS").textContent=`${msg}(${sub})・🪙かけら +${gain}`;
+  const row=$("#rewardRow");row.innerHTML="";$("#resClose").style.display="none";
+  if(!winv){
+    row.innerHTML=`<div style="font-size:22px;font-weight:900;color:var(--ink2);padding:20px">ことばを ふやして もういちど挑もう</div>`;
+    $("#resClose").style.display="";
+  }else{
+    /* 報酬3択: 未加入エティモン1 + 未所持レア語2(企画書仕様) */
+    const opts=[];
+    const lockedW=WILDS.filter(w=>!S.recruited.includes(w.id));
+    if(lockedW.length){
+      const w=lockedW[Math.floor(Math.random()*lockedW.length)];
+      opts.push({kind:"wild",id:w.id});
+    }
+    const cand=Object.keys(ITEMS).filter(x=>!S.owned[x]&&rootOf[x]&&S.recruited.concat(lockedW.map(w=>w.id)).includes(rootOf[x]))
+      .sort((a,b)=>ITEMS[b].rarity-ITEMS[a].rarity);
+    while(opts.length<3&&cand.length)opts.push({kind:"item",id:cand.splice(Math.floor(Math.random()*Math.min(6,cand.length)),1)[0]});
+    while(opts.length<3)opts.push({kind:"item",id:Object.keys(ITEMS)[Math.floor(Math.random()*Object.keys(ITEMS).length)]});
+    row.innerHTML=opts.map((o,i)=>{
+      if(o.kind==="wild"){const w=wildBy(o.id);
+        return `<button class="rw" onclick="takeReward(${i})" data-k="wild" data-id="${o.id}">
+          <div class="ic"><img src="${ASSET}${CHIMG[o.id]}" alt=""></div>
+          <div class="t">${w.name}</div><div class="d">「${w.clan_jp}」の祖先を 仲間にする<br>箱庭に ${FACS[o.id].name} がふえる!</div>
+          <div class="tag"><span class="chip" style="background:${w.clan_color}">エティモン</span></div></button>`;}
+      const it=ITEMS[o.id];
+      return `<button class="rw" onclick="takeReward(${i})" data-k="item" data-id="${o.id}">
+        <div class="ic">${iconHTML(o.id)}</div>
+        <div class="t">${it.en}</div><div class="d">${it.def||it.name}<br>★${it.rarity}</div>
+        <div class="tag"><span class="chip" style="background:#8a7b90">ことばカード</span></div></button>`;
+    }).join("");
+  }
+  $("#resultBg").classList.add("open");
+}
+window.takeReward=function(i){
+  const el=document.querySelectorAll("#rewardRow .rw")[i];
+  if(!el)return closeResult();
+  const k=el.dataset.k,id=el.dataset.id;
+  if(k==="wild"){
+    S.recruited.push(id);
+    const w=wildBy(id);
+    toastGet(`<img src="${ASSET}${CHIMG[id]}" alt="">`,`${w.name} が なかまになった!`,`箱庭に「${FACS[id].name}」がふえた`);
+  }else{
+    S.owned[id]=(S.owned[id]||0)+1;S.zukan[id]=1;
+    toastGet(iconHTML(id,90),`${ITEMS[id].en} を てにいれた!`,ITEMS[id].def||"");
+  }
+  save();
+  $("#resultBg").classList.remove("open");
+  showPlay(null);renderHome();
+};
+window.closeResult=function(){$("#resultBg").classList.remove("open");showPlay(null);renderHome();};
+
+/* ================= 起動 ================= */
+renderHome();
+</script>
+</body>
+</html>

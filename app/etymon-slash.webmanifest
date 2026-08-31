@@ -1,0 +1,11 @@
+{
+  "name": "エティモン・スラッシュ",
+  "short_name": "エティモン",
+  "lang": "ja",
+  "start_url": "./etymon-slash.html",
+  "scope": "./",
+  "display": "fullscreen",
+  "orientation": "portrait-primary",
+  "background_color": "#07070b",
+  "theme_color": "#070a11"
+}

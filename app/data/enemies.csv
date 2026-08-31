@@ -1,0 +1,6 @@
+﻿id,name,img,size,memo
+sh_kaput,カプトのかげ,ch_kaput,1.0,imgをenemy用画像キーに差し替え可
+sh_ane,アーネのかげ,ch_ane,0.95,
+sh_gwei,グウェイのかげ,ch_gwei,1.0,
+sh_reg,レーグのかげ,ch_reg,1.05,
+sh_ye,イェートのかげ,ch_ye,1.0,

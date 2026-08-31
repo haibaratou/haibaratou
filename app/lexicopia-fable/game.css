@@ -1,0 +1,105 @@
+/* レキシコピア・ファブル ― 1920x1080固定キャンバス(箱庭IP360と同方式) */
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+html,body{width:100%;height:100%;overflow:hidden;background:#141019}
+body{font-family:-apple-system,BlinkMacSystemFont,"Hiragino Sans","Yu Gothic",sans-serif;color:#241f26}
+button{font-family:inherit;cursor:pointer}
+#wrap{position:fixed;inset:0;overflow:hidden}
+#app{position:absolute;left:50%;top:50%;width:1920px;height:1080px;
+  transform:translate(-50%,-50%) scale(1);transform-origin:center center;
+  background:#fffdf8;display:flex;flex-direction:column;overflow:hidden}
+header{display:flex;align-items:center;gap:12px;padding:10px 18px;background:#2f2833;color:#fff}
+header h1{font-size:20px;font-weight:900}
+header .sp{flex:1}
+#resbar{display:flex;gap:16px;font-size:17px;font-weight:900}
+.hbtn{background:rgba(255,255,255,.14);border:2px solid rgba(255,255,255,.3);color:#fff;
+  border-radius:12px;padding:8px 16px;font-size:15px;font-weight:bold}
+#errbar{display:none;background:#a4415c;color:#fff;font-weight:900;padding:8px 18px;font-size:15px}
+#stagebody{flex:1;position:relative;overflow:hidden}
+
+/* タイトル・序章 */
+#title{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;
+  gap:26px;background:linear-gradient(180deg,#2f2833,#141019);color:#fff;text-align:center}
+#title h1{font-size:64px;line-height:1.3}
+#title h1 span{font-size:34px;color:#ffd23e}
+#prol{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
+  background:#141019;color:#f4eee6;font-size:30px;font-weight:800;line-height:2;cursor:pointer;padding:0 200px;text-align:center}
+#prol .nx{position:absolute;right:60px;bottom:40px;color:#ffd23e;animation:blink 1s steps(1) infinite}
+@keyframes blink{50%{opacity:0}}
+
+/* 町 */
+#town{position:absolute;inset:0;background-size:auto 100%;background-repeat:repeat-x;background-position:0 bottom}
+.bld{position:absolute;background:rgba(255,253,246,.94);border:3px solid #2e2536;border-radius:14px;
+  padding:34px 8px 10px;text-align:center;font-size:17px;font-weight:900;cursor:pointer;
+  box-shadow:0 5px 0 rgba(46,37,54,.3);transition:transform .12s}
+.bld:hover{transform:translateY(-4px)}
+.bld .roof{position:absolute;left:-3px;right:-3px;top:-16px;height:34px;background:#c96f3d;
+  border:3px solid #2e2536;border-radius:12px 12px 4px 4px}
+.bld.deco{opacity:.9;cursor:default;background:rgba(240,232,216,.9)}
+.bld.deco .roof{background:#8fb9a0}
+.npc{position:absolute;width:86px;height:86px;object-fit:contain;transition:left 2.4s ease-in-out,top 2.4s ease-in-out;
+  filter:drop-shadow(0 5px 4px rgba(30,20,40,.35))}
+.fbtn{position:absolute;left:24px;bottom:24px;background:#ffd23e;border:3px solid #2e2536;border-radius:14px;
+  padding:12px 22px;font-size:19px;font-weight:900;box-shadow:0 4px 0 rgba(46,37,54,.4);animation:blink 1.4s steps(1) infinite}
+
+/* モーダル */
+#modal{position:absolute;inset:0;z-index:100;display:none;align-items:center;justify-content:center;
+  background:rgba(20,14,26,.7)}
+#modal.on{display:flex}
+.mbox{width:1120px;max-height:940px;overflow-y:auto;background:#fffdf4;border:4px solid #2e2536;
+  border-radius:22px;padding:28px 34px;box-shadow:0 24px 60px rgba(10,6,16,.6);font-size:19px;line-height:1.7}
+.mbox h3{font-size:28px;margin-bottom:10px}
+.mbox h4{font-size:19px;color:#8a6a1c;margin:14px 0 6px}
+.sub{color:#6f6673;font-size:15px;font-weight:700}
+.btn{background:#ffd23e;border:3px solid #2e2536;border-radius:12px;padding:10px 20px;
+  font-size:18px;font-weight:900;box-shadow:0 4px 0 rgba(46,37,54,.35);margin:4px 4px 4px 0}
+.btn.small{font-size:15px;padding:7px 12px}
+.btn.ghost{background:#fff}
+.btn.off{opacity:.45;box-shadow:none}
+.btns{display:flex;flex-wrap:wrap;gap:6px;margin:6px 0}
+.chks{display:flex;flex-direction:column;gap:4px;font-weight:800}
+.toast{position:fixed;left:50%;bottom:12%;transform:translateX(-50%);z-index:9500;
+  background:rgba(30,22,38,.94);color:#fff;font-weight:bold;font-size:16px;padding:10px 20px;border-radius:12px}
+
+/* 復活カード */
+.wcard{display:flex;gap:14px;align-items:center;border:3px solid #d8ccb8;border-radius:16px;
+  padding:12px;margin:8px 0;background:#fffef9}
+.wcard .wa{width:110px;height:110px;flex:0 0 auto;display:flex;align-items:center;justify-content:center;
+  background:#f4ecd9;border-radius:12px;overflow:hidden}
+.wcard .wa img{width:92%;height:92%;object-fit:contain}
+.wcard .wa .ph{font-weight:900;color:#8a7c60;font-size:15px;text-align:center}
+.wcard .wi{flex:1}
+.wcard b{font-size:26px}
+.wcard em{font-style:normal;font-size:19px;color:#4a3c50;margin-left:8px}
+.ipa{color:#8d8299;font-size:15px;margin-left:8px}
+.tag{display:inline-block;background:#efe6d2;border-radius:99px;padding:1px 10px;font-size:13.5px;
+  font-weight:800;color:#6a5c40;margin:3px 6px 3px 0}
+.role{font-weight:900;color:#a4552c}
+.kin{font-size:14px;color:#8d8299}
+.revive{display:flex;gap:18px;align-items:center;margin:10px 0}
+.revive img{width:150px;height:150px;object-fit:contain}
+.big{font-size:34px}
+.arow{display:flex;gap:12px;align-items:center;padding:7px 0;border-bottom:2px dashed #e3d9cc}
+.arow img{width:56px;height:56px;object-fit:contain}
+.arow b{font-size:21px;min-width:130px}
+.arow em{font-style:normal;color:#6f6673;min-width:110px}
+.job{border:2.5px solid #d8ccb8;border-radius:12px;padding:10px 14px;margin:6px 0;font-weight:800}
+.job.done{border-color:#2f7a52;background:#f3fbf4}
+.rec{padding:3px 0;font-weight:700;color:#4a3c50}
+.ety{display:flex;gap:14px;align-items:center;border:3px solid #d8ccb8;border-radius:16px;padding:12px;margin:8px 0}
+.ety img{width:110px;height:110px;object-fit:contain}
+.chk{display:block}
+
+/* 遠征・バトル */
+.xhead{background:#2f2833;color:#fff;border-radius:12px;padding:8px 14px;font-size:16px;font-weight:900;margin-bottom:12px}
+.brow{display:flex;justify-content:center;margin:8px 0}
+.foe{text-align:center;font-size:20px;font-weight:900}
+.foeimg{width:130px;height:130px;margin:0 auto 6px;border-radius:50%;display:flex;align-items:center;justify-content:center;
+  font-size:64px;color:#fff;background:radial-gradient(circle at 50% 35%,#8b6db0,#4a3468 80%);
+  border:4px solid #2e2536;box-shadow:0 6px 12px rgba(30,20,40,.4)}
+.tellline{color:#a4415c;font-weight:900}
+.blog{background:#f4ecd9;border-radius:10px;padding:8px 12px;font-weight:800;margin:8px 0}
+.fighter{display:flex;flex-direction:column;align-items:center;gap:2px;background:#fff;
+  border:3px solid #2e2536;border-radius:14px;padding:8px 14px;font-size:16px;font-weight:900;
+  box-shadow:0 4px 0 rgba(46,37,54,.3)}
+.fighter img{width:74px;height:74px;object-fit:contain}
+.fighter.off{opacity:.4}

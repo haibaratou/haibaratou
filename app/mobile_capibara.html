@@ -1,0 +1,283 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Wild Production Collect</title>
+<style>
+:root{
+  --ink:#4b3e64;
+  --soft:#fff8ee;
+  --line:rgba(89,76,112,.16);
+  --gold:#e9c86c;
+  --green:#76d89c;
+  --blue:#7cb3f2;
+}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%;background:#d8e7f0;font-family:system-ui,-apple-system,BlinkMacSystemFont,"Yu Gothic",Meiryo,sans-serif}
+body{display:flex;justify-content:center}
+.app{
+  position:relative;
+  width:min(100vw,430px);
+  height:100vh;
+  overflow:hidden;
+  background:#dfeaf1;
+}
+.bg{
+  position:absolute; inset:0;
+  background:url('assets/background.png') center/cover no-repeat;
+}
+.shade{
+  position:absolute; inset:0;
+  background:linear-gradient(180deg,rgba(255,255,255,.14),rgba(255,255,255,0) 22%,rgba(245,229,199,.18) 72%,rgba(241,220,187,.52));
+}
+.topbar{
+  position:absolute; left:12px; right:12px; top:12px;
+  display:flex; justify-content:space-between; align-items:flex-start; gap:10px; z-index:20;
+}
+.profile, .money{
+  background:rgba(255,250,244,.92);
+  border:1px solid var(--line);
+  border-radius:18px;
+  box-shadow:0 8px 24px rgba(58,47,73,.14);
+}
+.profile{
+  display:flex; align-items:center; gap:10px; padding:8px 10px; min-width:170px;
+}
+.avatar{
+  width:42px; height:42px; border-radius:14px; overflow:hidden; background:#d5e5ef;
+}
+.avatar img{width:100%;height:100%;object-fit:cover}
+.name{font-weight:1000; color:var(--ink); line-height:1.05}
+.lv{margin-top:4px; color:#b28a32; font-size:12px; font-weight:900}
+.money{
+  padding:10px 14px; color:var(--ink); font-weight:1000; display:flex; align-items:center; gap:8px;
+}
+.notice{
+  position:absolute; left:50%; top:86px; transform:translateX(-50%);
+  z-index:20; background:rgba(255,250,244,.95); color:var(--ink);
+  border:1px solid var(--line); border-radius:999px; padding:10px 16px;
+  font-weight:1000; font-size:13px; box-shadow:0 8px 22px rgba(58,47,73,.12);
+  white-space:nowrap;
+}
+.field{
+  position:absolute; inset:0;
+  padding-top:118px; padding-bottom:116px;
+}
+.wild{
+  position:absolute; text-align:center; z-index:10;
+}
+.wild img{
+  display:block; width:100%;
+  filter:drop-shadow(0 10px 10px rgba(0,0,0,.14));
+  user-select:none; -webkit-user-drag:none;
+}
+.wild .tag{
+  display:inline-block; margin-top:4px; padding:5px 11px;
+  border-radius:999px; background:rgba(255,250,244,.92);
+  color:var(--ink); font-size:12px; font-weight:1000; box-shadow:0 6px 18px rgba(58,47,73,.1);
+}
+.bubble{
+  position:absolute;
+  min-width:80px;
+  max-width:112px;
+  padding:8px 10px;
+  border-radius:18px;
+  background:rgba(255,255,255,.96);
+  border:1px solid rgba(124,179,242,.25);
+  box-shadow:0 10px 18px rgba(90,122,160,.22);
+  text-align:center;
+  cursor:pointer;
+  animation:floaty 2.8s ease-in-out infinite;
+  transition:transform .12s ease, opacity .18s ease;
+}
+.bubble:active{transform:scale(.96)}
+.bubble .en{font-weight:1000; color:var(--ink); font-size:15px; line-height:1.05}
+.bubble .jp{margin-top:2px; color:#8a7a67; font-weight:900; font-size:11px}
+.bubble::after{
+  content:"";
+  position:absolute; left:50%; bottom:-8px; transform:translateX(-50%) rotate(45deg);
+  width:14px; height:14px; background:rgba(255,255,255,.96);
+  border-right:1px solid rgba(124,179,242,.25);
+  border-bottom:1px solid rgba(124,179,242,.25);
+}
+@keyframes floaty{
+  0%,100%{transform:translateY(0)}
+  50%{transform:translateY(-8px)}
+}
+.collected{
+  opacity:0; pointer-events:none; transform:translateY(-12px) scale(.72);
+}
+.fx{
+  position:absolute; z-index:40; font-weight:1000; color:#fff; text-shadow:0 2px 10px rgba(0,0,0,.25);
+  animation:pop 1s ease forwards; pointer-events:none;
+}
+@keyframes pop{
+  0%{opacity:0; transform:translateY(8px) scale(.9)}
+  20%{opacity:1}
+  100%{opacity:0; transform:translateY(-26px) scale(1.1)}
+}
+.bottom{
+  position:absolute; left:0; right:0; bottom:0; height:108px; z-index:30;
+  background:linear-gradient(180deg,rgba(248,238,214,.96),rgba(236,222,193,1));
+  border-top:1px solid var(--line); box-shadow:0 -8px 20px rgba(58,47,73,.08);
+}
+.inventory{
+  position:absolute; left:12px; right:12px; top:10px;
+  display:grid; grid-template-columns:repeat(4,1fr); gap:8px;
+}
+.slot{
+  background:rgba(255,250,244,.95); border:1px solid var(--line);
+  border-radius:14px; padding:8px 6px; text-align:center; box-shadow:0 6px 18px rgba(58,47,73,.08);
+}
+.slot .item{font-size:12px; color:var(--ink); font-weight:1000; line-height:1.05}
+.slot .qty{margin-top:4px; font-size:20px; color:var(--blue); font-weight:1000}
+.actions{
+  position:absolute; left:12px; right:12px; bottom:10px;
+  display:grid; grid-template-columns:1fr 1fr 1.4fr; gap:10px;
+}
+.actions button{
+  height:36px; border:0; border-radius:999px; font-weight:1000; color:var(--ink);
+  background:#fff9f0; box-shadow:0 6px 18px rgba(58,47,73,.1);
+}
+.actions button.primary{
+  background:linear-gradient(180deg,#82dda6,#5fc785); color:#173623;
+}
+.smallhint{
+  position:absolute; left:50%; bottom:116px; transform:translateX(-50%);
+  z-index:20; background:rgba(91,136,216,.93); color:#fff; border-radius:999px;
+  padding:8px 14px; font-size:12px; font-weight:1000; box-shadow:0 8px 20px rgba(84,118,172,.24);
+}
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="bg"></div>
+  <div class="shade"></div>
+
+  <div class="topbar">
+    <div class="profile">
+      <div class="avatar"><img src="assets/wild_cat.png" alt=""></div>
+      <div>
+        <div class="name">はいがぶり</div>
+        <div class="lv">Lv.12 / エテュモン庭園</div>
+      </div>
+    </div>
+    <div class="money">🪙 <span id="money">153,122</span></div>
+  </div>
+
+  <div class="notice">頭上の生産物をタップして取得</div>
+  <div class="smallhint">取得するまで再生産は始まりません</div>
+
+  <div class="field">
+    <div class="wild" style="left:20px; top:430px; width:92px;">
+      <div class="bubble" data-item="anchor" data-jp="錨" style="left:6px; top:-56px;">
+        <div class="en">anchor</div><div class="jp">錨</div>
+      </div>
+      <img src="assets/wild_cat.png" alt="">
+      <div class="tag">キャプテン</div>
+    </div>
+
+    <div class="wild" style="left:104px; top:300px; width:132px;">
+      <div class="bubble" data-item="spell" data-jp="呪文" style="left:28px; top:-54px;">
+        <div class="en">spell</div><div class="jp">呪文</div>
+      </div>
+      <img src="assets/wild_witch.png" alt="">
+      <div class="tag">ウィッチ</div>
+    </div>
+
+    <div class="wild" style="left:224px; top:358px; width:118px;">
+      <div class="bubble" data-item="melody" data-jp="旋律" style="left:24px; top:-54px;">
+        <div class="en">melody</div><div class="jp">旋律</div>
+      </div>
+      <img src="assets/wild_fairy.png" alt="">
+      <div class="tag">フェアリー</div>
+    </div>
+
+    <div class="wild" style="left:292px; top:520px; width:112px;">
+      <div class="bubble" data-item="potion" data-jp="薬瓶" style="left:14px; top:-56px;">
+        <div class="en">potion</div><div class="jp">薬瓶</div>
+      </div>
+      <img src="assets/wild_nurse.png" alt="">
+      <div class="tag">ナース</div>
+    </div>
+  </div>
+
+  <div class="bottom">
+    <div class="inventory">
+      <div class="slot"><div class="item">anchor</div><div class="qty" id="inv-anchor">0</div></div>
+      <div class="slot"><div class="item">spell</div><div class="qty" id="inv-spell">0</div></div>
+      <div class="slot"><div class="item">melody</div><div class="qty" id="inv-melody">0</div></div>
+      <div class="slot"><div class="item">potion</div><div class="qty" id="inv-potion">0</div></div>
+    </div>
+    <div class="actions">
+      <button>辞書</button>
+      <button>ワイルド</button>
+      <button class="primary" id="collectAll">一括回収</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const inv = {anchor:0, spell:0, melody:0, potion:0};
+
+function updateInv(){
+  Object.keys(inv).forEach(k => {
+    const el = document.getElementById('inv-' + k);
+    if(el) el.textContent = inv[k];
+  });
+}
+
+function fx(x, y, text){
+  const el = document.createElement('div');
+  el.className = 'fx';
+  el.style.left = x + 'px';
+  el.style.top = y + 'px';
+  el.textContent = '+1 ' + text;
+  document.querySelector('.app').appendChild(el);
+  setTimeout(() => el.remove(), 1000);
+}
+
+function makeBubble(parent, item, jp, styleText){
+  const b = document.createElement('div');
+  b.className = 'bubble';
+  b.dataset.item = item;
+  b.dataset.jp = jp;
+  b.setAttribute('style', styleText);
+  b.innerHTML = '<div class="en">' + item + '</div><div class="jp">' + jp + '</div>';
+  bindBubble(b);
+  parent.prepend(b);
+}
+
+function collectBubble(b){
+  const item = b.dataset.item;
+  const jp = b.dataset.jp;
+  inv[item] = (inv[item] || 0) + 1;
+  updateInv();
+
+  const rect = b.getBoundingClientRect();
+  const root = document.querySelector('.app').getBoundingClientRect();
+  fx(rect.left - root.left + rect.width/2 - 18, rect.top - root.top, item);
+
+  const parent = b.parentElement;
+  const styleText = b.getAttribute('style');
+  b.classList.add('collected');
+  setTimeout(() => b.remove(), 180);
+  setTimeout(() => makeBubble(parent, item, jp, styleText), 2600);
+}
+
+function bindBubble(b){
+  b.addEventListener('click', () => collectBubble(b));
+}
+
+document.querySelectorAll('.bubble').forEach(bindBubble);
+
+document.getElementById('collectAll').addEventListener('click', () => {
+  const list = [...document.querySelectorAll('.bubble')];
+  list.forEach((b, i) => setTimeout(() => collectBubble(b), i * 90));
+});
+
+updateInv();
+</script>
+</body>
+</html>

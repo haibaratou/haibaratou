@@ -1,0 +1,48 @@
+﻿key,value
+site_title,エティモペディア
+site_sub,描ける英語語源辞典(β)
+nav_roots,ことばの祖先
+nav_words,単語をさがす
+nav_join,参加する
+search_placeholder,単語・意味・語根でさがす
+hero_badge,みんなでつくる語源辞典
+hero_h1_a,<span class='draw'>英単語</span>のはじまり
+hero_h1_b,ことばの<span class='draw'>祖先</span>ずかん
+hero_lead,まだ文字のない六千年前、<br>人間は言葉の祖先たちとともに暮らしていた。<br>だれにも記録されなかった彼らの姿が、いま、図鑑としてよみがえる。
+hero_cta1,🖌 ゲーム内で絵を投稿する
+hero_cta2,🎮 あそびながら集める
+stat_roots_label,ことばの祖先(語根)
+stat_words_label,収録単語
+stat_arts_label,投稿イラスト
+roots_head,エティモン
+roots_sub,― 英語のみならずインド～ヨーロッパ全域の言葉の祖先と言われている
+words_head,単語ずかん & みんなの図版
+words_sub,ひとつの単語に、いくつもの解釈。図版はすべて投稿作品。
+join_head,辞書づくりに、参加しよう
+join_sub,投稿はゲーム内から。単語カードを集めて、図鑑から絵を送る。
+join_step1_t,単語をえらぶ
+join_step1_b,ゲーム内で手に入れた単語カードから好きなものを選ぶ。語源の分解式がお題カード。
+join_step2_t,描いて送る
+join_step2_b,ゲーム内のお絵かき画面で描いて、その単語の図鑑ページから投稿する。
+join_step3_t,辞書に載る
+join_step3_b,投稿はぜんぶギャラリーに掲載。♥を集めた作品が代表図版に。
+wanted_head,🔥 ゲーム内で投稿できる単語
+footer,<b>ETYMOPEDIA(β)</b> ― 描ける英語語源辞典 / 図版はすべて投稿クリエイター・プレイヤーの作品です(このページはコンセプト提示用モック)
+rar_t1,ふだん語
+rar_t2,ときどき語
+rar_t3,めずらし語
+rar_t4,激レア語
+rar_t5,幻レア語
+rar_legend,レア度は「ふだんの英語でどれくらい出会うか」。★が多いほどレア。紫の幻レア語、七色の神レア語の先には、めったに文献にも現れない究極絶滅語がひそむ。
+br_head,同じ祖先、べつの道
+br_sub,単語についているバッジ(ゲルマン/ロマンス/ギリシャ…)は、その単語が英語にとどくまでに通った<b>道の名前</b>。同じ祖先から生まれても、通った道がちがうと、音も顔つきも変わってしまう。いまの英語の辞書にならぶ単語のうち、生えぬきのゲルマン組は3割たらず——のこりはみんな、どこかの道を旅してきた言葉たちだ。
+br_grimm_t,グリムの法則
+br_grimm_b,見つけたのは「グリム童話」のグリム兄弟、その兄ヤーコプ。ゲルマンの道を通った言葉は、祖先の音が<b>そろって同じ方向にズレる</b>ことを発見した。k は h に、p は f に、d は t に。だから同じ祖先から、ロマンス経由の capital とゲルマン経由の head という、別人のような顔が生まれる。ズレは気まぐれではなく法則 ― それがこの発見のすごいところ。ちなみに兄弟が各地の民話を聞き集めたのも、言葉の研究と地続きだった。方言を聞き分けるその耳が、音の法則を見つけたのだ。
+br_grimm_pairs,*kaput-「頭」k→h|capital|head;*pəter-「父」p→f|paternal|father;*dent-「歯」d→t|dentist|tooth
+br_legend_link,語派バッジのひみつ →
+br_grimm_img,branch/grimm-jacob.png
+rar_t6,神レア語
+br_kick,語派のはなし
+br_minor_head,もっと遠くの親戚たち
+br_grimm_cap,兄・ヤーコプ
+rar_t7,究極絶滅語

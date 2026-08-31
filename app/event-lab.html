@@ -1,0 +1,1408 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>イベント検証ラボ ― エティモリンゴ</title>
+<style>
+:root{--ink:#3f3547;--soft:#8b8095;--pane:#fffdf8;--line:#e6dcef;--warm:#f6ead1;
+  --accent:#c96a8a;--accent2:#6f62c4;--ok:#4fa87a;--ng:#c9585f;--gold:#d9a441}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+html,body{height:100%}
+body{font-family:"Hiragino Maru Gothic ProN","Meiryo",system-ui,sans-serif;color:var(--ink);
+  background:linear-gradient(180deg,#fdf8f1,#f4eee6 60%,#efe7dd);display:flex;flex-direction:column;overflow:hidden}
+button,input{font-family:inherit;color:inherit}
+header{flex:0 0 auto;display:flex;align-items:center;gap:12px;flex-wrap:wrap;padding:9px 16px;
+  background:linear-gradient(#fffefb,#f6eee2);border-bottom:3px solid #ddcdb4;box-shadow:0 2px 8px rgba(90,70,50,.10)}
+header h1{font-size:17px}
+header h1 small{font-size:11px;color:var(--soft);margin-left:8px;font-weight:normal}
+#hstat{margin-left:auto;font-size:11.5px;color:var(--soft)}
+.hbtn{background:#fff;border:2.5px solid var(--line);border-radius:12px;padding:6px 12px;font-size:12px;
+  cursor:pointer;text-decoration:none;color:inherit;box-shadow:0 3px 0 rgba(120,100,80,.14)}
+.hbtn:active{transform:translateY(2px);box-shadow:none}
+#main{flex:1 1 auto;min-height:0;display:flex;gap:10px;padding:10px}
+.pane{background:var(--pane);border:3px solid var(--line);border-radius:18px;display:flex;flex-direction:column;
+  min-height:0;box-shadow:0 6px 16px rgba(90,70,50,.10)}
+#left{flex:0 0 296px}
+#right{flex:1 1 auto;min-width:0}
+.pTtl{flex:0 0 auto;padding:8px 13px;font-size:13px;font-weight:bold;color:var(--accent2);
+  border-bottom:2px dashed var(--line);display:flex;align-items:center;gap:8px}
+.pTtl .cnt{margin-left:auto;font-size:11px;color:var(--soft);font-weight:normal}
+/* イベント一覧 */
+#evList{flex:1;overflow-y:auto;padding:8px}
+.lvHd{font-size:11px;font-weight:bold;color:var(--soft);padding:8px 4px 4px;letter-spacing:.06em}
+.ev{background:#fff;border:2.5px solid var(--line);border-radius:13px;padding:7px 10px;margin-bottom:6px;cursor:pointer;
+  transition:transform .1s,border-color .1s}
+.ev:hover{transform:translateY(-2px);border-color:var(--accent)}
+.ev.on{border-color:var(--accent);background:#fdf3f6;box-shadow:0 0 0 3px rgba(201,106,138,.2)}
+.ev .en{font-size:13px;font-weight:bold;line-height:1.3}
+.ev .em{font-size:10.5px;color:var(--soft);margin-top:2px}
+.ev .ec{font-size:10px;color:var(--gold);font-weight:bold;margin-top:3px}
+/* 詳細 */
+#detail{flex:1;overflow-y:auto;padding:12px 14px 18px}
+.scene{background:linear-gradient(#fffdf6,#f8f0e2);border:2.5px solid #ddcdb4;border-radius:14px;padding:11px 14px}
+.scene h2{font-size:17px;margin-bottom:5px}
+.scene p{font-size:13px;line-height:1.65;color:#5c5265}
+.req{display:flex;gap:6px;flex-wrap:wrap;margin-top:9px;align-items:center}
+.tg{font-size:11px;background:#eef0fb;border:1.5px solid #c8c6ea;color:#4c46a0;border-radius:8px;padding:2px 8px;font-weight:bold}
+.kw{font-size:11px;background:#fdf0f4;border:1.5px solid #eec2d0;color:#a4415c;border-radius:8px;padding:2px 8px}
+.verdict{margin-top:10px;border-radius:13px;padding:10px 13px;font-size:12.5px;line-height:1.7;border:2.5px solid}
+.verdict.good{background:#f2fbf6;border-color:#b3e2c8}
+.verdict.warn{background:#fffaf0;border-color:#f0d9a6}
+.verdict.bad{background:#fdf2f3;border-color:#f0bfc3}
+.verdict b{font-size:13px}
+.cols{display:flex;gap:10px;margin-top:12px;align-items:flex-start}
+.col{flex:1 1 0;min-width:0;background:#fff;border:2.5px solid var(--line);border-radius:14px;overflow:hidden}
+.col.solo{flex:1 1 100%}
+.colH{padding:7px 11px;font-size:12px;font-weight:bold;border-bottom:2px dashed var(--line);display:flex;gap:8px;align-items:center}
+.colH .n{margin-left:auto;font-size:12px;color:var(--accent2)}
+.colH.a{background:#f6f6fd}.colH.b{background:#fdf5f8}.colH.v{background:#f4faf6}
+.wr .vp{font-size:9.5px;border-radius:6px;padding:0 5px;font-weight:bold}
+.wr .vp.p{background:#eafaf0;color:#2f7a52}.wr .vp.n{background:#fdeef2;color:#a4415c}
+.wlist{max-height:46vh;overflow-y:auto;padding:6px}
+.wr{display:flex;align-items:baseline;gap:7px;padding:4px 7px;border-radius:9px;flex-wrap:wrap}
+.wr:nth-child(odd){background:#faf8fc}
+.wr b{font-size:13.5px}
+.wr .ja{font-size:11px;color:var(--soft)}
+.wr .rt{font-size:10px;color:#9a8fa6;font-family:"Shippori Mincho",serif;font-style:italic}
+.wr .tt{font-size:9.5px;background:#eef0fb;color:#5b56a8;border-radius:6px;padding:0 5px;margin-left:auto}
+.wr .rr{font-size:9.5px;color:#b3a8be}
+.wr .gl{flex-basis:100%;font-size:9.5px;color:#a99fb4;font-style:italic;padding-left:2px;line-height:1.3}
+.wr .tier{font-size:9px;font-weight:bold;border-radius:6px;padding:0 5px;white-space:nowrap}
+.wr .tier.crit{background:#fff3c4;color:#8a6d1f;border:1px solid #e3c96a}
+.wr .tier.good{background:#eafaf0;color:#2f7a52;border:1px solid #a9dcc0}
+.wr .tier.bad{background:#fdeef2;color:#a4415c;border:1px solid #eec2d0}
+.wr .tier.dual{background:#c2185b;color:#fff;border:1px solid #99134a}
+/* 初期装備。エティモンを持っていなくても最初から使える原始動詞 */
+.wr .init{font-size:9px;font-weight:bold;border-radius:4px;padding:0 4px;background:#2f7a52;color:#fff;white-space:nowrap}
+/* 答えの点検。語＝DBの語義 を並べて、英語の語感で選んだ穴を見つける */
+.au{display:inline-block;border:1.5px solid var(--line);border-radius:9px;padding:1px 7px;margin:0 3px 3px 0;background:#fff;font-size:11px;color:var(--soft)}
+.au b{color:var(--ink);font-size:12px;margin-right:5px}
+.au.ng{border-color:#eec2d0;background:#fdeef2;color:#a4415c}
+.wr.t-bad{background:#fff6f8}
+.wr.t-crit{background:#fffdf2}
+.wr.t-dual{background:#fff0f5;box-shadow:inset 3px 0 0 #c2185b}
+/* どの属性に刺さったか。二重の語には2つ並ぶ */
+.wr .asp{font-size:9px;font-weight:bold;border-radius:6px;padding:0 5px;white-space:nowrap;border:1px solid}
+.wr .asp.a0{background:#eef4ff;color:#33549b;border-color:#b9caee}
+.wr .asp.a1{background:#f4eeff;color:#63409b;border-color:#cdbcea}
+.wr .asp.a2{background:#eefaf6;color:#2b7a68;border-color:#aadcd0}
+.wr .asp.a3{background:#fff4ea;color:#95561f;border-color:#eec9a8}
+.wr .mm{font-size:9px;font-weight:bold;color:#a4415c;background:#fdeef2;border:1px solid #eec2d0;border-radius:6px;padding:0 4px}
+.wr.mism{background:#fff7f8}
+.wr.mism:nth-child(odd){background:#fdf0f2}
+/* エティモン(語根)のアイコンとID */
+.ety{display:inline-flex;align-items:center;gap:2px;background:#fff;border:1.5px solid var(--line);
+  border-radius:9px;padding:0 4px 0 1px;white-space:nowrap}
+.ety img{width:20px;height:20px;object-fit:contain;vertical-align:-5px}
+.ety .dot{width:14px;height:14px;border-radius:50%;display:inline-block;margin:0 2px}
+.ety .id{font-size:9px;font-weight:bold;color:#7b6f88}
+.ety .jn{font-size:9.5px;color:#6f6579}
+.wr.off{opacity:.32}
+.wr.off .ety{filter:grayscale(1)}
+/* 所持数カバレッジ表 */
+.cov{width:100%;border-collapse:collapse;font-size:11.5px}
+.cov th,.cov td{border:1px solid var(--line);padding:4px 7px;text-align:right;white-space:nowrap}
+.cov th{background:#f6f2fa;font-size:11px}
+.cov td.nm{text-align:left;font-weight:bold}
+.cov td.hot{background:#eafaf0;color:#2f7a52;font-weight:bold}
+.cov td.cold{background:#fdf2f3;color:#a4415c}
+.covWrap{overflow-x:auto;margin-top:8px}
+.more{width:100%;padding:6px;font-size:11.5px;background:#f4f0f8;border:none;border-radius:9px;cursor:pointer;color:var(--accent2);font-weight:bold}
+.none{padding:14px;text-align:center;font-size:12px;color:var(--soft)}
+/* 自作イベント */
+#lab{margin-top:14px;background:#fff;border:3px solid var(--line);border-radius:16px;padding:12px}
+#lab h3{font-size:14px;color:var(--accent2);margin-bottom:4px}
+#lab p{font-size:11.5px;color:var(--soft);line-height:1.6}
+#tagPick{display:flex;flex-wrap:wrap;gap:5px;margin-top:9px;max-height:132px;overflow-y:auto;padding:2px}
+.tp{font-size:10.5px;border:1.5px solid var(--line);background:#fff;border-radius:8px;padding:3px 7px;cursor:pointer;white-space:nowrap}
+.tp.on{border-color:var(--accent2);background:#eef0fb;color:#4c46a0;font-weight:bold}
+.tp small{color:#b3a8be;margin-left:3px}
+#kwBox{width:100%;margin-top:9px;border:2.5px solid var(--line);border-radius:11px;padding:8px 11px;font-size:13px}
+#labOut{margin-top:10px}
+@media(max-width:900px){
+  #main{flex-direction:column;overflow-y:auto}
+  #left{flex:0 0 auto;max-height:34vh}
+  #right{min-height:70vh}
+  .cols{flex-direction:column}
+  .wlist{max-height:none}
+}
+</style>
+</head>
+<body>
+<header>
+  <h1>🧪 イベント検証ラボ<small>意味タグだけで、あらゆるイベントに単語を割り当てられるか</small></h1>
+  <a class="hbtn" href="index.html">← 入口</a>
+  <a class="hbtn" href="etymon-explorer.html">🔍 探索</a>
+  <label style="font-size:12px;display:flex;align-items:center;gap:6px">もっているエティモン
+    <select id="ownSel" class="hbtn" style="padding:5px 8px">
+      <option value="1">上位1体（最初）</option><option value="2">上位2体</option>
+      <option value="3">上位3体</option><option value="5">上位5体</option><option value="10">上位10体</option>
+      <option value="20">上位20体</option><option value="30">上位30体</option>
+      <option value="50" selected>上位50体（いま絵があるぶん）</option>
+      <option value="100">上位100体</option><option value="200">上位200体</option>
+      <option value="400">上位400体</option><option value="9999">全部（1,437体）</option>
+    </select></label>
+  <label style="font-size:12px;display:flex;align-items:center;gap:5px" title="食べる・切る・運ぶのような原始の行為91語を、エティモン無しで最初から配る">
+    <input type="checkbox" id="starterChk" checked>初期装備 91語</label>
+  <div id="hstat">読み込み中…</div>
+</header>
+<div id="main">
+  <section class="pane" id="left">
+    <div class="pTtl">📋 イベント<span class="cnt" id="evCnt"></span></div>
+    <div id="evList"></div>
+  </section>
+  <section class="pane" id="right">
+    <div class="pTtl">🔎 検証<span class="cnt" id="legend"></span></div>
+    <div id="detail"></div>
+  </section>
+</div>
+<script>
+"use strict";
+const $=s=>document.querySelector(s);
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+
+/* ===========================================================================
+ * イベント定義
+ *  tags   … WordNet の意味カテゴリ(supersense)。これに属する語が候補になる
+ *  kw     … 語義(日本語)に対する追加の絞り込み。タグだけでは粗すぎる場合に使う
+ *  val    … 正負のしぼり('+' or '-')。valence.csv を参照する
+ *  expect … 「出るべき語」。再現率チェックに使う。取りこぼしを見つけるための答え合わせ
+ *  lv     … 1:かんたん(タグ1つで解ける) 2:ふつう 3:むずかしい(抽象的な要求)
+ *  note   … 検証所見。ok=タグだけで成立 / warn=語義の絞り込みが要る / bad=この方式では無理
+ * =========================================================================== */
+const EVENTS=[
+ /* ===== 原始の行為で倒す雑魚(lv:10) ― エティモン0体で倒せる =====
+  * <b>初期装備の91語だけで戦えるゾーン。</b>ここはエティモンを1体も持っていない。
+  * 「食べる」「切る」「燃やす」しかできない状態で、それが通用する相手だけを出す。
+  * 野菜には eat ― 誰でも分かる原始的な遊び。
+  * <b>ツルカラミ(蔓)とオモイイシ(岩)は削除した。</b>「道をふさぐ障害物」でしかなく、
+  * 悩みも台詞も持てない。性格の無い敵からは面白い答えが出てこない ―
+  * 実際、岩の答えは push / lift / 迂回 だけで、そこに water / river を足して
+  * 水増ししたせいで「意味が分からない一撃」が生まれた。<b>敵は必ず人格を持たせる。</b>
+  * エティモンはこの後から中間層として入り、攻め手が増えていく順になる。
+  *
+  * <b>ここだけ good(有効)を持たない。</b>意味タグは<b>行為の動詞に効かない</b>ため。
+  * WordNet の最頻語義タグを実際に引くと <b>cut=noun.possession / grind=noun.person /
+  * beat=noun.location / blade=noun.plant</b> で、切る・打つの語が意味どおりに集まらない。
+  * 逆に noun.act を「刈る」に当てると <b>merger / navigation / debut / diversion</b> が
+  * 有効として並んだ。これは capital を「頭」と言い張るのと同じ押しつけなので、
+  * lv:10 は <b>一撃(列挙)と逆効果だけ</b>で構成する。原始動詞は数が少なく列挙で足りる。
+  * (lv:9 は noun.food / noun.possession / noun.feeling のような<b>名詞タグ</b>なので機能する。) */
+ {lv:10,ttl:'たべごろ野菜',want:'食べてほしい／集めて（収穫して）ほしい',
+  bad:'venom rot frost drought locust mould blight mildew',
+  scene:'畑の真ん中で立ち上がった、つやつやの野菜の塊。葉の間から根がぞろぞろ生えている。攻撃してこない。ただ、うまそうだ。',
+  asp:[
+   {n:'食べる',ans:'eat bite chew swallow taste cook boil bake roast stew soup salad dinner feast plate dish bowl pan knife mouth tooth salt pepper sauce butter oil cream'},
+   {n:'収穫',ans:'harvest reap crop autumn cart barn market basket field farm garden'},
+   {n:'食べる',con:'食|噛|飲|味'},
+   {n:'集める',con:'集め|拾|選'}],
+  note:'ok',msg:'<b>「刈る」属性を廃止した</b>。scythe(草刈り鎌) / sickle / strike / beat / split / break を答えにしていたが、<b>草刈り鎌は野菜に使う道具ではない</b>。畑仕事の語(plough / hoe / spade / furrow / soil)も、<b>これは既に育った野菜</b>なので通らない。<br>残したのは <b>食べる</b>(食べる・料理する・食器・調味料)と <b>収穫</b>(harvest / crop / 荷車・納屋・市場)だけ。どちらも「食べごろの野菜がこの先どうなるか」で説明がつく。'},
+
+   {lv:10,ttl:'体が冷えきったびしょ濡れの子ネズミ',want:'温めてほしい／食べさせてほしい',bad:'water rain river swim wash cold ice snow wind frost',
+  scene:'びしょ濡れで震えている小さいの。敵意はまるで無い。こちらを見上げて、ひたすら震えている。',
+  asp:[
+   {n:'温める',ans:'fire flame heat warm warmth sun hearth coal blanket wool cover wear wrap dry burn summer fur bath stove oven candle torch ember lamp shelter roof home house nest bed hut cave glow spring'},
+   {n:'食べさせる',ans:'bread milk meat honey apple butter soup berry wine barley bean grain corn fruit nut fish egg broth stew feast meal dinner banquet cream gruel mead ale salt sausage grape olive ham beef pork mutton oat wheat biscuit feed give seed cook bake'},
+   {n:'温める',con:'温|暖|熱'},
+   {n:'食べる',con:'食|噛|飲|味'}],
+  note:'ok',msg:'<b>戦わない相手</b>。攻撃系の初期装備(cut / break / strike)は<b>全部「無効」に落ちる</b>ので、プレイヤーは持ち札を眺め直すことになる。<br>正解は <b>cover / wear / wrap / feed / give</b> ― <b>初期装備の中の、地味な非戦闘動詞</b>。91語を「攻撃カードの束」だと思っていたプレイヤーが、そうではないと気づく設計にしてある。'},
+
+ /* ===== 序盤キャラ(lv:8) ― 語根1体で必ず解ける =====
+  * 列挙型キャラは序盤に置けない。実測で、上位3体しか持っていない状態で
+  * 9キャラ合計 <b>4語</b> しか作れなかった。各キャラが要求する語根がばらばらで、
+  * 1体持っていても1〜6語しか届かないため。
+  *
+  * そこで序盤は<b>要求の粒度を語根に上げる</b>。「*per1(前へ) の血を引く言葉なら何でもいい」
+  * にすれば、エティモンを1体持っているだけで <b>94語</b> から選べて、絶対に詰まない。
+  * 中盤以降(10体〜)で列挙型の細かい悩みに移行する。 */
+ {lv:8,ttl:'ススマヌ',
+  scene:'車輪が逆向きに付いた荷車の精霊。押しても引いても後ろにしか進まない。「さきへ。さきへ」とだけ繰り返している。',
+  st:{t:'root',v:'per1'},
+  expect:'first far further approach provide period production performance forward private property percent primary prior improve profit',
+  note:'ok',msg:'*per1(前へ)を1体持っているだけで<b>94語</b>(単一語根の語)から選べる。2語根の語まで含めると707語。<b>序盤キャラの基本形</b>で、「祖先が合っていれば何でもいい」ので絶対に詰まない。エティモン#1なので最初に配るのに向く。'},
+
+ {lv:8,ttl:'タオレビト',
+  scene:'膝から下が霧になった旅人。何度も立ち上がろうとしては崩れる。「たつ、ちからを」',
+  st:{t:'root',v:'stā-'},
+  expect:'state stand station status stable establish institute constant distance instant substance circumstance rest cost',
+  note:'ok',msg:'*stā-(立つ)を1体で<b>79語</b>。#10なので序盤に配れる。state / stand / stable / establish / institute ― 「立つ」から「制度」まで意味が広がるのが見えるので、語源の面白さが最初に伝わる。'},
+
+ {lv:8,ttl:'カラッポ',
+  scene:'中が空洞の大きな壺。叩くと澄んだ音がして、少し寂しそうに揺れる。「なかみを、なかみを」',
+  st:{t:'root',v:'en'},
+  expect:'in into income industry influence information inside interior internal intimate energy enter engine',
+  note:'ok',msg:'*en(中に)を1体で<b>70語</b>。#3。income / interior / energy / engine ― 「中」の語が一気に手に入る。ゼニガタ社長の income とも重なるので、<b>序盤で覚えた語が中盤のキャラに効く</b>という繋がりが作れる。'},
+
+ {lv:8,ttl:'メナシ',
+  scene:'目のない白い仮面。手探りで何かを探している。触れると動きを止めて、じっとこちらを向く。',
+  st:{t:'root',v:'weid-'},
+  expect:'view vision visit evident provide advice wise wit idea guide history story review interview supervise',
+  note:'ok',msg:'*weid-(見る)を1体で<b>56語</b>。#16。view / vision / wise / wit / idea / history ― <b>「見る」から「知る」へ意味が伸びる</b>のがはっきり見えるので、語源学習として一番おいしい語根のひとつ。'},
+
+ {lv:8,ttl:'ウマレズ',
+  scene:'割れかけたまま止まった卵。殻の内側で、何かがずっと動いている。',
+  st:{t:'root',v:'genə-'},
+  expect:'general kind nature natural generation gender nation gene native genetic generate engine gentle genuine genius',
+  note:'ok',msg:'*genə-(命を与える)を1体で<b>67語</b>。#15。kind / nature / king / gentle / genius / gene が全部「生む」から来ていると分かる。<b>ウマレズを鎮めると同時に、語源のいちばん驚く例に触れられる</b>。'},
+
+ /* ===== キャラを鎮める(列挙方式・lv:9) =====
+  * アンダーテイルの雑魚敵のように、一体ずつ悩みを持っている。
+  * その悩みに効く「ことばカード」を差し出せば、一撃で満足して戦闘を回避できる。
+  *
+  * ここだけ作り方が違う: タグで引くのではなく <b>答えを人(かAI)が列挙し、
+  * DBに在る語だけを残す</b>。実測でDB一致率84%、しかも精度100%・ゴミゼロ。
+  * タグ方式は絞り込んでも必ず and / come のような外れが混ざるので、
+  * 最終的にはこちらが正しい。タグは「列挙のヒント」として使う。
+  *
+  * 敵は<b>属性を複数もつ</b>。ゾンビ・サラリーマンは「給料」でも「蘇生」でも倒せる。
+  * asp[] … 属性の配列。{n:属性名, ans:一撃の列挙, good:タグか語根}
+  * 2つ以上の属性に同時に刺さる語は「二重」になる。ここに落ちてくるのは
+  * rest(休息/安らかに眠れ)、security(有価証券/安心)、spring(春/ばね)のような
+  * <b>二義語</b>で、属性を掛け合わせただけで勝手に生まれる。個別に書いていない。
+  * bad は属性をまたいで1つ(誰に何を言っても怒るものは同じなので)。
+  *
+  * ★答えに入れてよい語の条件(2026-07 追加。それまでの答えを全部作り直した)★
+  *   <b>DBが画面に出す日本語の語義だけで納得できること。</b>それ以外は入れない。
+  *   除外1: <b>語源が同じだけの語</b>。capital / captain / chief / chapter / cape は
+  *          *kaput-(頭) の子孫だが、資本も岬も体の部位ではない。
+  *          「語源をたどれば頭だから通る」は、プレイヤーには通らない。
+  *   除外2: <b>英語の別語義に頼った語</b>。こちらのほうが数が多かった。
+  *          spring は「ばね」のつもりで入れたがDBの語義は「春」。
+  *          ※<b>この規則を機械的に当てすぎないこと</b> ― アイドルへの star は
+  *            語義が「星」でも「輝きを渡す」で通る。一度外して指摘を受けた。
+  *            外すのは<b>意味がまるで別</b>のとき(cheese=重要人物)だけ。
+  *          rest=残り(休息のつもり) key=小島(鍵) note=覚え書(音符) air=空気(アリア)
+  *          bank=土手(銀行) scale=鱗(規模) patient=忍耐強い(患者) cheese=重要人物
+  *          tear=引き裂く(涙) riddle=穴だらけにする(なぞなぞ) court=裁判所(宮廷)。
+  *          画面には日本語語義しか出ないので、プレイヤーには意味不明になる。
+  *   除外3: <b>こちらが一段推論して入れた語</b>(2026-07 追加。さらに200語削除)。
+  *          岩(オモイイシ)の答えに <b>water / river / flood / ice</b> を入れていた ―
+  *          「水で削れる/浮かせられる」という理屈は通るが、
+  *          <b>プレイヤーが岩を見て真っ先に水を思いつくことはない</b>。
+  *          同じものが全キャラに入っていた。いちばん悪かったのは
+  *          <b>病んだ医者(セイヤク先生)に virus / disease / pain / wound を渡すと一撃</b> ―
+  *          「医療の語彙」でまとめて拾ったせいで、<b>病気そのものを渡して満足する</b>ことになっていた。
+  *          ほかに 眠りたい社長に security/trust、自信のない子に victory/laurel、
+  *          給料が欲しい男に desk/office、退屈な王に authority/empire(すでに持っている)。
+  *          → 基準: <b>相手を見た瞬間に「それだ」と分かるものだけ。
+  *            連想を一段でも挟んだら入れない。</b>
+  *          属性名で語彙を集めると必ずこれが起きる(「医療」で集めると病名が入る)。
+  *          <b>集めるのは属性ではなく「相手が口に出して欲しがるもの」</b>。
+  *   ★ただし削りすぎた(2026-07 追記)。<b>濡れ鼠に spring(春) を渡しても通らない</b>という
+  *      当たり前の取りこぼしが出た。精度だけ見て<b>再現率を見ていなかった</b>のが原因。
+  *      12体ぶんに「プレイヤーが当然試す語」を書き出して突き合わせ、<b>108語を戻した</b>。
+  *      ヌレネズミには spring / summer / fur / stove / candle / roof / nest / bed …。
+  *      削るときは必ず<b>「当然試す語リスト」との突き合わせ</b>をやること。
+  *   ★<b>戻すときも一語ずつ確かめること</b>(2026-07 追記)。「回復の札はその相手を
+  *      満足させるはず」という機械的な規則を当てて足したら、<b>病んだ医者が
+  *      shelter(避難所)で昇天</b>するようになった。理屈が通らない。
+  *      規則でまとめて足すのは、属性名で語彙を集めたのと同じ誤り。
+  *      足した語も削った語も、必ず<b>場面と1語ずつ突き合わせる</b>。
+  *      確認は <code>python3 app/build_battle_enemies.py --review</code> で
+  *      「場面 → 答え(語義つき)」を一覧できる。
+  *      (このためのツールが下の「📏 再現率チェック」。使わずに削って失敗した。)
+  *   → この3つで <b>合計316語を答えから削除</b>した(770→454語)。最初の60語ぶんは、二重(2属性に同時に刺さる語)は
+  *      ほとんどが除外2に該当していて、<b>19語 → 8語</b>に減った。残ったのは
+  *      fat(脂肪) flesh(肉) meat(肉) marrow(髄) / watch(腕時計) ―
+  *      <b>日本語の語義ひとつで両方の属性を指している語</b>だけ。
+  *   ここは「二重が減って残念」ではなく、<b>減ったぶんが全部まやかしだった</b>という話。
+  * ans … 列挙した答え。DBに無い語は自動で落ちる(再現率チェックに理由が出る) */
+ {lv:9,ttl:'注文の多い料理店',want:'客を掴まえたい／食べたい',bad:'escape door exit flight refusal police witness rescue lock alarm',
+  scene:'山奥の白い西洋料理店。扉ごとに丁寧な貼り紙が増えていく。「クリームをよく塗ってください」「塩をたくさん揉み込んでください」― 注文しているのは、客ではない。',
+  asp:[
+   {n:'食材(体)',good:{t:'tag',v:['noun.body']},
+    ans:'head face blood mouth skin eye arm brain neck foot finger tooth ear nose flesh heart liver lung tongue lip rib spine muscle tendon artery marrow gut belly chin brow palm nail joint knee elbow breast bone hand leg biceps forehead occiput fat meat'},
+   {n:'厨房',good:{t:'tag',v:['noun.food']},
+    ans:'salt cream butter oil sauce spice herb pepper broth stew roast bake boil pot pan flesh meat fat marrow dish plate knife blade fire flame heat oven stove recipe menu'},
+   {n:'食べる',con:'食|噛|飲|味'},
+   {n:'掴む',con:'握|掴|取る|捕'}],
+  note:'ok',msg:'体45語＋厨房22語。二重は <b>fat / flesh / meat / marrow</b> ― <b>日本語の語義そのものが「体の部位」でも「食材」でもある語</b>で、まさにこの店が客に求めているものが二重に落ちてくる。属性を「食材(体)」と「厨房」に分けただけで、キャラの気味悪さが判定に出た。<br><b>ここから capital / captain / chief / chapter / cape を削除した</b>。全部 *kaput-(頭) の子孫なので「語源的には頭を渡している」と言えるが、<b>資本も岬も体の部位ではない</b>。語源が同じというだけで答えにするのは、プレイヤーには通らない押しつけになる。語源の面白さは<b>図鑑で語ること</b>であって、正解判定に混ぜるものではない。<br><b>原作の構造をそのまま機構にできる</b>: 注文の多い料理店は<b>扉ごとに注文が増える</b>のが肝なので、このキャラだけ「1枚で終わらず、順番に何枚も要求される」多段イベントにすると原作の緊張がそのまま出る。塩→クリーム→…と進むうちに、プレイヤーが「注文しているのは店で、料理は自分だ」と気づく。<br>ただし体の部位の語根は <b>*ken-4(首・#907) *mregh-m(n)o-(脳・#1133) *nas-(鼻・#531) *genu-1(膝・#364)</b> のように<b>その部位専用の語根</b>が多く、派生語が少ないので順位が深い。今の上位50体ではほとんど作れない。'},
+
+ {lv:9,ttl:'金欠で寝てない社長',want:'金を集めたい／眠りたい',bad:'debt loss poverty waste bankrupt deficit crisis fraud lawsuit collapse ruin idle delay',
+  scene:'スーツを着た子ヤギ。目の下に濃いクマ、手には空っぽの財布。「いや、事業計画は完璧なんですよ。完璧なんですが」と早口で繰り返している。',
+  asp:[
+   {n:'資金',good:{t:'tag',v:['noun.possession','noun.quantity']},
+    ans:'capital fund invest investment investor loan money income profit revenue salary wage payment pay wealth gold asset dividend bond insurance budget bonus pension fee stipend purse account credit sum price value reward prize inheritance legacy estate property rent subsidy allowance bill cheque coin treasure'},
+   {n:'睡眠不足',good:{t:'tag',v:['noun.state']},
+    ans:'sleep bed dream night quiet silence calm peace repose slumber holiday vacation pause couch cushion blanket home bedroom doze drowse lullaby midnight dusk pillow dark'},
+   {n:'集める',con:'集め|拾|選'},
+   {n:'眠る',con:'眠|休|静'}],
+  note:'ok',msg:'<b>この会社は金でも眠りでも救える。</b>資金58語＋休息24語。<br><b>二重は credit だけになった。</b>最初は interest(利子/関心) security(有価証券/安心) bond(債券/絆) trust(信託/信頼) share(株式/分かち合う) も二重に数えていたが、<b>DBが画面に出す語義は 興味 / 安全 / 債券 / 信頼 / 分け前</b>で、こちらが期待した「もう片方の意味」は出ない。英語の頭の中でだけ成立する二重だったので、全部片側に寄せた。<br>ほかに <b>scale(鱗) founder(浸水して沈む) bank(土手) deal(配る)</b> を削除 ― 規模/創業者/銀行/取引のつもりで入れたが、DBの語義は別物だった。DB一致率88%、落ちたのは funds / profits / launch / finance / cash / equity ― 複数形と語根未入力の語。'},
+
+ {lv:9,ttl:'給料待ちのゾンビ社員',want:'生きたい／生まれ直したい',bad:'overtime deadline audit report meeting quota invoice bureaucracy protocol summons decay rot plague curse chain debt',
+  scene:'ネクタイを締めたまま腐りかけている男。定期券と社員証を握って、改札の前を行ったり来たりしている。目は濁っているが、なぜか靴だけは磨いてある。',
+  asp:[
+   {n:'給料',good:{t:'tag',v:['noun.possession']},
+    ans:'capital fund invest investment investor loan money income profit revenue salary wage payment pay wealth gold asset dividend bond insurance budget bonus pension fee stipend purse account credit sum price value reward prize inheritance legacy estate property rent subsidy allowance bill cheque coin'},
+   {n:'蘇生',good:{t:'tag',v:['noun.state']},
+    ans:'animate breath life live alive revive revival vital vitality awake wake grave burial tomb funeral requiem prayer peace sleep heaven repose dawn'},
+   {n:'生きる',con:'生きる|生命|命を'},
+   {n:'生む',con:'生む|産|育'}],
+  note:'ok',msg:'<b>この男は「給料」でも「蘇生」でも倒せる。</b>給料38語＋蘇生29語。<br><b>二重はゼロになった。</b>当初は rest(有給/安らかに眠れ) leave(休暇/去る) retire(退職/退く) を二重の目玉にしていたが、<b>DBの語義は 残り / 去る / 退職する</b>で、期待した二重の意味が画面に出ない。<b>英語のダジャレとしては成立するが、日本語しか見えないプレイヤーには成立しない。</b>rest と leave は削除し、retire は給料側だけに残した。<br><b>蘇生側の good を語根 *anə- 指定からタグに変えた。</b>語根指定にすると *anə- の子孫が全部「有効」になるが、その中身は <b>anemone(イソギンチャク) / anemometer(風速計) / unanimous(満場一致) / magnanimous(度量が大きい) / animadversion(非難)</b> ― ゾンビの蘇生とは無関係な語が大半だった。語根で効果を決めるのは、capital を「頭」と言い張るのと同じ押しつけになる。<br>語源そのものは面白い: <b>salary</b> は *sal-(塩) ― ローマ兵の塩の手当てが給料の語源。<b>animate</b> は *anə-(息をする) で、8氏族の <b>ane</b> そのもの。ただし<b>それは図鑑で語ることで、正解判定に混ぜるものではない</b>、というのがこのキャラで得た結論。'},
+
+ {lv:9,ttl:'本番前で震える新人アイドル',want:'見てほしい／うまさを示したい',bad:'fear doubt anxiety solitude insult weakness error mistake shame ridicule',
+  scene:'マイクを両手で握りしめて震えているウサギ。衣装とメイクだけは完璧に仕上がっている。「あ、あの、わたし、やっぱり…」',
+  asp:[
+   {n:'自信',good:{t:'tag',v:['noun.feeling']},
+    ans:'confidence courage pride bold dignity hope strength smile praise faith trust calm cheer dream wish friend nerve heart resolve grit assurance encouragement'},
+   {n:'舞台',good:{t:'tag',v:['noun.communication']},
+    ans:'stage song voice audience applause music melody rhythm tune chorus concert ribbon flower jewel crystal beauty cute lovely charm shine glamour talent light star fame debut encore costume sparkle'},
+   {n:'見る',con:'見る|観察|見守|知覚'},
+   {n:'示す',con:'示す|指し|教え'}],
+  note:'ok',msg:'自信31語＋舞台34語。<b>二重は charm(魅力) だけ</b> ― 内側の魅力にも舞台映えにも読めるので残した。<br>star / grace は削除した。<b>DBの語義が 星 / 恩恵</b>で、こちらが期待した「スター」「気品」ではなかった。舞台側の key(小島) air(空気) note(覚え書) measure(測定) も同じ理由で削除 ― 鍵(調)/アリア/音符/小節のつもりだったが、全部DBでは別の意味になっている。<b>音楽用語は英語の多義に頼りすぎるので、この方式と相性が悪い</b>と分かった。DB一致率78%。落ちたのは glory / brave / pretty / radiant / brilliant / graceful / adorable ― <b>形容詞に多い</b>。ここが列挙方式の弱点で、形容詞は語根の割り当てが薄い。タグ方式では adj.all(1,908語)が丸ごと混ざって使い物にならなかったので、それでも列挙のほうが良い。'},
+
+ {lv:9,ttl:'何日も食べていない獣',want:'食べたい／掴まえたい',bad:'hunger starve thirst drought famine venom rot decay',
+  scene:'あばら骨が浮いた大きな獣。口を開けたまま、もう何日も動いていない。食べ物の匂いにだけ耳が動く。',
+  asp:[
+   {n:'食べ物',good:{t:'tag',v:['noun.food','noun.plant','noun.animal']},ans:'bread milk meat honey apple butter soup berry wine barley bean grain corn fruit nut fish egg broth stew feast meal dinner banquet cream gruel mead ale salt sausage grape olive ham beef pork mutton oat wheat biscuit cattle goat swine venison fowl marrow fat flesh loaf porridge'},
+   {n:'食べる',con:'食|噛|飲|味'},
+   {n:'掴む',con:'握|掴|取る|捕'}],
+  note:'warn',msg:'食べ物41語でDB一致率87%。<b>タグ方式(noun.food)の再現率36%と比べて段違い</b>。ただし食べ物そのものが語源DBに薄い(potato / rice / sugar / cabbage は印欧語根が無いか未入力)ので、上限は残る。<b>古代からある食べ物だけが出る</b>と割り切れば、むしろ設定として正しい。'},
+
+ {lv:9,ttl:'原稿が濡れた詩人ガラス',want:'書きたい／語りたい',bad:'forget divorce rejection indifference contract invoice statistics bureaucracy deadline receipt',
+  scene:'濡れてふやけた原稿を抱えたカラス。片方の羽がしおれている。読ませてくれと言うと嫌がるが、置いていくと拾って読み返している。',
+  asp:[
+   {n:'詩',good:{t:'tag',v:['noun.communication','noun.feeling']},ans:'poem verse rhyme song sonnet ballad tragedy stanza chorus lament ink page book letter word story tale legend love sorrow grief memory dream night moon star silence solitude passion beauty rose flower autumn wind rain twilight shadow echo distance absence voice pen muse river snow winter wing scroll ode metre'},
+   {n:'書く',con:'書|刻|ひっかく|描'},
+   {n:'話す',con:'話す|語る|言う|宣言'}],
+  note:'ok',msg:'詩・情感を43語。DB一致率86%。このキャラは<b>韻イベントと重ねられる</b> ― 「-ion で終わる語」と「詩人が満足する語」を同時に満たせば二重に効く、といった作りができる。'},
+
+ {lv:9,ttl:'殻をなくしたヤドカリ',want:'身を覆いたい／座って落ちつきたい',
+  bad:'storm wave gull crow beak salt sun drought exile abandon',
+  scene:'裸のまま砂の上でうずくまっている大きなヤドカリ。殻を波にさらわれた。硬いものを見るたび、そっと近づいては はさみで大きさを測っている。',
+  asp:[
+   {n:'殻',ans:'shell helmet hat lid cover cup bowl stone spiral coil shield cask case crust sheath'},
+   {n:'すみか',ans:'home house roof shelter nest hut den cave lodge room hole tent chamber niche nook lair crust sheath'},
+   {n:'覆う',con:'覆|包|隠|守'},
+   {n:'座る',con:'座'}],
+  note:'ok',msg:'<b>「茂みに隠れた迷子」を廃止して、モンスターに置き換えた</b>。迷子は状況であってモンスターではないうえ、答えが「家・母・パン」と散らかっていた。<br>ヤドカリなら<b>欲しいものが一つに定まる</b> ― 入れる硬いもの。殻でも兜でも帽子でも椀でも通るし、家・巣・洞窟でも通る。<b>見た目から欲しいものが分かり、答えが2方向ある</b>。<br><b>［修正］</b>「すみか」に旧「茂みに隠れた迷子」の語彙(mother / bread / milk / blanket / sleep / village …)がそのまま残っていて、<b>ヤドカリに sleep で昇天していた</b>。硬くて入れるものだけに絞った。'},
+
+ {lv:9,ttl:'自分の毒にやられたキノコ',want:'毒を解いてほしい／温めて乾かしてほしい',
+  bad:'poison venom toxin damp shade water rain flood decay',
+  scene:'傘のふちが黒く溶けかけた大きなキノコ。まわりの草は自分の胞子で枯れている。「わたしの毒は、わたしにも 効くのです」',
+  asp:[
+   {n:'解毒',ans:'antidote cure remedy medicine heal health doctor physician surgeon hospital clinic ointment dose vaccine treatment recovery nurse care salve potion splint milk charcoal clay ash purge purify cleanse serum'},
+   {n:'乾かす',ans:'sun light dry fire flame heat warm warmth summer wind breeze spring dawn hearth oven stove torch blaze ember drought heater furnace kiln dryer'},
+   {n:'解く',con:'解く|ほど|緩|放'},
+   {n:'温める',con:'温|暖|熱'}],
+  note:'ok',msg:'<b>「自分の薬だけ無い医者」を廃止して、モンスターに置き換えた</b>。あれは状況の小噺であって、見ても何が要るか分からなかった。<br>毒キノコが自分の毒で溶けかけている、なら<b>解毒</b>と<b>日に当てて乾かす</b>の2方向がすぐ読める。逆効果は<b>もっと湿らせるもの</b>(damp / rain / flood)。<br><b>暖炉(hearth)で乾かしたのに終わらない</b>という報告があったので、乾かす側に 熱と火の語を足した(hearth oven stove torch blaze ember heater furnace kiln dryer drought)。<br>入れなかった語 ― wash/rinse は「洗う」で、この相手の逆効果である water/damp と読みが割れる。pill は語義が「皮がはげ落ちる」で錠剤ではない。lamp/candle/lotion は語義だけでは解毒にも乾燥にも届かない。'},
+
+ {lv:9,ttl:'歌を聞きたくて溶けている王',want:'話してほしい／知らせてほしい',bad:'duty tax report document routine council obligation meeting audit protocol paperwork ledger',
+  scene:'王冠がずり落ちた獅子。玉座で溶けている。「なにか、こう、面白いことはないのか」と誰にともなく言っている。',
+  asp:[
+   {n:'娯楽',good:{t:'tag',v:['noun.act']},
+    ans:'play music feast festival tournament banquet wine sport contest jest comedy circus dice song story tale joke adventure parade spectacle acrobat race surprise riddle juggler wager chase ballad puzzle theatre game hunt'},
+   {n:'話す',con:'話す|語る|言う|宣言'},
+   {n:'知る',con:'知る|知力|知らせ'}],
+  note:'ok',msg:'娯楽24語の単属性にした。<b>「王権」属性を削除</b> ― 台詞が「宝物庫はもう飽きた。ぜんぶ見た」なのに gold / jewel / crown を渡すと満足する、という矛盾が起きていた。<b>台詞と答えは必ず一致させる</b>。飽きた宝物は逆効果側に移した。<b>属性が意味的に遠いと二重は生まれない</b>という反例で、狙って増やすなら「王権」と「祝祭」のように隣り合う属性を選ぶ必要がある。<br>court は削除した ― 宮廷/球戯場のつもりだったが<b>DBの語義は「裁判所」</b>で、どちらの属性にも合わない。riddle(穴だらけにする) tribute(記念品) も同じ理由。DB一致率76%(全キャラ最低)。game / dance / jester / hunt / treasure / knight / triumph が落ちる ― <b>ゲルマン系の具体名詞は語根欄が空のものが多い</b>。ロマンス系の抽象語(authority / ceremony)は残るので、キャラの語彙が意図せず堅くなる。'},
+
+ {lv:9,ttl:'おじいさんの大きなのっぽの古時計',want:'また回りたい',
+  bad:'rust decay dust ruin winter corrosion damp neglect',
+  scene:'百年動きつづけた大時計。針は12時で固まっている。つついても、かすかにカチ、と鳴って、また止まる。おじいさんは、もういない。',
+  asp:[
+   {n:'終わり',ans:'end rest stop sleep peace silence quiet calm night dusk eternity oblivion memory last dream repose slumber grave burial requiem prayer'},
+   {n:'時間',good:{t:'tag',v:['noun.time']},
+    ans:'hour minute second day year moment time morning evening noon week month century decade dawn period instant duration future calendar anniversary interval watch spring season age era'},
+   {n:'機械',good:{t:'tag',v:['noun.artifact']},
+    ans:'gear wheel axle engine oil machine device mechanism piston lever screw bolt crank motor pendulum rod pin dial needle coil weight balance movement spindle shaft valve'},
+   {n:'回す',con:'回す|回転|巻'}],
+  note:'ok',msg:'<b>名前だけで弱点が3方向 想像できる敵</b>にした(旧「トケイジ」)。「おじいさんの大きなのっぽの古時計」なら、<b>終わり(end / rest / peace)・時間(hour / century)・部品(gear / oil)</b>のどれでも通ると読める。<br>歌のとおり<b>百年動いて もう休みたい</b>キャラにしたので、以前は弱点だった end / stop / silence / oblivion を<b>答え側へ移した</b>。弱点は「安らかに終われず 朽ちる」ほうへ寄せた(rust / decay / dust / ruin)。<b>昇天=安らかに止まる／撃破=壊れる</b>という差が付いた。'},
+
+ /* ===== 組み合わせの敵(lv:9) =====
+  * <b>2つの立場を重ねると、弱点がそのぶん増える。</b>
+  * 「アイドル志望のゾンビ」なら 自信・舞台・成仏の3方向。
+  * 語彙は既存の敵から<b>そのまま流用</b>するので、書くのは名前・場面・台詞だけ。
+  * 敵を増やすいちばん安い方法であり、名前を読めば答えが3つ想像できる。 */
+ {lv:9,ttl:'土から出たがっているセミの幼虫',want:'伸びたい／生まれ直したい',
+  bad:'frost winter darkness soil clay stone rain flood mole beak',
+  scene:'十七年ぶんの土をかぶった大きな幼虫。木の根もとで、上ばかり見ている。「今年の夏に出られなかったら、もう夏は来ないんです」',
+  asp:[
+   {n:'自信',ans:'confidence courage pride bold dignity hope strength smile praise faith trust calm cheer dream wish friend nerve heart resolve grit assurance encouragement'},
+   {n:'舞台',ans:'stage song voice audience applause music melody rhythm tune chorus concert ribbon flower jewel crystal beauty cute lovely charm shine glamour talent light star fame debut encore costume sparkle'},
+   {n:'羽化',ans:'wing skin shell molt summer sun dawn sky air light rise climb tree leaf'},
+   {n:'伸ばす',con:'伸ば|広げ|張'},
+   {n:'生む',con:'生む|産|育'}],
+  note:'ok',msg:'<b>「アイドル志望のゾンビ」を置き換えた</b>。ゾンビもアイドルも既に別の敵で使っていて、使い回しになっていた。<br>セミの幼虫なら<b>同じ3属性(自信・舞台・羽化)を別の生き物で持てる</b>。十七年 土の中にいて、鳴けるのは一夏だけ ― <b>courage でも applause でも wing でも summer でも昇天する</b>。'},
+
+ {lv:9,ttl:'千年ねむれない番竜',want:'眠りたい／気を解いてほしい',
+  bad:'thief alarm duty tax report document council obligation audit protocol census',
+  scene:'金貨の山の上で、目だけを開けている竜。千年ここを見張っている。「盗まれるのが怖いのではない。……ただ、退屈で 眠れんのだ」',
+  asp:[
+   {n:'眠り',ans:'sleep bed dream night quiet silence calm peace repose slumber holiday vacation pause couch cushion blanket home bedroom doze drowse lullaby midnight dusk pillow dark'},
+   {n:'退屈しのぎ',ans:'play music feast festival tournament banquet wine sport contest jest comedy circus dice song story tale joke adventure parade spectacle acrobat race surprise riddle juggler wager chase ballad puzzle theatre game hunt'},
+   {n:'眠る',con:'眠|休|静'},
+   {n:'解く',con:'解く|ほど|緩|放'}],
+  note:'ok',msg:'<b>「退屈で眠れない王」を置き換えた</b>。王は既に別の敵にいた。<br>番竜なら <b>宝を見張る理由と 眠れない理由が同じ</b>になる。pillow でも dice でも story でも昇天する。'},
+
+ {lv:9,ttl:'本を食べつくした紙魚',want:'読むものを集めたい／書いたものがほしい',
+  bad:'fire flame ash smoke damp mould drought hunger famine broom',
+  scene:'書架のいちばん下で、空になった棚を見上げている大きな紙魚。「この部屋の本は、ぜんぶ 読みました。……ぜんぶ 食べました」',
+  asp:[
+   {n:'読むもの',ans:'poem verse rhyme song sonnet ballad tragedy stanza chorus lament ink page book letter word story tale legend love sorrow grief memory dream night moon star silence solitude passion beauty rose flower autumn wind rain twilight shadow echo distance absence voice pen muse river snow winter wing scroll ode'},
+   {n:'食べるもの',ans:'bread milk meat honey apple butter soup berry wine barley bean grain corn fruit nut fish egg broth stew feast meal dinner banquet cream gruel mead ale salt sausage grape olive ham beef pork mutton oat wheat biscuit loaf porridge'},
+   {n:'集める',con:'集め|拾|選'},
+   {n:'書く',con:'書|刻|ひっかく|描'}],
+  note:'ok',msg:'<b>「腹ぺこの詩人」を置き換えた</b>。詩人も腹ぺこも既に別の敵にいた。<br>紙魚は<b>読むことと食べることが同じ行為</b>なので、story でも bread でも昇天する。同じ2属性を、重複なしで持てるようになった。'},
+
+ {lv:9,ttl:'灯が消えたランタンお化け',want:'光がほしい',
+  bad:'water rain wind storm damp night darkness fog snow flood black gray ash blanket dismal',
+  okdup:'black gray ash blanket dismal',
+  scene:'胴の中が空っぽのランタン。旅人を照らすために立っているが、もう何も見えない。「わたしが消えてから、ここを通った者はいません」',
+  asp:[
+   {n:'灯',ans:'fire flame lamp candle torch lantern ember coal wax glow light sun star moon spark blaze flare dawn'},
+   {n:'道',ans:'road path way street bridge stair gate trail journey guide compass north route avenue course direction step pilgrim beacon'},
+   {n:'光る',con:'光|輝|燃|火'}],
+  note:'ok',msg:'<b>「時計職人だった迷子」を置き換えた</b>。時計も迷子も既に別の敵にいた。<br>ランタンお化けなら<b>火と道が一つの目的でつながる</b> ― 照らすために燃えたい。candle でも bridge でも昇天する。逆効果は火を消すもの(water / rain / wind)。<br><b>［修正］</b>「道」に旧「迷子」の語彙(mother / bread / milk / blanket / sleep / sister …)が丸ごと入っていて、<b>ランタンお化けが sleep で昇天していた</b>。通る道そのものの語だけに絞った。<br><b>［修正2］</b>「光る」の祖先束(*bhel-1 輝く など)には <b>black / gray / ash / blanket</b> が入る ― blanket は blanc(白い)から来ていて語源上は正しい。だが<b>毛布は灯を消すもの</b>なので、常識のほうを優先して<b>弱点</b>に置いた(弱点は祖先より先に判定される)。okdup に記録してある。'},
+
+/* ===== 語根そのものが答えの相手（lv:9・root 型）=====
+ * ここまでの敵は「答えの単語をひとつずつ書き出す」型だった。
+ * この3体は違って、<b>ある祖先から生まれた語なら どれでも一撃</b>になる。
+ * asp に ans ではなく root を書くと、その語根の派生語が全部 答えになる。
+ *
+ * なぜ成立するか ―― <b>カードの下の帯に「*weid- ― 見る」と出ている</b>。
+ * だから名前と台詞で「この相手は見られたがっている」と掴めれば、
+ * 手札のどれが効くかは<b>札の顔を見れば分かる</b>。
+ * vision も idol も wizard も、意味はばらばらなのに同じ祖先。
+ * 「関係なさそうな単語が、じつは同じ祖先だった」を、当てて気づく形にした。
+ *
+ * 名前と台詞に<b>その概念そのもの</b>を入れてある(見る/考える/話す)。
+ * 語根名は出さない ― 出したら探すところが無くなる。 */
+ {lv:9,ttl:'だれにも見えない透明人間',want:'見てほしい／知ってほしい',
+  bad:'fog mist shadow smoke dust curtain veil blind night',
+  scene:'足あとだけが雪の上に続いている。声はするのに姿がない。「わたしを 見た人は、ひとりも いません」',
+  asp:[
+   {n:'見る',con:'見る|観察|見守|知覚'},
+   {n:'知る',con:'知る|知力|知らせ'}],
+  note:'ok',msg:'<b>「見る」「知る」の意味を持つ祖先の派生語なら どれでも一撃</b>。<br>*weid-(見る)141語 *spek-(観察する)92語 *okʷ-(見る)68語 *gnō-(知る)74語 …を<b>全部束ねる</b>ので、vision / idea / history / special / respect / know / notice / eye まで通る。<br>1本の語根だけを答えにすると派生語が20語前後のマイナー語根になり、<b>山札にまず来ない・推測もできない</b>。同じ意味の祖先を束ねて初めて成立する。逆効果は<b>もっと見えなくするもの</b>(fog / veil / blind)。'},
+
+ {lv:9,ttl:'考えを盗まれた洗脳ヒツジ',want:'考えを返してほしい／知りたい',
+  bad:'order command obedience drug hypnosis chain collar bell whistle',
+  scene:'目がうずまきになったヒツジ。同じ方向にだけ歩き続けている。「わたしが なにを 考えていたか、思い出せないのです」',
+  asp:[
+   {n:'考える',con:'考える|意見|記憶|思い出'},
+   {n:'知る',con:'知る|知力|知らせ'}],
+  note:'ok',msg:'<b>「考える」「知る」の祖先を束ねて一撃</b>。<br>mind / monster / monument / music / museum / mention / remind / mentor / summon ―― 怪物も記念碑も音楽も、もとは「考える・思い出す」。<br>逆効果は<b>考えさせないもの</b>(command / hypnosis / collar)。'},
+
+ {lv:9,ttl:'声をなくした沈黙のフクロウ',want:'話したい／示したい',
+  bad:'silence hush gag muzzle mute whisper secret',
+  scene:'くちばしを固く閉じたフクロウ。夜通し口を開けようとしては、やめている。「ひと言も 出てこないのです。もう ずっと」',
+  asp:[
+   {n:'話す',con:'話す|語る|言う|宣言'},
+   {n:'示す',con:'示す|指し|教え'}],
+  note:'ok',msg:'<b>「話す」「示す」の祖先を束ねて一撃</b>。<br>fate / fairy / fame / phone / prophet / confess / preface / infant ―― 運命も妖精も幼児も、もとは「話す」(infant は<b>まだ話せない者</b>)。<br>逆効果は<b>黙らせるもの</b>(silence / gag / muzzle)。'},
+
+/* ===== 接頭辞そのものが弱点の相手（pre 型）=====
+ * 祖先(語根)ではなく<b>接頭辞</b>を弱点にする型。com- を持つ語なら どれでも一撃。
+ * company / common / community / complete / connect / consider / contact /
+ * continue / correct / concept ―― <b>405語</b>あって、しかも全部よく見る単語。
+ *
+ * これがいちばん推測しやすい。語根と違って<b>綴りの頭に出ている</b>ので、
+ * 「一緒にいたい」と言う相手に co- で始まる札を出す、で通る。
+ * 語源クイズの入口として、語根型より易しい層になる。 */
+ {lv:9,ttl:'みんなと一緒にいたいだけの はぐれ子ダコ',want:'一緒にいたい／みんなと合わさりたい',
+  bad:'alone solitude exile lonely single separation isolation banish desert',
+  scene:'岩陰から足を8本ぜんぶ伸ばして、通りすがりの誰かに巻きつこうとしている小さなタコ。追い払っても、少し離れたところでまた待っている。「ひとりは、やなんだ」',
+  asp:[
+   {n:'一緒に（com-）',pre:'com-|co-|contra-|counter-'}],
+  note:'ok',msg:'<b>接頭辞 com- / co- を持つ語なら どれでも一撃</b>(405語)。<br>company(仲間) common(共通の) community(共同社会) complete(完全な) connect(つなぐ) consider(考える) contact(接触) continue(続く) correct(正しい) concept(概念) ―― 全部「一緒に」から始まっている。<br>語根型と違って<b>綴りの頭に答えが出ている</b>ので、いちばん推測しやすい。語源クイズの入口として置く。逆効果は<b>引き離すもの</b>(alone / exile / separation)。'},
+
+ /* ===== しくみで解くイベント(lv:0) =====
+  * 「語のしくみ」で条件を作る。ただし <b>しくみ単独では成立しない</b>。
+  * 語派だけで切ると and / but / face のような「渡せない語」が並ぶだけで、
+  * 数が大きいことに意味は無かった。必ず意味タグと交差させ、
+  * 「何を差し出すのか」を決めること。 */
+ {lv:0,ttl:'ローマの遺跡に埋もれた道具',
+  scene:'崩れた石造りの床に、道具の形をした窪みがある。ラテン語から来た「もの」でなければ嵌まらない。',
+  st:{t:'g',v:'L'},tags:['noun.artifact'],
+  expect:'structure surface car office wall product machine instrument vehicle table chamber column',
+  note:'ok',msg:'ロマンス語9,166語のうち、道具・人工物に絞った616語。語派だけで切っていた頃は and / because / just が並んで答えにならなかった。「ローマ由来」×「もの」の交差にして初めてイベントとして成立する。しくみは<b>絞り込みの軸</b>であって、それ単独では問いにならない。'},
+
+ {lv:0,ttl:'北の村の家系図が焼けた',
+  scene:'村人の名簿が灰になった。北の言葉で呼ばれてきた者たちを、もう一度並べ直したい。',
+  st:{t:'g',v:'G'},tags:['noun.person'],
+  expect:'man woman mother father friend son brother sister daughter king queen lord neighbor',
+  note:'ok',msg:'ゲルマン語×人 の426語。man / woman / mother / father / brother / sister ― 英語の親族語彙はほぼ全部ゲルマン由来なので、「北の村の家系図」という設定と中身がぴったり一致する。ロマンス語の人物語(author / student / professional)とは顔ぶれが完全に分かれるのが気持ちいい。'},
+
+ {lv:0,ttl:'知の神殿の扉',
+  scene:'ギリシャの柱に囲まれた書庫。ここでは「考えかた」を差し出さねば扉が開かない。',
+  st:{t:'g',v:'Gr'},tags:['noun.cognition'],
+  expect:'idea type method policy science program strategy theory logic system analysis philosophy',
+  note:'ok',msg:'ギリシャ語×認識 の150語。idea / method / science / strategy / theory / logic ― <b>抽象思考の語彙は英語ではほぼギリシャ由来</b>という事実が、そのままイベントの筋になる。語派と意味が噛み合った例で、しくみイベントの理想形。'},
+
+ {lv:0,ttl:'医神の神殿',
+  scene:'白い柱の奥に治療の間がある。ギリシャの医術の言葉でしか、体は語れない。',
+  st:{t:'g',v:'Gr'},tags:['noun.body'],
+  expect:'gene nerve plasma artery hormone gland sperm cell tissue muscle bacteria enzyme',
+  note:'ok',msg:'ギリシャ語×体 の113語。gene / nerve / artery / hormone / gland ― <b>医学用語はギリシャ由来</b>。同じ「体」でもゲルマン側は head / blood / mouth / eye と日常語になるので、<b>同じ意味タグでも語派を変えると別のイベントになる</b>。'},
+
+ {lv:0,ttl:'《前へ》の血脈が眠る谷',
+  scene:'この谷は *per1「前へ」の力で満ちている。同じ祖先を持つ言葉だけが、先へ進める。',
+  st:{t:'root',v:'per1'},
+  expect:'first process far present further approach problem provide period production performance forward private property profit',
+  note:'ok',msg:'733語（機能語の for / from は除外）。<b>語根イベントだけは意味タグを重ねなくても成立する</b> ― 「同じ祖先を持つ」こと自体が問いの答えになっているから。見た目も意味もバラバラな first / problem / private / profit が全部 *per1(前へ) から来ていると分かる瞬間が、このゲームで一番おいしい。語根は1,437種類あるので、エティモンの絵がそのままイベントになる。'},
+
+ {lv:0,ttl:'「もういちど」の呪い',
+  scene:'時が巻き戻り続けている。輪を断てるのは、re-(もう一度)を宿した言葉だけだ。',
+  st:{t:'pre',v:'re-'},
+  expect:'research result response return remember report respect review recent record reduce recover repeat',
+  note:'ok',msg:'391語。接頭辞は「意味を持つ部品」なので、条件と効果が直結する。他でも成立: com-(共に)402語 / ex-(外へ)323語 / ad-(〜へ)311語 / in-(否定)290語 / de-(離れて)254語 / dis-(二つに)177語。「離すには dis-、戻すには re-」と、接頭辞の意味がそのまま鍵になる。'},
+
+ {lv:0,ttl:'吟遊詩人が節を探している',
+  scene:'詩の最後の一行が足りない。同じ響きで終わる言葉なら、意味は何でもよいという。',
+  st:{t:'rhyme',v:'ion'},
+  expect:'information education position production function attention section decision situation addition expression application',
+  note:'ok',msg:'729語。<b>意味も語源も一切問わない唯一のイベント</b> ― 綴りの音だけで解ける。レア度とも無関係。他の韻でも: -ate 603語 / -ent 437語 / -ous 374語 / -ble 254語。「語尾で品詞と音が決まる」感覚が身につくので、英語学習としての効きも良い。'},
+
+ /* --- ここから「低レア度(=だれでも知っている語)で解けるイベント」 ---
+  * レア度400以下は全14,958語中わずか919語しかない。
+  * その919語がどのタグに集まっているかを逆算して作ったイベント。
+  * どれも「中学英語で解ける」帯。 */
+ {lv:1,ttl:'体の一部が石になっている',
+  scene:'呪いで腕が石に変わりかけている。失われた部位を差し出せば戻せるという。',
+  tags:['noun.body'],
+  expect:'head face blood mouth skin eye arm brain neck foot hand leg heart bone finger tooth hair ear nose',
+  note:'ok',msg:'低レア度イベントの筆頭。head(128) face(140) blood(242) mouth(283) skin(306) eye(309) arm(312) brain(317) neck(362) foot(369) と、中学生でも知っている語が並ぶ。350語中15語がレア度400以下で、しかもその15語がそのまま「体の部位」として絵になる。come / small / quick が混ざるのは最頻語義のズレ(後述)。'},
+
+ {lv:1,ttl:'数が合わない',
+  scene:'門に刻まれた数式が欠けている。正しい数を当てはめれば開く。',
+  tags:['noun.quantity'],
+  expect:'one two three four five six ten twenty half million much little enough third bit hundred thousand nine eight seven',
+  note:'ok',msg:'最も低レア度に寄ったイベント。one(1) two(19) three(117) four(206) five(234) half(234) six(291) ten(320) twenty(322) ― レア度1の語が使える唯一の帯。数字は語源的にも印欧語根が濃く(*oi-no- *dwo- *trei-)、DBの守備範囲そのもの。'},
+
+ {lv:1,ttl:'家族が引き裂かれた',
+  scene:'村人が家族を探している。誰を探しているのか、言葉にしてやれば見つかる。',
+  tags:['noun.person'],
+  kw:'人|親|子|兄|姉|弟|妹|母|父|友|仲間|男|女|夫|妻|家族|主',
+  expect:'man woman mother father friend son brother sister husband wife daughter child people person master',
+  note:'ok',msg:'man(89) woman(201) mother(207) father(210) friend(268) son(281) brother(311) husband(332) sister(344) ― 全部が基礎語彙で、しかも印欧語根が濃い(*mater- *pater- *bhrater-)。語族の親戚関係がそのまま見える題材で、語源ゲームとして最も相性が良い部類。'},
+
+ {lv:1,ttl:'地図に行き先が無い',
+  scene:'どこへ向かうかを決めなければ、隊は動けない。',
+  tags:['noun.location'],
+  expect:'place home side area city field town front middle position end source region country north south east west',
+  note:'warn',msg:'place(123) home(156) side(167) area(221) city(243) field(248) town(301) と使いやすい語が33語ある。ただし see(30) here(74) state(148) open(196) common(220) のように、最頻語義が場所ではない語が上位に混ざる。語義しぼりを足したほうがよい。'},
+
+ {lv:1,ttl:'時が止まっている',
+  scene:'村の時計が止まり、季節が動かない。時に関わる言葉が要る。',
+  tags:['noun.time'],
+  expect:'day night year moment future history hour week month season morning evening age time second minute',
+  note:'ok',msg:'低レア度率22%と全タグ中トップ。day(98) year(164) second(182) night(190) moment(208) history(228) future(232) が並ぶ。時間は抽象概念なので語源DBが厚く、食べ物と正反対に相性が良い。then(21) may(22) even(54) go(100) は最頻語義のズレ。'},
+
+ {lv:2,ttl:'雨風をしのぐ場所が無い',
+  scene:'夜が来る。住まいを組み立てなければ全滅する。',
+  tags:['noun.artifact'],
+  kw:'家|部屋|戸|扉|壁|屋|床|窓|建|橋|道|門|台|寝|柱|階',
+  expect:'house room floor wall road window kitchen door bed roof bridge gate stair building',
+  note:'ok',msg:'artifact 1,365語を語義で「住まい」に絞ると73語まで落ち、うち9語がレア度400以下。room(162) house(182) floor(302) wall(305) road(316) window(328) kitchen(369)。well(59)が井戸として正しく入るのが気持ちいい。'},
+
+ {lv:2,ttl:'烏合の衆をまとめたい',
+  scene:'各自が勝手に動いている。人を束ねる仕組みが要る。',
+  tags:['noun.group'],
+  expect:'law school country community company class society team party group family army city union nation',
+  note:'ok',msg:'低レア度44語と数が多い。law(182) school(207) country(219) community(243) company(244) class(251) society(270) team。「集団」は抽象度が高く印欧語根が濃いので、DBの得意分野。'},
+
+ {lv:1,ttl:'荒れ地に緑を戻したい',
+  scene:'焼けた大地。何も生えていない。生命を植えたい。',
+  tags:['noun.plant'],
+  note:'ok',msg:'成立。noun.plant は植物のみ。木も草も花も種も同じ穴に入る。'},
+
+ {lv:1,ttl:'資金が尽きた',
+  scene:'鍛成に使う元手が無い。財に関わるものが要る。',
+  tags:['noun.possession'],
+  note:'ok',msg:'成立。capital がここに入る。同じ穴に income(*en 中へ) と expense(*eghs 外へ) が同居するのが面白いところで、タグは同じでも語根が正反対。効果の向きを語根で決められる。'},
+
+ {lv:1,ttl:'話し相手がいない',
+  scene:'誰もいない村。人が要る。',
+  tags:['noun.person'],
+  note:'ok',msg:'成立するが1,493語と多すぎる。「誰でもいい」ので候補が絞れず、選ぶ楽しさが無い。イベント側をもっと具体的にする必要がある(例:「医者が要る」)。'},
+
+ {lv:2,ttl:'体を治したい',
+  scene:'仲間が傷を負っている。手当てに使えるものが要る。',
+  tags:['noun.body','noun.substance','verb.body'],
+  kw:'薬|治|癒|回復|包帯|血|骨|肉|皮|傷|健康|栄養',
+  note:'warn',msg:'タグだけだと noun.substance に「毒」「酸」「煙」まで入り、渡すと悪化するものが候補に並ぶ。語義キーワードでの絞り込みが必須。'},
+
+ {lv:2,ttl:'川を渡りたい',
+  scene:'目の前に大きな川。向こう岸に行きたい。',
+  tags:['noun.artifact','verb.motion'],
+  kw:'船|舟|橋|筏|渡|泳|飛|越',
+  note:'warn',msg:'noun.artifact は1,365語もあり「机」「靴」「時計」まで入る。タグは入口にしかならず、実質は語義キーワードが解を決めている。'},
+
+ {lv:2,ttl:'暗くて何も見えない',
+  scene:'洞窟の底。灯りが要る。',
+  tags:['noun.phenomenon','noun.substance'],
+  kw:'光|火|炎|明|輝|灯|熱|燃',
+  note:'warn',msg:'noun.phenomenon には「雨」「地震」「重力」も入る。ここも語義キーワード頼み。ただし絞った後の候補は非常に納得感がある。'},
+
+ {lv:2,ttl:'村人がバラバラで統率が取れない',
+  scene:'各自が勝手に動いている。まとめるものが要る。',
+  tags:['noun.group'],
+  note:'warn',msg:'成立するが「群れ」を渡すのか「まとめる力」を渡すのかが曖昧。noun.group は結果(集団)であって手段ではない。イベントが求めるのが名詞か動詞かで、必要なタグが変わる。'},
+
+ {lv:3,ttl:'来週のアイドルコンテストに出たいが、自信がない子',
+  scene:'歌もダンスも練習した。でも舞台に立つ勇気が出ない。自信を、あるいは可愛らしさを渡してあげれば出場できるかもしれない。',
+  tags:['noun.feeling','noun.attribute','adj.all'],
+  val:'+',
+  kw:'自信|勇気|勇敢|美|麗|愛|魅力|可愛|かわい|輝|華|優雅|上品|明る|元気|大胆|誇り|希望|才能|魅|素敵|栄光',
+  note:'bad',msg:'①に some / other / such / any / just が並ぶ理由は、WordNet が形容詞に意味カテゴリを与えず全部 adj.all(1,908語) に放り込むため。adj.all は意味ではなく品詞のバケツで、「かわいい」も「そのような」も同じ袋に入る。しかも「自信がある」「美しい」はまさに形容詞なので、一番タグが要る場所にタグが無い。②の自動正負は 2,499→670語 に減らすが、正と判定された中に just / very / new / together / due が残り、逆に courage(勇気) / virtue(美徳) / talented(才能のある) / bright(輝いている) を誤って弾いてしまう(③が正負なしなら63語、正負を挟むと43語に減る=正解を20語失っている)。正負は必須だが、valence.csv の fix 列を埋めるまでは自動値のほうが害が大きい。'},
+
+ {lv:3,ttl:'二人が言い争っている',
+  scene:'仲裁したい。争いを鎮めるものが要る。',
+  tags:['noun.feeling','verb.social','noun.communication'],
+  val:'+',
+  kw:'和|平|許|仲|調停|同意|協|穏|静|愛|友',
+  note:'bad',msg:'上と同じ問題。「怒り」「憎悪」「侮辱」も同じタグに入るため、タグは正負を区別しない。感情や評価が絡むイベントでは、タグだけでは絶対に解けない。'},
+
+ {lv:3,ttl:'名前のない土地に名をつけたい',
+  scene:'地図に空白がある。呼び名を与えれば土地が定まる。',
+  tags:['noun.communication','noun.location'],
+  note:'warn',msg:'珍しくタグだけでほぼ成立する抽象イベント。「名づける」は対象を選ばないので、候補が多いことがそのまま自由度になる。抽象イベントでもこの型なら機能する。'},
+
+ {lv:3,ttl:'呪いをかけられた',
+  scene:'体が石になりかけている。元に戻すものが要る。',
+  tags:['verb.change','noun.act'],
+  val:'+',
+  kw:'解|戻|回復|浄|治|変|直|救',
+  note:'bad',msg:'verb.change には「壊す」「腐らせる」「悪化させる」も入る。変化の方向をタグが持っていないため、キーワード無しでは危険な候補が並ぶ。'},
+];
+/* 旧形式(ans/good を直に持つ単属性キャラ)を asp[] に揃える。
+   逆に asp[] を持つキャラは、既存の集計コードのために e.ans に全属性の答えを流し込む。 */
+EVENTS.forEach(e=>{
+  if(!e.asp){
+    if(e.ans||e.good)e.asp=[{n:'',good:e.good,ans:e.ans||''}];
+    return;
+  }
+  e.ans=e.asp.map(a=>a.ans||'').join(' ').trim();
+});
+
+/* ===== データ ===== */
+let WORDS=[],ROOTS={},TAGS={},BYTAG={},VALS={},RANK={},NOPIE={},GLOSS={},cur=-1,showAll={},ownN=50;
+const A='../assets/';
+async function load(){
+  const [ws,rs,tg,vc,np,gl]=await Promise.all([
+    fetch('data/pie/words.json').then(r=>r.json()),
+    fetch('data/pie/roots.json').then(r=>r.json()),
+    fetch('data/pie/tags.json').then(r=>r.json()),
+    fetch('data/pie/valence.csv').then(r=>r.text()).catch(()=>''),
+    fetch('data/pie/nopie.json').then(r=>r.json()).catch(()=>({})),
+    fetch('data/pie/gloss.json').then(r=>r.json()).catch(()=>({})),
+  ]);
+  WORDS=ws;TAGS=tg;NOPIE=np;GLOSS=gl;
+  // valence.csv: word,ja,tag,auto,fix  … fix があれば fix を優先(手で直した値)
+  // 語義にカンマが入っていても壊れないよう、先頭と末尾から取る
+  vc.split(/\r?\n/).slice(1).forEach(ln=>{
+    if(!ln)return;
+    const c=ln.split(',');
+    if(c.length<5)return;
+    VALS[c[0]]=c[c.length-1]||c[c.length-2];
+  });
+  for(const r of rs)ROOTS[r.key]=r;
+  // エティモンID = 派生語が多い順。#1=前へ(795語) #2=一緒に(626語) …
+  rs.slice().sort((a,b)=>(b.dict||0)-(a.dict||0)).forEach((r,i)=>{RANK[r.key]=i+1;});
+  const seen=new Set();
+  for(const x of WORDS){
+    // 再現率チェック用: タグの有無に関わらず、綴りで全語を引けるようにする
+    const lc=x.w.toLowerCase();
+    if(!(lc in WBY)){WBY[lc]=x;ALLW.push(x);}
+    const t=TAGS[x.w];
+    if(!t||seen.has(x.w))continue;
+    seen.add(x.w);
+    (BYTAG[t]=BYTAG[t]||[]).push(x);
+  }
+  for(const k in BYTAG)BYTAG[k].sort((a,b)=>(a.r??9999)-(b.r??9999));
+  /* 語根型(asp に root を書いた相手)の答えを<b>実際の語の列</b>に展開する。
+     こうしておくと、下の「答えの点検」も再現率も件数も、列挙型と同じ道を通る。
+     147語ぜんぶが日本語語義つきで並ぶので、<b>語根で括ったせいで
+     場面に合わない語が混ざっていないか</b>を目で確かめられる。 */
+  const kids={};
+  for(const x of WORDS)for(const k of (x.p||[]))(kids[k]=kids[k]||[]).push(x);
+  /* con(概念)は<b>同じ意味の語根 全部</b>に広がる。
+     「見る」なら *weid- だけでなく *okʷ- *spek- *derk- も入る。
+     1本だけ選ぶと派生語20語のマイナー語根になり、山札にまず来ない。 */
+  EVENTS.forEach(e=>{
+    let grew=false;
+    (e.asp||[]).forEach(a=>{
+      if(a.ans||(!a.root&&!a.con&&!a.pre))return;
+      if(a.pre){   // 接頭辞型。その接頭辞を持つ語をそのまま答えにする
+        const rx=new RegExp('(^|,\\s*)('+a.pre+')');
+        const ws=WORDS.filter(x=>rx.test(x.pre||'')&&x.ja&&!/^[A-Z]/.test(x.w)&&!/\s/.test(x.w));
+        ws.sort((x,y)=>(x.r??9999)-(y.r??9999));
+        a.ans=[...new Set(ws.map(x=>x.w))].join(' '); grew=true; return;
+      }
+      const keys=a.con?Object.keys(ROOTS).filter(k=>new RegExp(a.con).test(ROOTS[k].ja||''))
+                      :[a.root];
+      a._keys=keys;
+      const ws=[];
+      for(const k of keys)for(const x of (kids[k]||[]))
+        if(x.ja&&!/^[A-Z]/.test(x.w)&&!/\s/.test(x.w))ws.push(x);
+      ws.sort((x,y)=>(x.r??9999)-(y.r??9999));
+      a.ans=[...new Set(ws.map(x=>x.w))].join(' ');
+      grew=true;
+    });
+    if(grew)e.ans=e.asp.map(a=>a.ans||'').join(' ').trim();
+  });
+  $('#legend').innerHTML=`<span style="opacity:.32">うすい文字</span>＝いま持っているエティモンでは作れない語　`
+    +`<span style="color:var(--ng)">⚠語義ズレ</span>＝タグが英語の別語義に付いている疑い`;
+  $('#hstat').textContent=`タグ付き ${seen.size} 語 ／ グループ ${Object.keys(BYTAG).length} 種 ／ エティモン ${rs.length} 体`;
+  $('#ownSel').onchange=e=>{ownN=+e.target.value;renderEv();renderDetail();};
+  $('#starterChk').onchange=e=>{useStarter=e.target.checked;renderEv();renderDetail();};
+  renderEv();renderDetail();renderLabTags();
+}
+/* ===== 絞り込み ===== */
+function byTags(tags){
+  const out=[];
+  for(const t of tags)for(const x of (BYTAG[t]||[]))out.push(x);
+  return out;
+}
+function byKw(list,kw){
+  if(!kw)return list;
+  let re;try{re=new RegExp(kw);}catch(e){return list;}
+  return list.filter(x=>re.test(x.ja||''));
+}
+// 正負しぼり。valence.csv に載っていない語(食べ物・道具など)は正負が無関係なので素通し
+function byVal(list,v){
+  if(!v)return list;
+  return list.filter(x=>!(x.w in VALS)||VALS[x.w]===v);
+}
+/* ===== 描画 ===== */
+const LV=[];LV[9]={n:'キャラを鎮める — 敵は属性を複数もつ／効果は 二重・一撃・有効・逆効果・無効',c:'#c07a2e'};
+LV[8]={n:'序盤キャラ — エティモン1体で必ず解ける',c:'#4fa87a'};
+LV[10]={n:'原始の行為で倒す雑魚 — エティモン0体、初期装備91語だけで戦える',c:'#2f7a52'};
+Object.assign(LV,[{n:'しくみで解く — レア度も意味も問わない',c:'#6f62c4'},{n:'かんたん — タグ1つで解ける',c:'#4fa87a'},{n:'ふつう — 絞り込みが要る',c:'#d9a441'},{n:'むずかしい — 抽象的な要求',c:'#c9585f'}]);
+function renderEv(){
+  let h=`<div class="ev${cur===-1?' on':''}" data-i="-1" style="border-color:${cur===-1?'var(--accent)':'#ddcdb4'};background:${cur===-1?'#fdf3f6':'#fffaf0'}">
+    <div class="en">📊 総括 ― この方式は成立するか</div>
+    <div class="em">${EVENTS.length}イベントを実データで検証した結論</div></div>`;
+  for(const lv of [10,8,9,0,1,2,3]){
+    h+=`<div class="lvHd" style="color:${LV[lv].c}">${esc(LV[lv].n)}</div>`;
+    EVENTS.forEach((e,i)=>{
+      if(e.lv!==lv)return;
+      const L=byKw(byVal(rawFor(e),e.val),e.kw), mk=L.filter(canMake).length;
+      h+=`<div class="ev${cur===i?' on':''}" data-i="${i}">
+        <div class="en">${esc(e.ttl)}</div>
+        <div class="em">${esc(reqText(e))}</div>
+        <div class="ec">候補 ${L.length}語 <span style="color:${mk?'var(--ok)':'var(--ng)'}">／ いま作れる ${mk}語</span></div></div>`;
+    });
+  }
+  $('#evList').innerHTML=h;
+  $('#evCnt').textContent=`${EVENTS.length}件`;
+  document.querySelectorAll('.ev').forEach(el=>el.onclick=()=>{cur=+el.dataset.i;showAll={};renderEv();renderDetail();});
+}
+/* タグと品詞の食い違いを検出する。
+ * タグは「WordNetの最頻語義(英語)」に付いているが、画面に出している語義は日本語で、
+ * 両者が別の意味を指していることがある。
+ *   come  ja=来る   → WordNet最頻語義は "the thick white fluid…"(精液) なので noun.body
+ *   small ja=小さい → "the slender part of the back"(背中のくびれ)
+ *   behind ja=後ろに → "the fleshy part … you sit on"(尻)
+ * DBの品詞に名詞が無いのに名詞タグが付いていれば、ほぼ確実にこのズレ。 */
+function posMismatch(x){
+  const t=TAGS[x.w];if(!t)return false;
+  const pos=(x.pos||'').split('/');
+  if(t.startsWith('noun.'))return !pos.includes('名');
+  if(t.startsWith('verb.'))return !pos.includes('動');
+  if(t.startsWith('adj.')) return !pos.includes('形');
+  return false;
+}
+// 手持ちの上位N体だけで作れるか(語根を全部そろえている必要がある)
+/* ===== 初期装備(原始の行為) =====
+ * エティモンを1体も持っていなくても最初から使える91語。食べる・切る・運ぶのような、
+ * 人間が言葉を持つ前からやっていた行為だけを集めた。
+ *
+ * なぜ配る必要があるか(実データ):
+ *  - エティモンは派生語が多い順に並ぶので、上位から出てくるのは
+ *    <b>and / at / do / for / from / in / to / first / face / state / fact</b>
+ *    ― 機能語とロマンス系の抽象名詞ばかりで、<b>「できること」が一つも無い</b>。
+ *  - 原始動詞は逆に語根がとても深い。eat=*ed-(#276) drink=*dhreg-(#980)
+ *    sleep=*slēb-(#1045) see=*sekʷ-2(#769) weep=*wāb-(#1340)。
+ *    「食べる」専用の語根は「食べる」しか産まなかったので、派生語順では最後に来る。
+ *  - 結果、78語の原始動詞のうち<b>上位50体で作れるのは9語だけ</b>(中央値#270)。
+ * つまりエティモン順に開放すると、<b>抽象から始まって具体に永久に辿り着かない</b>。
+ * 初期装備で下駄を履かせるのは飾りではなく、この反転を打ち消すために要る。 */
+const STARTER=`eat bite chew swallow taste drink feed cook boil bake
+cut break tear split pierce grind beat strike crack
+push throw turn carry bear take give hold catch lift drag
+go come run walk climb fall fly swim leap ride
+see hear feel watch listen
+say speak call sing laugh weep shout whisper name
+make build weave sew bind tie dig plant sow reap wash burn
+sleep wake rest sit stand lie live die grow
+wear cover fill empty open close hide wrap
+know think learn count choose want fear love`.split(/\s+/).filter(Boolean);
+const STARTER_SET=new Set(STARTER);
+let useStarter=true;
+function isStarter(x){return useStarter&&STARTER_SET.has(x.w.toLowerCase());}
+function canMake(x){return isStarter(x)||(x.p||[]).every(k=>(RANK[k]||9999)<=ownN);}
+/* ===== 再現率チェック =====
+ * 「出るはずの語」を並べて、実際に候補に入るかを1語ずつ診断する。
+ * 候補一覧だけ見ていると、出た語の質しか分からず取りこぼしに気づけない
+ * (noun.food が全部食べ物なので成立に見えたが、実は6割落としていた)。 */
+const WBY={};   // 単語 -> レコード(綴りで引く)
+const ALLW=[];  // 重複を除いた全単語(構造イベント用。タグが無い語も含む)
+/* 語のしくみで絞る。意味タグを使わないので、レア度にも品詞にも縛られない */
+function pickStruct(x,st){
+  if(!st)return false;
+  switch(st.t){
+    case 'g'    : return x.g===st.v;                       // 語派
+    case 'root' : return (x.p||[]).includes(st.v);         // 語根を含む
+    case 'pre'  : return x.pre===st.v;                     // 接頭辞
+    case 'suf'  : return x.suf===st.v;                     // 接尾辞
+    case 'rhyme': return x.w.toLowerCase().endsWith(st.v); // 韻(語末)
+    case 'pos'  : return (x.pos||'').split('/').includes(st.v);
+    case 'nroot': return (x.p||[]).length===st.v;          // 語根の数
+  }
+  return false;
+}
+/* 答えとして成立しない語を全イベントから除く。
+ * and / but / a / the のような機能語、語義が空の語、固有名詞は
+ * どのイベントでも「渡せるもの」にならない。 */
+const FUNC_POS=new Set(['前','接','冠','代','助','間','副']);
+function isJunk(x){
+  const pos=(x.pos||'').split('/').filter(Boolean);
+  if(pos.length&&pos.every(p=>FUNC_POS.has(p)))return '機能語・副詞のみ';
+  if(!(x.ja||'').trim())return '語義が空';
+  if(/^[A-Z]/.test(x.w))return '固有名詞';
+  return null;
+}
+const ST_LABEL={g:'語派',root:'語根',pre:'接頭辞',suf:'接尾辞',rhyme:'韻(語末)',pos:'品詞',nroot:'語根の数'};
+const G_JA={G:'ゲルマン',L:'ロマンス',Gr:'ギリシャ'};
+function stText(st){
+  const v=st.t==='g'?(G_JA[st.v]||st.v):st.t==='rhyme'?('-'+st.v):st.t==='root'?('*'+st.v):st.v;
+  return `${ST_LABEL[st.t]} = ${v}`;
+}
+function reqText(e){
+  if(e.asp&&e.asp.length>1)return e.asp.map(a=>a.n).join(' × ');
+  if(e.ans)return `列挙 ${e.ans.split(/\s+/).filter(Boolean).length}語`;
+  const a=e.st?stText(e.st):'';
+  const b=(e.tags&&e.tags.length)?e.tags.map(t=>t.split('.')[1]).join('/'):'';
+  return [a,b].filter(Boolean).join(' × ');
+}
+/* ===== 効果の5段階 =====
+ * どんな英単語でも多少は効く。ただし刺さり方が違う。
+ *   dual … 2つ以上の属性に同時に刺さる。書かなくても属性の掛け算で生まれる
+ *   crit … 一撃で満足させる。属性ごとに列挙(30〜45語)
+ *   good … 少し満足する。属性ごとに語根かタグで自動判定(数百語)
+ *   bad  … 激怒する。キャラに1つだけ列挙(10〜15語)
+ *   none … 何も起きない。上のどれでもない語ぜんぶ
+ * 序盤に強い: good が語根/タグ判定なので、答えを1つも知らなくても必ず何か効く。
+ * 執筆量はキャラあたり crit 40語×属性数 + bad 15語。あとは自動。 */
+/* 敵は複数の属性を同時に持つ。ゾンビ・サラリーマンなら「給料」でも「蘇生」でも倒せる。
+   asp[] … 属性の配列。属性ごとに ans(一撃の列挙)と good(タグ/語根)を持つ。
+   2つ以上の属性に同時に刺さる語は「二重」。rest(休息/安らかに眠れ)、
+   security(安心/有価証券)、spring(春/ばね)のような二義語がここに落ちてくる。 */
+function aspHits(x,e){
+  const lc=x.w.toLowerCase(), h=[];
+  (e.asp||[]).forEach((a,i)=>{
+    if(a._ans&&a._ans.has(lc)){h.push({i,k:'crit'});return;}
+    // <b>語根そのものが答え</b>の相手。その祖先から生まれた語なら どれでも一撃
+    if(a._keys&&(x.p||[]).some(k=>a._keys.includes(k))){h.push({i,k:'crit'});return;}
+    if(a.pre&&new RegExp('(^|,\\s*)('+a.pre+')').test(x.pre||'')){h.push({i,k:'crit'});return;}
+    const g=a.good;
+    if(g&&(g.t==='tag'?g.v.includes(TAGS[x.w]):(x.p||[]).includes(g.v)))h.push({i,k:'good'});
+  });
+  return h;
+}
+function tierOf(x,e){
+  if(!e.asp)return null;
+  prepTiers(e);
+  if(e._bad&&e._bad.has(x.w.toLowerCase()))return 'bad';
+  const h=aspHits(x,e);
+  if(!h.length)return 'none';
+  // 二重は「両方の属性に一撃で刺さる」語だけ。タグ判定(good)は範囲が広いので、
+  // これを数に入れると opportunity が「資金＋睡眠不足」になってしまう。
+  if(h.filter(v=>v.k==='crit').length>=2)return 'dual';
+  return h.some(v=>v.k==='crit')?'crit':'good';
+}
+function prepTiers(e){
+  if(e._bad)return;
+  const S=t=>new Set((t||'').split(/[\s,、,\/]+/).filter(Boolean).map(v=>v.toLowerCase()));
+  e._bad=S(e.bad);
+  (e.asp||[]).forEach(a=>{a._ans=S(a.ans);});
+}
+// イベントの生候補。しくみイベントは意味タグを通さない
+function rawFor(e){
+  let L;
+  // 列挙方式: 人(かAI)が挙げた答えのうち、DBに在るものだけを残す。
+  // 精度100%・ゴミゼロ。落ちるのはDBの穴だけ(再現率チェックに理由が出る)。
+  if(e.asp){
+    prepTiers(e);
+    const rankT={dual:0,crit:1,good:2,bad:3};
+    const seen=new Set(), out=[];
+    for(const x of ALLW){
+      if(seen.has(x.w))continue;
+      const t=tierOf(x,e);
+      if(!t||t==='none')continue;
+      if(t==='good'&&(isJunk(x)||posMismatch(x)))continue;
+      seen.add(x.w); out.push(x);
+    }
+    return out.sort((a,b)=>(rankT[tierOf(a,e)]-rankT[tierOf(b,e)])||((a.r??9999)-(b.r??9999)));
+  }
+  if(e.st){
+    L=ALLW.filter(x=>pickStruct(x,e.st));
+    // しくみ条件に意味タグを重ねる。語派だけだと and / face のような
+    // 「答えにならない語」が混ざるので、必ず何を差し出すのかを決める。
+    if(e.tags&&e.tags.length)L=L.filter(x=>e.tags.includes(TAGS[x.w]));
+  }else{
+    L=byTags(e.tags);
+  }
+  // 語義ズレ(タグが英語の別語義に付いている疑い)も候補から外す。
+  // come(来る)が体の部位に、same(同じ)が人に出るのはこれ。
+  return L.filter(x=>!isJunk(x)&&!posMismatch(x)).sort((a,b)=>(a.r??9999)-(b.r??9999));
+}
+function diagnose(word,e){
+  const w=word.trim();if(!w)return null;
+  const x=WBY[w.toLowerCase()];
+  if(!x){
+    const np=NOPIE[w]||NOPIE[w.toLowerCase()];
+    if(np)return {w,st:'nopie',msg:`レア度${np[0]??'—'} ・ ${np[1]||'?'} ・ 印欧語根(pie列)が空`};
+    return {w,st:'nodb',msg:'元データに行が無い'};
+  }
+  // 列挙方式: 答えに書いてあってDBに在れば、それが正解
+  if(e.ans){
+    const list=new Set(e.ans.split(/[\s,、,\/]+/).filter(Boolean).map(t=>t.toLowerCase()));
+    if(!list.has(w.toLowerCase()))return {w,x,st:'struct',msg:'答えに列挙されていない'};
+    return {w,x,st:'ok',msg:''};
+  }
+  const j=isJunk(x);
+  if(j)return {w,x,st:'struct',msg:`除外（${j}）`};
+  if(posMismatch(x))return {w,x,st:'struct',msg:'除外（語義ズレ）'};
+  if(e.st){
+    if(!pickStruct(x,e.st))return {w,x,st:'struct',msg:`条件に合わない（${stText(e.st)} ではない）`};
+    if(e.tags&&e.tags.length&&!e.tags.includes(TAGS[x.w]))
+      return {w,x,st:'tag',msg:`タグが ${(TAGS[x.w]||'—').split('.')[1]||'無し'}`};
+    return {w,x,st:'ok',msg:''};
+  }
+  const t=TAGS[x.w];
+  if(!t)return {w,x,st:'notag',msg:'タグ未付与(機能語 or WordNet未収録)'};
+  if(!(e.tags||[]).includes(t))return {w,x,st:'tag',msg:`タグが ${t.split('.')[1]}`};
+  if(e.val&&(x.w in VALS)&&VALS[x.w]!==e.val)return {w,x,st:'val',msg:`正負が ${VALS[x.w]}`};
+  if(e.kw){let re;try{re=new RegExp(e.kw);}catch(err){re=null;}
+    if(re&&!re.test(x.ja||''))return {w,x,st:'kw',msg:'語義しぼりに掛からない'};}
+  return {w,x,st:'ok',msg:''};
+}
+const ST={ok:['✅','候補に入っている','var(--ok)'],
+  tag:['⚠️','DBにあるがタグ違い（1語1タグの副作用 ― AI再タグ付けで回収できる）','var(--gold)'],
+  val:['⚠️','正負フィルタで落ちた（自動判定の誤り）','var(--gold)'],
+  kw :['⚠️','語義しぼりで落ちた（キーワードを足せば回収できる）','var(--gold)'],
+  notag:['⚠️','タグが付いていない','var(--gold)'],
+  struct:['⚠️','しくみの条件に合わない','var(--gold)'],
+  nopie:['🔧','元データに行はあるが「印欧語根(pie列)」が空 ― 語根を埋めれば入る（16,662語がこの状態）','#b5761f'],
+  nodb:['❌','元データに行そのものが無い','var(--ng)']};
+/* 答えの点検。列挙した語を「DBが画面に出す日本語語義つき」で並べ直すだけ。
+   これが無かったせいで、spring を「ばね」、key を「鍵」、rest を「休息」、
+   court を「宮廷」のつもりで答えに入れてしまい、まとめて60語を消す羽目になった。
+   英語の語感で列挙すると必ずこの穴に落ちるので、書いたら必ずここで見る。 */
+function auditHTML(e){
+  if(!e.asp)return '';
+  const rows=e.asp.map(a=>{
+    const ws=(a.ans||'').split(/\s+/).filter(Boolean);
+    const cells=ws.map(w=>{
+      const x=WBY[w.toLowerCase()];
+      if(!x)return `<span class="au ng"><b>${esc(w)}</b>DBなし</span>`;
+      const ja=(x.ja||'').trim();
+      return `<span class="au${ja?'':' ng'}"><b>${esc(w)}</b>${esc(ja||'語義が空')}</span>`;
+    }).join('');
+    return `<div style="margin-top:7px"><div style="font-size:11.5px;font-weight:bold;color:var(--soft)">${esc(a.n||'答え')} — ${ws.length}語</div>
+      <div style="margin-top:3px;line-height:1.95">${cells}</div></div>`;
+  }).join('');
+  return `<div style="margin-top:14px">
+    <h3>🔎 答えの点検 ― プレイヤーに見えるのはこの日本語だけ</h3>
+    <p>列挙した答えを、<b>DBが画面に出す語義</b>と並べています。英語の語感で選ぶと、
+    ここがまったく別の意味になっていることがあります。<b>この日本語だけを見て納得できない語は、答えから外してください。</b></p>
+    ${rows}</div>`;
+}
+function recallHTML(e){
+  const src=(recallInput[cur]!==undefined?recallInput[cur]:(e.expect||e.ans||''));
+  const words=src.split(/[\s,、,\/]+/).filter(Boolean);
+  const res=words.map(w=>diagnose(w,e)).filter(Boolean);
+  const ok=res.filter(r=>r.st==='ok').length;
+  const rate=res.length?Math.round(ok/res.length*100):0;
+  const g=collect(res);
+  return `<div id="lab" style="margin-top:14px">
+    <h3>📏 再現率チェック ― 出るべき語が本当に出るか</h3>
+    <p>「このイベントなら出てほしい」語を並べてください。1語ずつ、候補に入るか・入らないなら何が原因かを診断します。
+    候補一覧だけを見ていると出た語の質しか分からず、<b>取りこぼしに気づけません</b>。</p>
+    <textarea id="recallBox" style="width:100%;margin-top:9px;border:2.5px solid var(--line);border-radius:11px;
+      padding:8px 11px;font-size:13px;font-family:inherit;min-height:56px;resize:vertical"
+      placeholder="出てほしい語をスペースかカンマ区切りで(例: bread milk carrot onion egg)">${esc(src)}</textarea>
+    ${res.length?`<div class="verdict ${rate>=80?'good':rate>=50?'warn':'bad'}" style="margin-top:10px">
+      <b>再現率 ${ok} / ${res.length}（${rate}%）</b><br>
+      ${rate>=80?'このイベントは取りこぼしが少ない。':rate>=50?'半分前後を取りこぼしている。原因の内訳を下で確認。':'大半を取りこぼしている。候補一覧が綺麗でも、このイベントは成立していない。'}
+    </div>`:''}
+    ${['ok','tag','struct','val','kw','notag','nopie','nodb'].map(k=>{
+      if(!g[k]||!g[k].length)return '';
+      const [ic,lb,col]=ST[k];
+      return `<div style="margin-top:8px;font-size:12px">
+        <div style="color:${col};font-weight:bold">${ic} ${esc(lb)} — ${g[k].length}語</div>
+        <div style="margin-top:3px;line-height:1.9">${g[k].map(r=>
+          `<span style="display:inline-block;border:1.5px solid var(--line);border-radius:9px;padding:1px 7px;margin:0 3px 3px 0;background:#fff">
+           <b>${esc(r.w)}</b>${r.x?`<span style="color:var(--soft);font-size:10px"> ${esc((r.x.ja||'').slice(0,8))}</span>`:''}
+           ${r.msg?`<span style="color:${col};font-size:10px"> ${esc(r.msg)}</span>`:''}</span>`).join('')}</div></div>`;
+    }).join('')}
+  </div>`;
+}
+function collect(res){const g={};for(const r of res){(g[r.st]=g[r.st]||[]).push(r);}return g;}
+let recallInput={};
+function bindRecall(){
+  const b=$('#recallBox');if(!b)return;
+  let t=null;
+  b.oninput=()=>{clearTimeout(t);t=setTimeout(()=>{
+    const p=b.selectionStart;recallInput[cur]=b.value;renderDetail();
+    const n=$('#recallBox');if(n){n.focus();n.setSelectionRange(p,p);}
+  },500);};
+}
+function etyChip(k){
+  const r=ROOTS[k]||{},id=RANK[k]||'—';
+  const ico=r.img?`<img src="${A}${esc(r.img)}" onerror="this.outerHTML='<span class=&quot;dot&quot; style=&quot;background:${esc(r.color||'#c9c0d4')}&quot;></span>'">`
+                 :`<span class="dot" style="background:${esc(r.color||'#c9c0d4')}"></span>`;
+  return `<span class="ety" title="${esc(r.ja||k)} / *${esc(r.pie||k)} / 派生${r.dict??'?'}語">${ico}<span class="id">#${id}</span><span class="jn">${esc(r.ja||k)}</span></span>`;
+}
+function wordRow(x,e){
+  const v=VALS[x.w],g=GLOSS[x.w],mm=posMismatch(x);
+  const tr=e?tierOf(x,e):null;
+  // どの属性に刺さったか。2個並べば「二重」の理由がそのまま見える
+  const ab=(tr&&tr!=='bad'&&e.asp&&e.asp.length>1)
+    ? aspHits(x,e).map(h=>`<span class="asp a${h.i%4}">${esc(e.asp[h.i].n)}</span>`).join('') : '';
+  return `<div class="wr${canMake(x)?'':' off'}${mm?' mism':''}${tr?' t-'+tr:''}">
+    ${tr?`<span class="tier ${tr}">${TIER_JA[tr]}</span>`:''}${ab}${isStarter(x)?'<span class="init" title="初期装備。エティモン不要で最初から使える">初</span>':''}<b>${esc(x.w)}</b><span class="ja">${esc(x.ja||'')}</span>
+    ${(x.p||[]).map(etyChip).join('')}
+    <span class="rr">レア${x.r??'—'}</span>
+    ${v==='+'?'<span class="vp p">＋</span>':v==='-'?'<span class="vp n">−</span>':''}
+    ${mm?'<span class="mm" title="タグは英語の別語義に付いている疑い">⚠ 語義ズレ</span>':''}
+    <span class="tt">${esc((TAGS[x.w]||'').split('.')[1]||'')}</span>
+    ${g?`<span class="gl">${esc(g)}</span>`:''}</div>`;
+}
+const TIER_JA={dual:'二重',crit:'一撃',good:'有効',bad:'逆効果',none:'無効'};
+function listBox(id,list,cls,ttl,e){
+  const lim=showAll[id]?list.length:40;
+  if(!list.length)return `<div class="col"><div class="colH ${cls}">${ttl}<span class="n">0語</span></div>
+    <div class="none">該当なし</div></div>`;
+    const mk=list.filter(canMake).length, mism=list.filter(posMismatch).length;
+  const td=e?list.filter(x=>tierOf(x,e)==='dual').length:0;
+  const tc=e?list.filter(x=>tierOf(x,e)==='crit').length:0;
+  const tb=e?list.filter(x=>tierOf(x,e)==='bad').length:0;
+  // 作れるものを先に並べる(手持ちで何ができるか見たいので)。
+  // ただし段階つきのキャラは、見出しどおり二重→一撃→…の順を優先する
+  // (作れない二重が40件の枠外に押し出されて見えなくなるため)。
+  if(!e||!e.asp)list=list.slice().sort((a,b)=>(canMake(b)?1:0)-(canMake(a)?1:0));
+  return `<div class="col"><div class="colH ${cls}">${ttl}<span class="n">${list.length}語 <span style="color:${mk?'var(--ok)':'var(--ng)'}">／作れる ${mk}</span>${td?`<span style="color:#c2185b"> ／二重 ${td}</span>`:''}${tc?`<span style="color:#b8860b"> ／一撃 ${tc}</span>`:''}${tb?`<span style="color:var(--ng)"> ／逆効果 ${tb}</span>`:''}${mism?`<span style="color:var(--ng)"> ／⚠ズレ ${mism}</span>`:''}</span></div>
+    <div class="wlist">${list.slice(0,lim).map(x=>wordRow(x,e)).join('')}
+    ${list.length>lim?`<button class="more" data-all="${id}">残り ${list.length-lim} 語を表示</button>`:''}</div></div>`;
+}
+/* 何体そろえばイベントが遊べるか。エティモンIDは派生語が多い順。
+   ある単語を作るには、その語の語根を全部持っている必要がある。 */
+const NS=[5,10,20,30,50,100,200,400,9999];
+function covHTML(rows){
+  const cnt=(list,n)=>list.filter(x=>(x.p||[]).every(k=>(RANK[k]||9999)<=n)).length;
+  const body=rows.map(({e})=>{
+    const L=byKw(byVal(rawFor(e),e.val),e.kw);
+    const cells=NS.map(n=>{
+      const c=cnt(L,n), rate=L.length?c/L.length:0;
+      const cls=c>=5&&rate>=0.15?'hot':c<=2?'cold':'';
+      return `<td class="${cls}">${c}</td>`;
+    }).join('');
+    return `<tr><td class="nm">${esc(e.ttl)}</td><td>${L.length}</td>${cells}</tr>`;
+  }).join('');
+  const tot=NS.map(n=>rows.reduce((a,{e})=>a+cnt(byKw(byVal(rawFor(e),e.val),e.kw),n),0));
+  const avg=tot.map(t=>Math.round(t/rows.length));
+  // 候補が多すぎるイベント(1,000語超)は平均を歪めるので、実用的なものだけで別に見る
+  const tight=rows.filter(({e})=>byKw(byVal(rawFor(e),e.val),e.kw).length<=100);
+  const tightAvg=NS.map(n=>Math.round(
+    tight.reduce((a,{e})=>a+cnt(byKw(byVal(rawFor(e),e.val),e.kw),n),0)/Math.max(1,tight.length)));
+  return `<div class="col solo" style="margin-top:12px">
+    <div class="colH v">何体そろえばイベントが遊べるか<span class="n">エティモンID＝派生語が多い順</span></div>
+    <div class="covWrap" style="padding:8px">
+      <table class="cov"><thead><tr><th style="text-align:left">イベント</th><th>候補</th>
+      ${NS.map(n=>`<th>${n===9999?'全1437体':'上位'+n+'体'}</th>`).join('')}</tr></thead>
+      <tbody>${body}
+      <tr style="background:#faf7fd"><td class="nm">合計</td><td>—</td>${tot.map(t=>`<td><b>${t}</b></td>`).join('')}</tr>
+      <tr style="background:#faf7fd"><td class="nm">1イベント平均</td><td>—</td>${avg.map(t=>`<td>${t}語</td>`).join('')}</tr>
+      </tbody></table>
+      <div style="font-size:11.5px;color:var(--soft);line-height:1.7;margin-top:8px">
+      緑＝5語以上かつ候補の15%以上／赤＝2語以下。<br>
+      平均は「話し相手がいない」(候補1,493語)のような大味なイベントに引っ張られるので、
+      <b>しぼり込みが効いている実用的なイベント(候補100語以下の${tight.length}件)だけ</b>で見ます:
+      <b>50体で平均${tightAvg[4]}語、100体で${tightAvg[5]}語、200体で${tightAvg[6]}語、400体で${tightAvg[7]}語。</b><br>
+      <b>いま絵がある50体では「暗くて見えない」2語・「呪いを解く」2語・「川を渡りたい」5語</b>で、
+      選択肢が無くゲームになりません。<b>1イベントに10語以上ほしいなら200体、余裕を持たせるなら400体</b>が目安です。<br>
+      注意すべき点として、<b>派生語が多い順＝イベントに使える順ではありません。</b>
+      上位は #1前へ #2一緒に #3中に #4後ろに #5否定 #6外へ …と<b>接頭辞的な抽象語根ばかり</b>で、
+      食べ物・体・光のような具体的な語根はずっと下位にあります。
+      「体を治したい」が上位50体で${cnt(byKw(byVal(rawFor(EVENTS[4]),EVENTS[4].val),EVENTS[4].kw),50)}語しか作れないのはそのためで、
+      <b>絵を描く順番は派生語数ではなく、イベントで実際に使われる順で決めたほうがよさそうです。</b></div>
+    </div></div>`;
+}
+/* 易しい語(レア度400以下)を最も多く解放する順に語根を選ぶ(貪欲法)。
+ * 派生語数順に絵を描くと、day も year も作れないゲームになるので、その対案。 */
+function easyOrder(limit){
+  const easy=ALLW.filter(x=>(x.r??9999)<=400);
+  const owned=new Set(), out=[];
+  let rem=easy.slice();
+  for(let i=0;i<limit;i++){
+    const gain={};
+    for(const x of rem){
+      const miss=(x.p||[]).filter(k=>!owned.has(k));
+      if(miss.length===1)gain[miss[0]]=(gain[miss[0]]||0)+1;
+    }
+    const best=Object.entries(gain).sort((a,b)=>b[1]-a[1])[0];
+    if(!best)break;
+    owned.add(best[0]);
+    rem=rem.filter(x=>!(x.p||[]).every(k=>owned.has(k)));
+    out.push({k:best[0],g:best[1],cum:easy.length-rem.length});
+  }
+  return {out,total:easy.length};
+}
+function artOrderHTML(){
+  const {out,total}=easyOrder(24);
+  const byDict=new Set(Object.entries(RANK).filter(([,v])=>v<=24).map(([k])=>k));
+  const easy=ALLW.filter(x=>(x.r??9999)<=400);
+  const alt=easy.filter(x=>(x.p||[]).every(k=>byDict.has(k))).length;
+  return `<div class="col solo" style="margin-top:12px">
+    <div class="colH v">絵を描くべき語根の順番<span class="n">易しい語を最も多く解放する順（貪欲法）</span></div>
+    <div style="padding:9px 11px">
+      <div style="font-size:11.5px;color:var(--soft);line-height:1.8;margin-bottom:8px">
+      <b>上位50体（派生語数順）で作れる3,116語の中央値レア度は819</b>。
+      つまり <b>incipience(1417) や chukker(1610) のような珍語ばかり作れて、day(98) year(164) man(89) は作れません</b>。
+      day の語根は#317、year は#542、man は#215 ― <b>易しい語ほど、派生語の少ない語根から来ている</b>からです。<br>
+      下は「レア度400以下の語をいちばん多く解放する順」で語根を並べ直したもの。
+      この24体で <b>${out.length?out[out.length-1].cum:0}語</b>／派生語数順の24体だと <b>${alt}語</b>（易しい語 全${total}語中）。</div>
+      <div class="covWrap"><table class="cov"><thead><tr>
+        <th style="text-align:left">順</th><th style="text-align:left">語根</th><th style="text-align:left">意味</th>
+        <th>解放</th><th>累計</th><th>派生語順位</th><th>絵</th></tr></thead><tbody>
+      ${out.map((o,i)=>{const r=ROOTS[o.k]||{};const rk=RANK[o.k]||0;
+        return `<tr><td>${i+1}</td><td class="nm">*${esc(r.pie||o.k)}</td><td class="nm" style="font-weight:normal">${esc(r.ja||'')}</td>
+        <td>${o.g}</td><td><b>${o.cum}</b></td><td class="${rk>50?'cold':''}">#${rk}</td>
+        <td>${r.img?'○':'<b style="color:var(--ng)">未</b>'}</td></tr>`;}).join('')}
+      </tbody></table></div>
+      <div style="font-size:11.5px;color:var(--soft);line-height:1.8;margin-top:8px">
+      「派生語順位」が赤いものは<b>派生語数順では50位圏外＝今は絵が無い</b>語根です。
+      <b>*to-(それ・#172) *kʷo-(誰・何・#66) *bheuə-(存在する・#43) *es-(存在する・#82) *gnō-(知る・#44) *magh-(能力をもつ・#191)</b>
+      ― これらを描くと、易しい語が一気に作れるようになります。</div>
+    </div></div>`;
+}
+function summaryHTML(){
+  const rows=EVENTS.map(e=>{
+    const raw=rawFor(e),fin=byKw(byVal(raw,e.val),e.kw);
+    const kwN=e.ans?e.ans.split(/\s+/).filter(Boolean).length:(e.kw?e.kw.split('|').length:0);
+    return {e,raw:raw.length,fin:fin.length,kwN};
+  });
+  const totKw=rows.reduce((a,b)=>a+b.kwN,0), totTag=rows.reduce((a,b)=>a+(b.e.ans?0:b.e.st?1:(b.e.tags||[]).length),0);
+  const totFin=rows.reduce((a,b)=>a+b.fin,0);
+  return `<div class="scene">
+    <h2>📊 総括 ― この方式は成立するか</h2>
+    <p>意味タグ(WordNet supersense 44種)だけで、あらゆるイベントに正しい単語を割り当てられるか。
+    ${EVENTS.length}個のイベントで実際に引いて確かめた結果です。</p>
+  </div>
+  <div class="verdict good"><b>結論:成立する。ただし「イベントごとの執筆」は必要で、それは避けられないし避けなくていい。</b><br>
+  英単語17,505語に個別設定するのは破綻しますが、<b>イベント側に数行書くのは、どんなゲームでもやっていること</b>です。
+  上の12イベントで書いた量は <b>タグ ${totTag}個 ＋ キーワード ${totKw}語 = 合計 ${totTag+totKw}項目</b>。
+  それで <b>${totFin}語ぶんの正解</b>が引けています。1イベントあたり平均 ${Math.round((totTag+totKw)/EVENTS.length)}項目で、
+  平均 ${Math.round(totFin/EVENTS.length)}語の正解候補。<b>執筆の単位が「単語」から「イベント」に移った</b>のが要点で、
+  イベント100個作るなら約${Math.round((totTag+totKw)/EVENTS.length*100)}項目、現実的な量に収まります。</div>
+  <div class="verdict bad"><b>答えに「語源が同じだけの語」と「英語の別語義に頼った語」を入れていた ― 60語を削除</b><br>
+  最初は、<b>*kaput-(頭) の子孫だから</b>という理由で <b>capital(資本) / captain / chief / chapter(章) / cape(岬)</b> を
+  「体の部位をよこせ」の答えにしていました。語源的には正しくても、<b>資本も岬も体の部位ではありません</b>。
+  語源が同じというだけで正解にするのは、プレイヤーへの押しつけです。
+  <b>語源の面白さは図鑑で語ることで、正解判定に混ぜるものではない</b> ― ここを分けます。<br>
+  同じ検査で、<b>もっと多かったのは「英語の別語義に頼った語」</b>でした。
+  <b>spring</b> はばねのつもりが語義は<b>春</b>、<b>rest</b> は休息のつもりが<b>残り</b>、
+  <b>key</b>=小島(鍵) <b>note</b>=覚え書(音符) <b>air</b>=空気(アリア) <b>bank</b>=土手(銀行)
+  <b>scale</b>=鱗(規模) <b>court</b>=裁判所(宮廷) <b>patient</b>=忍耐強い(患者)
+  <b>cheese</b>=重要人物 <b>tear</b>=引き裂く(涙) <b>riddle</b>=穴だらけにする(なぞなぞ)。
+  画面には日本語語義しか出ないので、プレイヤーには意味不明になります。<br>
+  影響が大きかったのは<b>二重</b>で、<b>19語 → 8語</b>に減りました。
+  「時計まわりは二義語だらけ」「金融語は信頼の語」というのは<b>英語の頭の中だけの話</b>で、
+  日本語語義しか見えない画面では何も起きていませんでした。
+  残った8語(fat / flesh / meat / marrow / credit / charm / watch / parade)は、
+  <b>日本語の語義ひとつで両方の属性を指しています</b>。<br>
+  再発防止に<b>「🔎 答えの点検」</b>をキャラ画面に追加しました。列挙した答えを
+  <b>DBが出す日本語語義つきで並べ直すだけ</b>ですが、これが無かったせいで60語ぶん間違えました。</div>
+  <div class="verdict bad"><b>エティモン順に開放すると、抽象から始まって具体に永久に辿り着かない</b><br>
+  エティモンは<b>派生語が多い順</b>に並べています。ところが上位から出てくる語は
+  <b>and / at / do / for / from / in / to / first / face / state / fact / far / country / approach / effect</b> ―
+  機能語とロマンス系の抽象名詞ばかりで、<b>「できること」が一つもありません</b>
+  (上位50体で作れる3,147語のうち<b>66%がロマンス系</b>。全体平均の55%より偏る)。<br>
+  原因は逆側にあります。<b>原始動詞ほど語根が深い</b>のです ―
+  <b>eat=*ed-(#276) drink=*dhreg-(#980) sleep=*slēb-(#1045) see=*sekʷ-2(#769) weep=*wāb-(#1340)</b>。
+  「食べる」専用の語根は「食べる」しか産まなかったので、派生語順では最後尾に回ります。
+  実測で<b>原始動詞78語のうち上位50体で作れるのは9語だけ</b>(最深語根#の中央値は270)。<br>
+  → 対策が<b>初期装備91語</b>。食べる・切る・運ぶ・見る・言う・作るをエティモン抜きで最初から配ります。
+  ヘッダのチェックを外すと差が出ます:<b>エティモン1体のとき、初期装備なしでは全キャラ合計で0〜9語しか作れず、
+  ありでは4〜18語</b>。lv:10 の雑魚4体は<b>初期装備だけで倒せる</b>ように作ってあります。</div>
+  <div class="verdict warn"><b>ただし タグだけでは解けないイベントがある(3件)</b><br>
+  「自信をあげる」「争いを鎮める」「呪いを解く」のように<b>良し悪しの向きが要るイベント</b>では、タグが正負を区別しません。
+  noun.feeling には「愛」も「憎悪」も同居し、verb.change には「治す」も「腐らせる」も入ります。
+  ここは語義キーワードで絞るしかなく、絞れば正しく解けます(アイドルの例:2,499語 → 63語、内容は love/courage/beauty/cute/charm/elegant …と完全に妥当)。</div>
+  <div class="verdict bad"><b>タグは「英語の最頻語義」に付いている ― 日本語の語義とは別物のことがある</b><br>
+  「体の一部が石になっている」に <b>come（来る）</b> が出るのはこれ。
+  WordNet で come の最も頻度が高い名詞語義は <i>"the thick white fluid containing spermatozoa"</i>（精液）で、
+  だから noun.body が付く。画面に出している語義は日本語の「来る」なので、プレイヤーには意味不明になる。
+  同種:<b>small</b>=背中のくびれ / <b>behind</b>=尻 / <b>quick</b>=爪の下の生身 / <b>delicious</b>=甘いリンゴの品種。<br>
+  <b>タグの英語語義と、表示している日本語語義が、そもそも別の意味を指している。</b>
+  そこで候補の各行に<b>WordNetの英語定義</b>を出し、DBの品詞と食い違う語には <span style="color:var(--ng)">⚠語義ズレ</span> を付けた。
+  「なぜこれが候補なのか」がその場で分かる。<br>
+  検出できたのは全14,958語中<b>994語(6%)</b>だが、これは品詞で機械的に分かるぶんだけで、実際はもっと多い
+  （<b>delicious</b> は名詞義があるので検出できない）。<b>AIに日本語語義を読ませてタグを付け直せば根本から消える</b>問題。</div>
+  <div class="verdict bad"><b>候補一覧だけ見ていると取りこぼしに気づけない ― 「食べ物」は再現率36%だった</b><br>
+  noun.food の304語は中身がすべて食べ物なので「精度100%・成立」に見えたが、
+  代表的な食べ物32語で答え合わせをすると <b>12語しか出てこない</b>。
+  carrot / onion / egg / fish / corn / wheat は最頻語義が plant や animal なので food タグが付かず、
+  potato / rice / sugar は元データの語根欄が空、cabbage は行そのものが無い。<br>
+  <b>精度(出た語の質)ではなく再現率(出るべき語が出たか)で見ないと、この方式は評価できない。</b>
+  各イベントの下に再現率チェックを付けたので、必ずそちらで確認すること。</div>
+  <div class="verdict warn"><b>取りこぼしの原因は3種類あって、直せるものと直せないものがある</b><br>
+  <b>①タグ違い</b>(carrot=plant, egg=animal) … 最頻語義だけを採った副作用。<b>AI再タグ付けで回収できる</b>。複数タグを許せば carrot に plant と food の両方が付く。<br>
+  <b>②語根が未入力</b>(hand, bone, hair, potato, rice) … 元データ35,031行のうち <b>16,662語</b>が、語源テキストもレア度も揃っているのに
+  <b>印欧語根(pie列)だけが空</b>。ビルドはpie列が空の行を捨てるので丸ごと落ちている。
+  うち<b>561語はレア度400以下</b>で、埋めれば低レア語のプールが今の919語から1.6倍になる。
+  ただし hand / bone / hair はゲルマン語固有で印欧語根が特定できていない語なので、全部は埋まらない。<br>
+  <b>③元データに行が無い</b>(cabbage, plum) … 追加するしかない。</div>
+  <div class="verdict bad"><b>列挙型キャラは序盤に置けない ― 3体持っていても合計4語しか作れない</b><br>
+  キャラ9体の答えを全部合わせても、<b>上位3体で作れるのは4語</b>（5体でも4語、10体で17語、50体でようやく66語）。
+  各キャラが要求する語根がばらばら（*kaput- / *bhudh- / *kerd- / *bhreuə- / *tkei- …）で、
+  1体持っていても1〜6語しか届かないためです。<b>答えが数十個では、序盤のエティモンでは1つも作れません。</b></div>
+  <div class="verdict good"><b>解決は「要求の粒度を語根に上げる」こと ― 1体で71語</b><br>
+  「*per1(前へ)の血を引く言葉なら何でもいい」にすると、<b>エティモンを1体持っているだけで71語</b>から選べて絶対に詰まない。
+  列挙型が50体で1〜13語なのに対し、<b>桁が2つ違います</b>。<br>
+  単独で作れる語が多い語根: <b>*per1(前へ)94語 / *stā-(立つ)79 / *en(中に)70 / *genə-(生む)67 / *dhē-(置く)57 / *weid-(見る)56</b>。
+  どれも絵があるので今すぐ配れます。<br>
+  <b>序盤は語根要求型、中盤(10体〜)から列挙型</b>に移行するのが素直です。
+  そして<b>配ったエティモンに対応するキャラを出す</b>こと ― *per1 を配ったら ススマヌ、という組み方にしないと、
+  語根要求型でも「持っていない語根を要求される」ので同じことになります（上の一覧で「上位1体」にすると、
+  ススマヌ以外が全部0語になるのが見えます）。</div>
+  <div class="verdict good"><b>いちばん強いのは「意味」ではなく「しくみ」で解くイベント</b><br>
+  語派・語根・接頭辞・韻・品詞は、<b>レア度にも意味にも品詞にも縛られない</b>ので、条件を1個書くだけで数千語が該当します。
+  しかも語源ゲームとして納得感が最も高い型です。<br>
+  <b>ローマの遺跡（ロマンス語）9,155語 / 北の森（ゲルマン）4,616語 / ギリシャ神殿 3,066語</b> ―
+  「どの遺跡か」を変えるだけで性格の違うイベントが3つ。執筆量はどれも<b>条件1個</b>。<br>
+  <b>《前へ》の血脈（*per1）785語</b> は for / first / problem / private / profit が同じ祖先だと分かる瞬間が作れます。
+  語根は1,437種類あるので、<b>エティモンの絵がそのままイベントになります</b>。<br>
+  <b>吟遊詩人（-ion で終わる語）730語</b>は意味も語源も問わない、綴りの音だけのイベント。再現率100%。<br>
+  意味タグのイベントが再現率36〜100%とばらつくのに対し、<b>しくみイベントは判定が機械的なので取りこぼしが原理的に起きません</b>
+  （落ちるのは「語根が未入力」の語だけ）。</div>
+  <div class="verdict good"><b>低レア度で解けるイベントは実在する ― ただし食べ物ではない</b><br>
+  レア度400以下は全14,958語中わずか<b>919語</b>。その919語がどこに集まっているかを逆算すると、
+  <b>数(27語・再現率100%) / 時(47語) / 体の部位(15語) / 集団(44語) / 場所(33語) / 家族(11語) / 住まい(9語)</b> に固まっている。
+  one(1) two(19) day(98) head(128) man(89) place(123) room(162) ― どれも中学英語の帯。<br>
+  逆に<b>食べ物・光・自然現象・形・天候は薄い</b>(天候はわずか7語)。
+  <b>抽象概念や関係は印欧語根が濃く、具体物 ― とくに近世以降に入ってきた物 ― は薄い</b>という、
+  語源データベースの性質がそのまま出ている。イベントは厚い側で設計すること。</div>
+  <div class="verdict bad"><b>形容詞には意味タグが存在しない ― これが最大の穴</b><br>
+  WordNet が意味カテゴリを与えているのは<b>名詞(25種)と動詞(15種)だけ</b>で、形容詞は全部 <code>adj.all</code>、
+  副詞は全部 <code>adv.all</code> に放り込まれます。これは意味ではなく<b>品詞のバケツ</b>です。
+  だから「アイドル」の候補に <code>some</code> <code>other</code> <code>such</code> <code>any</code> <code>just</code> が並びました。
+  「かわいい」も「そのような」も同じ袋に入っています。<b>「自信がある」「美しい」はまさに形容詞</b>なので、
+  一番タグが要る場所にタグが無い、という構造です。</div>
+  <div class="verdict warn"><b>正負(＋/−)は必須。ただし自動判定は当てにならない</b><br>
+  SentiWordNet で自動採点すると <b>courage(勇気) が −、anger(怒り) が ＋</b> になります。
+  「正」側に <code>just</code> <code>very</code> <code>new</code> <code>available</code> が残り、
+  「負」側に <code>number</code> <code>level</code> <code>size</code> <code>black</code> <code>red</code> が入ります。目視で3割前後が誤りです。<br>
+  そこで <b>app/data/pie/valence.csv</b>（${Object.keys(VALS).length}行）を下書きとして用意しました。
+  <code>auto</code> 列が自動判定、<code>fix</code> 列に <b>＋ / 0 / −</b> を書くとそちらが優先されます。
+  対象は形容詞・感情・属性・状態・変化動詞だけで、食べ物や道具は正負が無関係なので入っていません。
+  再生成しても fix 列は保持されます。<b>3値の分類作業なので、設計と違って終わります。</b></div>
+  <div class="verdict bad"><b>逆に「かんたん」なはずのイベントほど、候補が多すぎて選ぶ楽しさが無い</b><br>
+  「話し相手がいない」は noun.person 1,493語が全部正解になってしまいます。
+  <b>候補が多い＝良いイベント、ではありません。</b>面白さは候補50〜200語くらいの帯にありそうで、
+  そこを外れるイベントは設計し直したほうがよさそうです。下の表の「候補」列で確認できます。</div>
+  ${covHTML(rows)}
+  ${artOrderHTML()}
+  <div class="col solo" style="margin-top:12px">
+    <div class="colH a">全${EVENTS.length}イベントの内訳<span class="n">執筆 ${totTag+totKw}項目 → 正解 ${totFin}語</span></div>
+    <div class="wlist" style="max-height:none">
+    ${rows.map(({e,raw,fin,kwN})=>{
+      const c={ok:'var(--ok)',warn:'var(--gold)',bad:'var(--ng)'}[e.note];
+      const mk={ok:'✅',warn:'⚠️',bad:'❌'}[e.note];
+      return `<div class="wr" style="align-items:center">
+        <span style="width:16px">${mk}</span>
+        <b style="flex:1;min-width:140px;font-size:12.5px">${esc(e.ttl)}</b>
+        <span class="rr">執筆 ${e.ans?kwN:(e.st?1:(e.tags||[]).length)+kwN}項目</span>
+        <span class="rr">タグのみ ${raw}語</span>
+        <span class="tt" style="color:${c};background:#fff;border:1.5px solid ${c}">候補 ${fin}語</span></div>`;
+    }).join('')}</div></div>`;
+}
+function renderDetail(){
+  if(cur===-1){
+    $('#detail').innerHTML=summaryHTML()+labHTML();
+    document.querySelectorAll('[data-all]').forEach(b=>b.onclick=()=>{showAll[b.dataset.all]=1;renderDetail();});
+    bindLab();return;
+  }
+  const e=EVENTS[cur];
+  const raw=rawFor(e), mid=byVal(raw,e.val), fin=byKw(mid,e.kw);
+  const vc={ok:'good',warn:'warn',bad:'bad'}[e.note];
+  const vt={ok:'✅ タグだけで成立',warn:'⚠️ 語義の絞り込みが要る',bad:'❌ タグだけでは解けない'}[e.note];
+  let h=`<div class="scene">
+    <h2>${esc(e.ttl)}</h2><p>${esc(e.scene)}</p>
+    <div class="req">${e.asp
+      ?`<span style="font-size:11px;color:var(--soft)">${e.asp.length>1?'属性':'つくりかた'}</span>`
+       +(e.asp.length>1
+         ? e.asp.map((a,i)=>`<span class="tg asp a${i%4}" style="font-size:11px">${esc(a.n)}<span style="opacity:.65"> ${(a.ans||'').split(/\s+/).filter(Boolean).length}語${a.good?` ＋${a.good.t==='tag'?a.good.v.join('/'):'*'+a.good.v}`:''}</span></span>`).join('')
+         : `<span class="tg" style="background:#fff2e6;border-color:#e8c39a;color:#a86a2b">答えを列挙 → DBと突き合わせ</span>`)
+      :e.st
+      ?`<span style="font-size:11px;color:var(--soft)">しくみ</span><span class="tg" style="background:#f0eefb;border-color:#c0b8ea">${esc(stText(e.st))}</span>`
+        +((e.tags&&e.tags.length)?`<span style="font-size:11px;color:var(--soft)">×</span>${e.tags.map(t=>`<span class="tg">${esc(t)}</span>`).join('')}`:'')
+      :`<span style="font-size:11px;color:var(--soft)">要求タグ</span>${(e.tags||[]).map(t=>`<span class="tg">${esc(t)}</span>`).join('')}`}
+      ${e.val?`<span style="font-size:11px;color:var(--soft);margin-left:6px">正負</span><span class="kw">${e.val==='+'?'＋のみ':'−のみ'}</span>`:''}
+      ${e.kw?`<span style="font-size:11px;color:var(--soft);margin-left:6px">語義しぼり</span><span class="kw">${esc(e.kw)}</span>`:''}</div>
+    <div style="margin-top:7px;font-size:11.5px;color:var(--soft)">
+      このイベントの執筆量 <b style="color:var(--ink)">${e.ans?e.ans.split(/\s+/).filter(Boolean).length:e.st?1:(e.tags||[]).length+(e.kw?e.kw.split('|').length:0)}項目</b>
+      （${e.ans?`答えを ${e.ans.split(/\s+/).filter(Boolean).length}語 列挙`:e.st?'しくみの条件1個だけ':`タグ${e.tags.length}個${e.kw?` ＋ キーワード${e.kw.split('|').length}語`:''}`}）
+      → 正解候補 <b style="color:var(--accent2)">${fin.length}語</b></div>
+  </div>
+  <div class="verdict ${vc}"><b>${vt}</b><br>${esc(e.msg)}</div>
+  <div class="cols">
+    ${listBox('a',raw,'a',e.asp?(e.asp.length>1?'効果のある語（二重→一撃→有効→逆効果の順）':'効果のある語（一撃→有効→逆効果の順）'):e.st?'条件に合う語':'① タグだけ',e)}
+    ${e.val?listBox('v',mid,'v','② 正負でも絞る',e):''}
+    ${e.kw?listBox('b',fin,'b',(e.val?'③':'②')+' 語義でも絞る',e):''}
+  </div>`;
+  h+=auditHTML(e);
+  h+=recallHTML(e);
+  h+=labHTML();
+  $('#detail').innerHTML=h;
+  document.querySelectorAll('[data-all]').forEach(b=>b.onclick=()=>{showAll[b.dataset.all]=1;renderDetail();});
+  bindRecall();bindLab();
+}
+/* ===== 自作イベント ===== */
+let labTags=new Set(),labKw='',labVal='';
+function labHTML(){
+  const ts=Object.keys(BYTAG).sort((a,b)=>BYTAG[b].length-BYTAG[a].length);
+  return `<div id="lab">
+    <h3>🧬 自分でイベントを作って試す</h3>
+    <p>タグを選び、必要なら語義で絞り込んで、思いついたイベントが本当に解けるか確かめてください。</p>
+    <div id="tagPick">${ts.map(t=>`<span class="tp${labTags.has(t)?' on':''}" data-t="${esc(t)}">${esc(t)}<small>${BYTAG[t].length}</small></span>`).join('')}</div>
+    <div style="display:flex;gap:6px;align-items:center;margin-top:9px;font-size:11px;color:var(--soft)">正負
+      ${[['','しぼらない'],['+','＋のみ'],['-','−のみ']].map(([v,n])=>
+        `<span class="tp${labVal===v?' on':''}" data-v="${v}">${n}</span>`).join('')}</div>
+    <input id="kwBox" type="search" placeholder="語義でしぼる(例: 光|火|明 ／ 空欄なら絞らない)" value="${esc(labKw)}">
+    <div id="labOut"></div></div>`;
+}
+function bindLab(){
+  document.querySelectorAll('.tp').forEach(el=>el.onclick=()=>{
+    const t=el.dataset.t;
+    labTags.has(t)?labTags.delete(t):labTags.add(t);
+    el.classList.toggle('on');renderLabOut();
+  });
+  document.querySelectorAll('[data-v]').forEach(el=>el.onclick=()=>{
+    labVal=el.dataset.v;
+    document.querySelectorAll('[data-v]').forEach(o=>o.classList.toggle('on',o.dataset.v===labVal));
+    renderLabOut();
+  });
+  const kb=$('#kwBox');
+  if(kb){kb.oninput=()=>{labKw=kb.value;renderLabOut();};}
+  renderLabOut();
+}
+function renderLabOut(){
+  const box=$('#labOut');if(!box)return;
+  if(!labTags.size){box.innerHTML='<div class="none">タグを1つ以上えらんでください</div>';return;}
+  const raw=byTags([...labTags]), mid=byVal(raw,labVal), fin=byKw(mid,labKw);
+  box.innerHTML=`<div class="cols">
+    ${listBox('la',raw,'a','① タグだけ')}
+    ${labVal?listBox('lv',mid,'v','② 正負でも絞る'):''}
+    ${labKw?listBox('lb',fin,'b',(labVal?'③':'②')+' 語義でも絞る'):''}</div>`;
+  box.querySelectorAll('[data-all]').forEach(b=>b.onclick=()=>{showAll[b.dataset.all]=1;renderLabOut();});
+}
+function renderLabTags(){}
+load();
+</script>
+</body>
+</html>

@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>エティモン 合体</title>
+<style>
+:root{
+  --bg:#160f22; --bg2:#241736; --panel:#2c1e42; --panel2:#3a2a55; --line:#54406f;
+  --fg:#f4eeff; --dim:#a795c4; --gold:#f5c542; --ok:#7cd98a; --ng:#e87f8f;
+  --join:#5aa7e8; --core:#f2a444;
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;height:100%;overflow:hidden}
+body{background:radial-gradient(130% 90% at 50% 0%,var(--bg2),var(--bg));color:var(--fg);
+  font-family:"Hiragino Maru Gothic ProN","Hiragino Sans","Noto Sans JP",system-ui,sans-serif;
+  font-size:15px;user-select:none;display:flex;flex-direction:column}
+.hide{display:none!important}
+button{font:inherit;cursor:pointer}
+.top{flex:0 0 auto;display:flex;gap:6px;align-items:center;padding:8px 11px;
+  background:rgba(255,255,255,.06);border-bottom:2px solid var(--line)}
+.top h1{font-size:14px;margin:0 6px 0 0;letter-spacing:1px;white-space:nowrap;flex:0 0 auto}
+@media(max-width:480px){.top h1{display:none}}
+.tab{border:2px solid var(--line);background:transparent;color:var(--fg);border-radius:10px;
+  padding:6px 13px;font-size:13.5px;white-space:nowrap;flex:0 0 auto}
+.tab.on{background:var(--gold);color:#33280a;border-color:var(--gold);font-weight:700}
+.top .r{margin-left:auto;font-size:12px;color:var(--dim);white-space:nowrap}
+.wrap{flex:1 1 auto;overflow-y:auto;padding:12px 11px 26px}
+h2{font-size:16px;margin:0 0 4px}.sub{color:var(--dim);font-size:12.5px;margin:0 0 12px;line-height:1.7}
+
+/* ---- 合体台 ---- */
+.altar{display:flex;align-items:center;justify-content:center;gap:9px;margin-bottom:12px}
+.pod{flex:1;max-width:132px;aspect-ratio:1;background:var(--panel);border:3px dashed var(--line);
+  border-radius:18px;display:flex;flex-direction:column;align-items:center;justify-content:center;
+  padding:6px;text-align:center;position:relative}
+.pod.on{border-style:solid;border-color:var(--pc)}
+.pod img{width:100%;max-height:62px;object-fit:contain}
+.pod .ic{font-size:34px;line-height:1}
+.pod .jp{font-size:13px;font-weight:700;line-height:1.15;margin-top:2px}
+.pod .k{font-size:9.5px;color:var(--dim);font-family:ui-monospace,monospace}
+.pod .kind{position:absolute;top:4px;left:5px;font-size:9px;padding:1px 6px;border-radius:6px;
+  background:var(--core);color:#3a2b05;font-weight:700}
+.pod .kind.j{background:var(--join);color:#0d2740}
+.plus{font-size:26px;color:var(--gold);font-weight:700}
+.fusebtn{width:100%;background:var(--gold);border:0;border-radius:15px;padding:14px;
+  font-size:18px;font-weight:700;color:#33280a;box-shadow:0 5px 0 #b8901c;margin-bottom:12px}
+.fusebtn:active{transform:translateY(4px);box-shadow:0 1px 0 #b8901c}
+.fusebtn:disabled{opacity:.35;box-shadow:none}
+
+/* ---- 結果 ---- */
+#result{position:fixed;inset:0;background:rgba(10,5,20,.9);z-index:40;display:none;
+  align-items:center;justify-content:center;padding:18px}
+#result.on{display:flex}
+.rc{background:var(--panel);border:4px solid var(--gold);border-radius:22px;padding:18px 20px 16px;
+  max-width:420px;width:100%;text-align:center;animation:pop .5s cubic-bezier(.2,1.5,.4,1)}
+@keyframes pop{0%{transform:scale(.7);opacity:0}100%{transform:none;opacity:1}}
+.rc.miss{border-color:var(--line)}
+.eq{font-size:13.5px;color:var(--dim);margin-bottom:10px}
+.eq b{color:var(--fg);font-size:15px}
+.rc .born{font-size:36px;font-weight:700;letter-spacing:.5px;line-height:1.1}
+.rc .bja{font-size:17px;color:var(--gold);margin-top:2px}
+.rc .rare{display:inline-block;margin-top:7px;font-size:12px;border:1px solid var(--gold);
+  color:var(--gold);border-radius:999px;padding:2px 12px}
+.rc .b{font-size:12.5px;color:var(--dim);line-height:1.7;margin-top:10px;text-align:left}
+.rc .more{font-size:12.5px;color:var(--dim);margin-top:8px}
+.rc .more span{display:inline-block;background:var(--panel2);border:1px solid var(--line);
+  border-radius:6px;padding:2px 8px;margin:2px}
+.go{margin-top:14px;width:100%;background:var(--gold);border:0;border-radius:14px;padding:13px;
+  font-size:16px;font-weight:700;color:#33280a;box-shadow:0 4px 0 #b8901c}
+.go:active{transform:translateY(3px);box-shadow:0 1px 0 #b8901c}
+.go.gh{background:transparent;color:var(--fg);border:2px solid var(--line);box-shadow:none}
+
+/* ---- 手持ち ---- */
+.filt{display:flex;gap:6px;margin-bottom:8px}
+.filt button{flex:1;border:2px solid var(--line);background:transparent;color:var(--dim);
+  border-radius:10px;padding:6px;font-size:12.5px}
+.filt button.on{border-color:var(--gold);color:var(--gold)}
+.pool{display:grid;grid-template-columns:repeat(auto-fill,minmax(84px,1fr));gap:6px}
+.pk{background:var(--panel);border:2px solid var(--line);border-radius:12px;padding:5px 3px 6px;
+  text-align:center;position:relative}
+.pk.core{border-left:5px solid var(--core)}
+.pk.join{border-left:5px solid var(--join)}
+.pk.sel{border-color:var(--gold);background:var(--panel2)}
+.pk:active{transform:scale(.95)}
+.pk img{width:100%;height:44px;object-fit:contain}
+.pk .ic{font-size:28px;line-height:1.4}
+.pk .jp{font-size:11px;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pk .n{font-size:9px;color:var(--dim)}
+
+/* ---- 図鑑 ---- */
+.book{display:flex;flex-direction:column;gap:6px}
+.bk{background:var(--panel);border:2px solid var(--line);border-radius:12px;padding:8px 11px;
+  display:flex;align-items:baseline;gap:8px;flex-wrap:wrap}
+.bk b{font-size:17px}.bk i{font-style:normal;font-size:12.5px;color:var(--dim)}
+.bk .from{margin-left:auto;font-size:11px;color:var(--dim)}
+.bk .st{color:var(--gold);font-size:11px}
+</style>
+</head>
+<body>
+
+<div class="top">
+  <h1>エティモン 合体</h1>
+  <button class="tab on" data-t="fuse">合体</button>
+  <button class="tab" data-t="book">図鑑</button>
+  <div class="r" id="rn"></div>
+</div>
+<div class="wrap">
+
+<section id="fuse">
+  <div class="altar">
+    <div class="pod" id="podA"></div>
+    <div class="plus">＋</div>
+    <div class="pod" id="podB"></div>
+  </div>
+  <button class="fusebtn" id="doFuse" disabled>合体する</button>
+  <p class="sub" id="tip"></p>
+  <div class="filt">
+    <button data-f="all" class="on">ぜんぶ</button>
+    <button data-f="中身">中身</button>
+    <button data-f="つなぎ手">つなぎ手</button>
+  </div>
+  <div class="pool" id="pool"></div>
+</section>
+
+<section id="book" class="hide">
+  <h2>生まれた ことば</h2>
+  <p class="sub" id="bookTip"></p>
+  <div class="book" id="bookList"></div>
+</section>
+
+</div>
+
+<div id="result"><div class="rc" id="rc"></div></div>
+
+<script id="fdata" type="application/json">{"pairs":{},"roots":{}}</script>
+<script>
+const A='../assets/', $=s=>document.querySelector(s);
+let D=JSON.parse(document.getElementById('fdata').textContent);
+let P=D.pairs||{}, R=D.roots||{};
+let have=[], sel=[], found=[], filt='all', tried=new Set();
+const key=(a,b)=>[a,b].sort().join('|');
+const ICON={'つなぎ手':'🔗','中身':'✦'};
+
+function rootHTML(k,cls){
+  const r=R[k];
+  return `<button class="pk ${r.kind==='中身'?'core':'join'}${cls||''}" data-k="${k}">
+    ${r.img?`<img src="${A+'chara/'+r.img}" alt="">`:`<div class="ic">${ICON[r.kind]}</div>`}
+    <div class="jp">${r.jp}</div><div class="n">${r.n}語</div></button>`;
+}
+function podHTML(k){
+  if(!k) return `<div class="pod"><div class="ic" style="opacity:.3">?</div>
+    <div class="jp" style="color:var(--dim);font-size:11px">えらぶ</div></div>`;
+  const r=R[k];
+  return `<div class="pod on" style="--pc:${r.kind==='中身'?'var(--core)':'var(--join)'}">
+    <span class="kind ${r.kind==='つなぎ手'?'j':''}">${r.kind}</span>
+    ${r.img?`<img src="${A+'chara/'+r.img}" alt="">`:`<div class="ic">${ICON[r.kind]}</div>`}
+    <div class="jp">${r.jp}</div><div class="k">*${k}</div></div>`;
+}
+function draw(){
+  $('#podA').outerHTML=podHTML(sel[0]).replace('class="pod','id="podA" class="pod');
+  $('#podB').outerHTML=podHTML(sel[1]).replace('class="pod','id="podB" class="pod');
+  const ks=have.filter(k=>filt==='all'||R[k].kind===filt)
+    .sort((a,b)=>R[b].n-R[a].n);
+  $('#pool').innerHTML=ks.map(k=>rootHTML(k,sel.includes(k)?' sel':'')).join('');
+  $('#doFuse').disabled=sel.length!==2;
+  const t=sel.length===2?key(sel[0],sel[1]):null;
+  $('#tip').innerHTML= sel.length===2
+    ? (tried.has(t)?'この組み合わせは もう ためした。':'なにが 生まれるかは、合体するまで わからない。')
+    : `<b style="color:var(--core)">中身</b>どうしの合体は めずらしいが、名作が出る。<br>
+       <b style="color:var(--join)">つなぎ手</b>は 相手が多いので 当たりやすい。`;
+  $('#rn').textContent=`手持ち ${have.length} ・ 生まれた ${found.length}`;
+}
+$('#pool').addEventListener('click',ev=>{
+  const b=ev.target.closest('.pk'); if(!b)return;
+  const k=b.dataset.k, at=sel.indexOf(k);
+  if(at>=0)sel.splice(at,1); else if(sel.length<2)sel.push(k); else sel=[sel[1],k];
+  draw();
+});
+document.querySelector('.filt').addEventListener('click',ev=>{
+  const b=ev.target.closest('button'); if(!b)return;
+  filt=b.dataset.f;
+  document.querySelectorAll('.filt button').forEach(x=>x.classList.toggle('on',x===b));
+  draw();
+});
+
+$('#doFuse').addEventListener('click',()=>{
+  const [a,b]=sel, t=key(a,b);
+  tried.add(t);
+  const v=P[t];
+  const ra=R[a], rb=R[b];
+  if(!v){
+    $('#rc').className='rc miss';
+    $('#rc').innerHTML=`<div class="eq"><b>${ra.jp}</b> ＋ <b>${rb.jp}</b></div>
+      <div class="born" style="font-size:24px;color:var(--dim)">なにも 生まれなかった</div>
+      <div class="b">この2つが 合わさった英単語は 見つかっていない。
+        べつの相手と 組んでみよう。</div>
+      <button class="go gh" data-close="1">とじる</button>`;
+    $('#result').classList.add('on'); draw(); return;
+  }
+  const w=v[0];
+  const rare=v.length===1?'★★★ レア合体':v.length<=3?'★★':'★';
+  if(!found.some(f=>f.w===w.w)) found.unshift({...w,a,b,rare,n:v.length});
+  // 合体に成功すると、その語が持つ もう一つの縁で 新しい語根が来ることがある
+  let got=null;
+  const cand=Object.keys(P).filter(kk=>kk.split('|').some(x=>x===a||x===b))
+    .flatMap(kk=>kk.split('|')).filter(x=>!have.includes(x));
+  if(cand.length && Math.random()<0.55){
+    got=cand[Math.floor(Math.random()*cand.length)];
+    have.push(got);
+  }
+  $('#rc').className='rc';
+  $('#rc').innerHTML=`<div class="eq"><b>${ra.jp}</b> ＋ <b>${rb.jp}</b> ＝</div>
+    <div class="born">${w.w}</div><div class="bja">${w.ja}</div>
+    <div class="rare">${rare}</div>
+    ${w.b?`<div class="b">${w.b}</div>`:''}
+    ${v.length>1?`<div class="more">同じ組み合わせから ほかにも:<br>
+      ${v.slice(1,5).map(x=>`<span>${x.w}<i style="color:var(--dim);font-size:10.5px"> ${x.ja}</i></span>`).join('')}</div>`:''}
+    ${got?`<div class="more" style="color:var(--gold)">
+      <b>${R[got].jp}</b>(${R[got].kind})が 仲間になった</div>`:''}
+    <button class="go" data-close="1">つづける</button>`;
+  $('#result').classList.add('on');
+  draw();
+});
+$('#result').addEventListener('click',ev=>{
+  if(ev.target.closest('[data-close]')||ev.target.id==='result'){
+    $('#result').classList.remove('on'); sel=[]; draw(); }
+});
+
+document.querySelector('.top').addEventListener('click',ev=>{
+  const b=ev.target.closest('.tab'); if(!b)return;
+  const t=b.dataset.t;
+  document.querySelectorAll('.tab').forEach(x=>x.classList.toggle('on',x===b));
+  ['fuse','book'].forEach(s=>$('#'+s).classList.toggle('hide',s!==t));
+  if(t==='book')drawBook();
+});
+function drawBook(){
+  $('#bookTip').innerHTML=`合体で 生まれた語 <b>${found.length}</b> / 全部で 7,187語。
+    組み合わせは <b>3,979通り</b>あり、その66%は 1語しか生まれない。`;
+  $('#bookList').innerHTML=found.length? found.map(f=>`
+    <div class="bk"><b>${f.w}</b><i>${f.ja}</i>
+      <span class="st">${f.rare}</span>
+      <span class="from">${R[f.a].jp} ＋ ${R[f.b].jp}</span></div>`).join('')
+    : '<p class="sub">まだ なにも 生まれていない。</p>';
+}
+
+(async()=>{
+  if(location.protocol!=='file:'){
+    try{ const r=await fetch('data/pie/fusion.json');
+      if(r.ok){ const j=await r.json(); if(j.pairs){P=j.pairs;R=j.roots;} } }catch(e){}
+  }
+  if(!Object.keys(R).length){ $('#pool').innerHTML='<p class="sub">データがありません。'
+    +'python3 app/build_fusion.py を実行してください。</p>'; return; }
+  // はじめの手持ち。つなぎ手4人 + 絵のある中身6人
+  const js=Object.keys(R).filter(k=>R[k].kind==='つなぎ手').sort((a,b)=>R[b].n-R[a].n).slice(0,4);
+  const cs=Object.keys(R).filter(k=>R[k].kind==='中身'&&R[k].img).sort((a,b)=>R[b].n-R[a].n).slice(0,6);
+  have=[...js,...cs];
+  draw();
+})();
+</script>
+</body>
+</html>

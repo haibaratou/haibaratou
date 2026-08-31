@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="ja"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>エティモアイランド（指定ポケット試作）</title>
+<!-- グリードアイランド式の最小試作: 野原のものをタップで「カード化」し、
+     一族ページの「指定ポケット」を埋める。戦闘・数値・クイズなし。
+     レア度は語の実使用頻度(rank)から。語源データは data/pie/*.json が正。 -->
+<style>
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+html,body{width:100%;height:100%;overflow:hidden;background:#141019}
+body{font-family:-apple-system,BlinkMacSystemFont,"Hiragino Sans","Yu Gothic",sans-serif;color:#241f26}
+#wrap{position:fixed;inset:0}
+#app{position:absolute;left:50%;top:50%;width:1920px;height:1080px;transform:translate(-50%,-50%) scale(1);
+  transform-origin:center;background:#fffdf8;display:flex;flex-direction:column;overflow:hidden}
+header{display:flex;align-items:center;gap:14px;padding:10px 20px;background:#2f2833;color:#fff}
+header h1{font-size:21px;font-weight:900}
+.sp{flex:1}
+.hbtn{background:rgba(255,255,255,.14);border:2px solid rgba(255,255,255,.3);color:#fff;border-radius:12px;
+  padding:9px 18px;font-size:16px;font-weight:900;cursor:pointer}
+#field{flex:1;position:relative;overflow:hidden;background-size:auto 100%;background-repeat:repeat-x;background-position:0 bottom}
+.wild{position:absolute;width:150px;height:150px;object-fit:contain;cursor:pointer;
+  transition:left 3s ease-in-out,top 3s ease-in-out;filter:drop-shadow(0 6px 5px rgba(30,20,40,.35))}
+.wild:hover{filter:drop-shadow(0 0 14px #ffd23e)}
+.wild.got::after{content:"✓"}
+/* カード化演出 */
+#flash{position:absolute;inset:0;pointer-events:none;opacity:0;z-index:40}
+#flash.on{animation:fl .6s ease-out}
+@keyframes fl{0%{opacity:0}25%{opacity:.9;background:radial-gradient(circle,#fff 0%,#ffd23e66 40%,transparent 70%)}100%{opacity:0}}
+#cardGet{position:absolute;inset:0;z-index:50;display:none;align-items:center;justify-content:center;background:rgba(20,14,26,.75)}
+#cardGet.on{display:flex}
+.card{width:380px;background:linear-gradient(160deg,#fff8e2,#f2e2b8);border:4px solid #8a6a1c;border-radius:20px;
+  padding:20px;text-align:center;box-shadow:0 0 40px rgba(240,193,79,.6),0 22px 50px rgba(10,6,16,.6);
+  animation:cin .55s cubic-bezier(.2,1.4,.4,1)}
+@keyframes cin{0%{transform:rotateY(90deg) scale(.6)}100%{transform:none}}
+.card img{width:230px;height:230px;object-fit:contain}
+.card .no{font-size:14px;font-weight:900;color:#8a6a1c;text-align:left}
+.card b{font-size:40px;display:block}
+.card em{font-style:normal;font-size:22px;font-weight:900;color:#4a3c50}
+.card .stars{color:#c9962e;font-size:22px;letter-spacing:2px}
+.card .fam{margin-top:6px;font-size:15px;font-weight:800;color:#6a5c40}
+.tap{margin-top:10px;font-size:15px;color:#8d8299;animation:bl 1s steps(1) infinite}
+@keyframes bl{50%{opacity:0}}
+/* バインダー */
+#binder{position:absolute;inset:0;z-index:60;display:none;background:#2b2433;overflow-y:auto;padding:30px 60px}
+#binder.on{display:block}
+.page{background:linear-gradient(#fffdf4,#f4ead2);border:4px solid #8a6a1c;border-radius:24px;
+  padding:24px;margin:0 auto 30px;width:1500px;position:relative}
+.page h2{font-size:24px;color:#6a5c40}
+.page .note{font-size:15px;color:#8d8299;font-weight:700;margin:4px 0 10px}
+.slots{display:flex;align-items:center;justify-content:center;gap:26px}
+.rootc{width:190px;height:190px;border-radius:50%;border:6px solid var(--cc);background:#fffdf6;overflow:hidden;
+  display:flex;align-items:center;justify-content:center;flex:0 0 auto}
+.rootc img{width:92%;height:92%;object-fit:contain}
+.slot{width:200px;height:266px;border-radius:14px;border:3px dashed #b9a878;background:#efe6cf;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;font-weight:900}
+.slot.filled{border-style:solid;border-color:#8a6a1c;background:linear-gradient(160deg,#fff8e2,#f2e2b8);
+  box-shadow:0 6px 14px rgba(30,20,40,.25)}
+.slot img{width:120px;height:120px;object-fit:contain}
+.slot .q{font-size:44px;color:#b9a878}
+.slot .w{font-size:22px}
+.slot .j{font-size:15px;color:#6f6673}
+.slot .st{color:#c9962e;font-size:15px}
+.comp{position:absolute;right:24px;top:20px;font-size:19px;font-weight:900;color:#2f7a52}
+.toast{position:fixed;left:50%;bottom:10%;transform:translateX(-50%);z-index:990;background:rgba(30,22,38,.94);
+  color:#fff;font-weight:bold;font-size:17px;padding:10px 22px;border-radius:12px}
+</style></head><body>
+<div id="wrap"><div id="app">
+  <header><h1>🏝 エティモアイランド</h1>
+    <span id="prog" style="font-weight:900"></span><span class="sp"></span>
+    <button class="hbtn" id="btnBook">📖 バインダー</button>
+    <button class="hbtn" id="btnReset">🔁 さいしょから</button></header>
+  <div id="field"><div id="flash"></div></div>
+  <div id="cardGet"></div>
+  <div id="binder"></div>
+</div></div>
+<script>
+'use strict';
+const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
+const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const A='../assets/';
+const ri=n=>Math.floor(Math.random()*n);
+/* 指定ポケット: 一族3ページ×5枠。語は語源データ実在のものだけ(起動時検証) */
+const PAGES=[
+ {root:'kaput-', name:'カプト（頭）の指定ポケット', img:'chara/T_ch_kaput_head.png', color:'#e8875a',
+  slots:['captain','chef','chief','chapter','head']},
+ {root:'weid-', name:'ウェイド（見る・知る）の指定ポケット', img:'chara/T_ch_weid_see.png', color:'#a06ee0',
+  slots:['video','wizard','idea','history','guide']},
+ {root:'bhā-2', name:'ファーリ（話す）の指定ポケット', img:'chara/T_ch_bha_speak.png', color:'#f2a444',
+  slots:['fable','telephone','prophet','infant','fame']},
+];
+const ALLW=PAGES.flatMap(p=>p.slots);
+let WBY={};
+let S=JSON.parse(localStorage.getItem('etymon_island')||'{"got":[]}');
+const save=()=>localStorage.setItem('etymon_island',JSON.stringify(S));
+const starOf=r=>{const t=[100,220,360,520,720,1000,1350,1750,2150];let n=1;for(const v of t)if((r??9999)>v)n++;return Math.min(10,n);};
+function toast(t){const d=document.createElement('div');d.className='toast';d.textContent=t;
+  document.body.appendChild(d);setTimeout(()=>d.remove(),2000);}
+/* ===== 野原 ===== */
+let spawnT=null;
+function renderField(){
+  $('#field').style.backgroundImage=`url(${A}ground/T_BG_base_ground_tree.png)`;
+  $$('#field .wild').forEach(e=>e.remove());
+  spawn();spawn();spawn();
+  clearInterval(spawnT);
+  spawnT=setInterval(()=>{if($$('#field .wild').length<4)spawn();wander();},4000);
+}
+function spawn(){
+  const rest=ALLW.filter(w=>!S.got.includes(w));
+  const pool=rest.length?rest:ALLW;
+  const w=pool[ri(pool.length)];
+  if($$('#field .wild').find(e=>e.dataset.w===w))return;
+  const img=document.createElement('img');
+  img.className='wild'; img.dataset.w=w;
+  img.src=A+'word/'+w+'.png';
+  img.onerror=function(){this.onerror=null;this.src=A+'chara/T_ch_kaput_head.png';};
+  img.style.left=(200+ri(1450))+'px'; img.style.top=(430+ri(400))+'px';
+  img.onclick=()=>capture(w,img);
+  $('#field').appendChild(img);
+}
+function wander(){
+  $$('#field .wild').forEach(e=>{if(Math.random()<0.6){
+    e.style.left=(200+ri(1450))+'px'; e.style.top=(430+ri(400))+'px';}});
+}
+/* ===== カード化 ===== */
+function capture(w,el){
+  const x=WBY[w]; const st=starOf(x.r);
+  const fl=$('#flash'); fl.classList.remove('on'); void fl.offsetWidth; fl.classList.add('on');
+  el.remove();
+  const isNew=!S.got.includes(w);
+  if(isNew){S.got.push(w);save();}
+  const page=PAGES.find(p=>p.slots.includes(w));
+  $('#cardGet').innerHTML=`<div class="card">
+    <div class="no">No.${x.r}　ストック ${11-st}枚</div>
+    <img src="${A}word/${w}.png" onerror="this.style.display='none'">
+    <b>${esc(w)}</b><em>${esc(x.ja||'')}</em><br>
+    <span class="stars">${'★'.repeat(st)}${'☆'.repeat(10-st)}</span>
+    <div class="fam">${esc(page.name)}へ ${isNew?'<b>カード化!</b>':'（捕獲済み）'}</div>
+    <div class="tap">▼ タップでバインダーへ</div></div>`;
+  $('#cardGet').classList.add('on');
+  $('#cardGet').onclick=()=>{
+    $('#cardGet').classList.remove('on');
+    const done=page.slots.every(s=>S.got.includes(s));
+    if(isNew&&done){openBinder();toast('🎉 '+page.name+' コンプリート!');}
+    prog();
+  };
+  prog();
+}
+/* ===== バインダー ===== */
+function openBinder(){
+  $('#binder').innerHTML=PAGES.map(p=>{
+    const done=p.slots.every(s=>S.got.includes(s));
+    return `<div class="page" style="--cc:${p.color}">
+      <h2>${esc(p.name)}</h2><div class="note">同じ祖先 *${p.root.replace(/-$/,'')} から生まれた ことばたち</div>
+      ${done?'<div class="comp">✅ コンプリート</div>':''}
+      <div class="slots">
+        ${p.slots.slice(0,2).map(slotHTML).join('')}
+        <div class="rootc"><img src="${A}${p.img}"></div>
+        ${p.slots.slice(2).map(slotHTML).join('')}
+      </div></div>`;}).join('')
+    +`<div style="text-align:center"><button class="hbtn" onclick="closeBinder()">🏝 野原へもどる</button></div>`;
+  $('#binder').classList.add('on');
+}
+function slotHTML(w){
+  const got=S.got.includes(w), x=WBY[w]||{};
+  if(!got)return `<div class="slot"><span class="q">？</span><span class="j">まだ 見ぬ ことば</span></div>`;
+  const st=starOf(x.r);
+  return `<div class="slot filled"><img src="${A}word/${w}.png" onerror="this.style.display='none'">
+    <span class="w">${esc(w)}</span><span class="j">${esc(x.ja||'')}</span>
+    <span class="st">${'★'.repeat(st)}</span></div>`;
+}
+function closeBinder(){$('#binder').classList.remove('on');}
+function prog(){$('#prog').textContent=`指定ポケット ${S.got.length} / ${ALLW.length}`;}
+/* ===== 起動 ===== */
+const fit=()=>{const vw=innerWidth,vh=innerHeight;
+  $('#app').style.transform=`translate(-50%,-50%) scale(${Math.min(vw/1920,vh/1080)})`;};
+addEventListener('resize',fit);
+async function boot(){
+  fit();
+  const words=await fetch('data/pie/words.json').then(r=>r.json());
+  const seen=new Set();
+  for(const x of words){const k=x.w.toLowerCase();if(!seen.has(k)){seen.add(k);WBY[k]=x;}}
+  const bad=ALLW.filter(w=>!WBY[w]);
+  if(bad.length){document.body.textContent='語源データに無い語: '+bad.join(',');return;}
+  $('#btnBook').onclick=openBinder;
+  $('#btnReset').onclick=()=>{if(confirm('カードを全部忘れる?')){localStorage.removeItem('etymon_island');location.reload();}};
+  prog(); renderField();
+}
+window.G={get S(){return S;},capture:(w)=>capture(w,{remove(){}}),openBinder,PAGES};
+boot();
+</script></body></html>

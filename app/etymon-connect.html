@@ -1,0 +1,386 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>エティモリンゴ 親戚さがし（プロトタイプ5）</title>
+<!--
+  ============================================================================
+  エティモリンゴ:親戚さがし(プロトタイプ5)
+  ============================================================================
+  「結局ゲームとして何が面白いのか」への答え。
+
+  このデータの固有の面白さは<b>ひとつ</b>しかない:
+  <b>「関係ないと思っていた語が、実は親戚だと分かる瞬間」</b>。
+  これまでの試作は、その驚きを画面が「教えて」いた。読むだけだった。
+  ここでは驚きを<b>プレイヤーが外すリスクの中で当てる手柄</b>にする。
+
+  ■ ルール(NYT Connections の語源版)
+    16語を、<b>同じ祖先をもつ4つの家族</b>に分ける。まちがえられるのは4回。
+    3つ合っていれば「おしい、あと1つ」とだけ教える。
+
+  ■ なぜゲームになるのか
+    意味の直感で分けると<b>外れる</b>ようにお題を組んである。
+      story(物語)は「話す」ではなく<b>「見る」</b>の子(historia=見て知ったこと)。
+      music(音楽)は「音」ではなく<b>「考える」</b>の子(ムーサの技)。
+      rich(豊かな)は「金」ではなく<b>「まっすぐ」</b>の子(王の力)。
+      date(日付)は<b>「与える」</b>の子(手紙に書き与えた日)。
+    ―― 意味の直感 vs 語源の真実。この緊張が1手ごとにある。
+    外して「えっ、こっちの家族!?」となった瞬間が、そのまま学びになる。
+
+  ■ エティモペディアとの連動
+    登場する祖先は roots.csv の14語根だけ。家族が解けるたびに
+    その語根の<b>蘊蓄(roots.csv の note)</b>が出る。図鑑がそのまま攻略本になる。
+
+  お題は手組み6問(データ照合済み)+以降は自動生成の無限モード。
+  画面は 1920x1080 固定キャンバス + scale(箱庭と同じ)。
+  ============================================================================
+-->
+<style>
+:root{
+  --ink:#241f26; --soft:#6f6673; --line:#e3d9cc; --paper:#fffdf8;
+  --ok:#2f7a52; --ng:#a4415c; --gold:#b8860b;
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+html,body{width:100%;height:100%;overflow:hidden;background:#141019}
+body{font-family:-apple-system,BlinkMacSystemFont,"Hiragino Sans","Yu Gothic",sans-serif;color:var(--ink)}
+#wrap{position:fixed;inset:0;overflow:hidden}
+button{font-family:inherit;cursor:pointer}
+#app{position:absolute;left:50%;top:50%;width:1920px;height:1080px;
+  transform:translate(-50%,-50%) scale(1);transform-origin:center center;
+  background:
+    radial-gradient(circle at 14% 12%,#ffeede 0 16%,transparent 17%),
+    radial-gradient(circle at 88% 20%,#e8f2ff 0 13%,transparent 14%),
+    linear-gradient(180deg,#fffdf8,#f6efe2);
+  display:flex;flex-direction:column;overflow:hidden}
+header{display:flex;align-items:center;gap:14px;padding:14px 26px;background:#2f2833;color:#fff}
+header h1{font-size:24px;font-weight:900;letter-spacing:.03em;white-space:nowrap}
+header h1 small{font-size:14px;opacity:.65;margin-left:8px}
+header .sp{flex:1}
+#pnav{font-size:19px;font-weight:900;background:rgba(255,255,255,.14);border-radius:99px;padding:6px 18px}
+#lives{font-size:26px;letter-spacing:3px}
+.hbtn{background:rgba(255,255,255,.14);border:2px solid rgba(255,255,255,.3);color:#fff;
+  border-radius:12px;padding:8px 16px;font-size:16px;font-weight:bold;white-space:nowrap}
+.hbtn:hover{background:rgba(255,255,255,.26)}
+
+#board{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;padding:12px 0}
+#ask{font-size:25px;font-weight:900;color:#4a3c50}
+#ask b{color:#a4415c}
+/* 解けた家族の行 */
+#fams{display:flex;flex-direction:column;gap:10px;width:1460px}
+.fam{display:flex;align-items:center;gap:16px;border-radius:18px;padding:8px 20px;
+  border:3px solid #2e2536;color:#fff;
+  background:linear-gradient(120deg,color-mix(in srgb,var(--cc) 88%,#241f26),var(--cc));
+  box-shadow:0 6px 14px rgba(30,20,40,.25);animation:famIn .5s cubic-bezier(.2,1.3,.4,1)}
+@keyframes famIn{0%{transform:scale(.7);opacity:0}100%{transform:scale(1);opacity:1}}
+.fam .face{width:84px;height:84px;border-radius:50%;background:#fffdf6;overflow:hidden;flex:0 0 auto;
+  border:4px solid #fff;box-shadow:0 3px 7px rgba(30,20,40,.35);display:flex;align-items:center;justify-content:center}
+.fam .face img{width:90%;height:90%;object-fit:contain}
+.fam .fj{font-size:27px;font-weight:900;white-space:nowrap;text-shadow:0 2px 3px rgba(0,0,0,.3)}
+.fam .fw{flex:1;display:flex;flex-wrap:wrap;gap:6px 16px;font-size:23px;font-weight:900}
+.fam .fw span{white-space:nowrap}
+.fam .fw span em{font-style:normal;font-size:16px;opacity:.85;font-weight:800;margin-left:4px}
+.fam.ghost{opacity:.55;filter:grayscale(.4)}
+/* 16語の盤 */
+#grid{display:grid;grid-template-columns:repeat(4,354px);gap:14px}
+.tile{height:132px;border-radius:16px;background:linear-gradient(#fffef9,#f3ead7);
+  border:3px solid #2e2536;box-shadow:0 5px 0 rgba(46,37,54,.28);
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;
+  cursor:pointer;user-select:none;transition:transform .12s,background .12s;position:relative;overflow:hidden}
+.tile:hover{transform:translateY(-4px)}
+.tile .w{font-size:38px;font-weight:900;color:#241f26;line-height:1;max-width:96%;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.tile .j{font-size:19px;font-weight:800;color:#6f6673;max-width:96%;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.tile.sel{background:linear-gradient(#3b3145,#241f26);transform:translateY(-6px);
+  box-shadow:0 8px 0 rgba(46,37,54,.4),0 0 0 3px #ffd23e}
+.tile.sel .w{color:#fff}.tile.sel .j{color:#cfc4da}
+.tile.shake{animation:tshake .45s}
+@keyframes tshake{0%,100%{transform:translateX(0)}20%,60%{transform:translateX(-9px)}40%,80%{transform:translateX(9px)}}
+#bar{display:flex;align-items:center;gap:18px;min-height:74px}
+#btnPick{background:linear-gradient(#ffd94f,#f0b429);border:3px solid #2e2536;border-radius:16px;
+  padding:14px 40px;font-size:24px;font-weight:900;color:#241f26;box-shadow:0 5px 0 rgba(46,37,54,.4)}
+#btnPick:disabled{opacity:.4;box-shadow:none;transform:translateY(3px)}
+#btnShuffle,#btnClear{background:#fff;border:3px solid #2e2536;border-radius:16px;
+  padding:14px 24px;font-size:19px;font-weight:900;box-shadow:0 5px 0 rgba(46,37,54,.25)}
+#note{font-size:21px;font-weight:900;color:#a4415c;min-height:28px}
+/* 結果 */
+#over{position:absolute;inset:0;z-index:9600;display:none;align-items:center;justify-content:center;
+  background:rgba(20,14,26,.82)}
+#over.on{display:flex}
+#over .box{width:1180px;max-height:960px;overflow-y:auto;background:#fffdf4;border:4px solid #2e2536;
+  border-radius:24px;padding:32px 42px;box-shadow:0 24px 60px rgba(10,6,16,.6)}
+#over .box.clear{border-color:#2f7a52}
+#over .box.dead{border-color:#a4415c}
+#ovT{font-size:38px;font-weight:900;margin-bottom:14px}
+.ovFam{display:flex;gap:16px;align-items:flex-start;padding:12px 0;border-top:2px dashed #d8ccb8}
+.ovFam .face{width:76px;height:76px;border-radius:50%;flex:0 0 auto;overflow:hidden;background:#fffdf6;
+  border:4px solid var(--cc);display:flex;align-items:center;justify-content:center}
+.ovFam .face img{width:90%;height:90%;object-fit:contain}
+.ovFam h4{font-size:24px;font-weight:900;color:#241f26}
+.ovFam h4 span{color:var(--cc)}
+.ovFam .ws{font-size:20px;font-weight:900;color:#4a3c50;margin:2px 0 4px}
+.ovFam p{font-size:18px;font-weight:700;line-height:1.65;color:#5d5266}
+#over button{margin-top:20px;background:#ffd23e;border:3px solid #2e2536;border-radius:14px;
+  padding:12px 30px;font-size:21px;font-weight:900;box-shadow:0 4px 0 rgba(46,37,54,.4)}
+</style>
+</head>
+<body>
+<div id="wrap">
+<div id="app">
+  <header>
+    <h1>エティモリンゴ 親戚さがし<small>16のことばを 同じ祖先の4家族にわけよう</small></h1>
+    <span class="sp"></span>
+    <span id="pnav"></span>
+    <span id="lives"></span>
+    <button class="hbtn" id="btnRetry">🔁 このお題をやりなおす</button>
+  </header>
+  <div id="board">
+    <div id="ask">同じ<b>祖先</b>をもつ4つを えらんで「これで家族!」――<b>意味が似てる、はワナかも</b></div>
+    <div id="fams"></div>
+    <div id="grid"></div>
+    <div id="bar">
+      <button id="btnPick" disabled>これで家族!</button>
+      <button id="btnShuffle">🔀 ならびかえ</button>
+      <span id="note"></span>
+    </div>
+  </div>
+  <div id="over"><div class="box"><div id="ovT"></div><div id="ovBody"></div>
+    <button id="ovBtn">つぎのお題へ</button></div></div>
+</div>
+</div>
+<script>
+'use strict';
+const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
+const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const A='../assets/';
+const dict=o=>Object.assign(Object.create(null),o||{});
+let seed=(Math.random()*1e9)|0;
+function rnd(){seed^=seed<<13;seed>>>=0;seed^=seed>>17;seed^=seed<<5;seed>>>=0;return seed/4294967296;}
+const ri=n=>Math.floor(rnd()*n);
+function shuffle(a){for(let i=a.length-1;i>0;i--){const j=ri(i+1);[a[i],a[j]]=[a[j],a[i]];}return a;}
+
+/* 登場する祖先はエティモペディア(roots.csv)の14種だけ */
+const CLAN=new Set(['kaput-','anə-','bhā-2','gwei-','oi-no-','reg-','weid-','yē-',
+  'mori-','men-1','dō-','genu-1','per1','kom']);
+/* roots.csv の id → words.json の語根キー */
+const CSVKEY=dict({kaput:'kaput-',ane:'anə-',bha:'bhā-2',gwei:'gwei-',oino:'oi-no-',
+  reg:'reg-',weid:'weid-',ye:'yē-',mori:'mori-',men:'men-1','do':'dō-',genu:'genu-1',
+  per1:'per1',kom:'kom'});
+
+/* ===========================================================================
+   手組みのお題6問。<b>1語ずつDBと照合済み</b>(語義あり・そのクランのみに属す・
+   お題内の他家族に属さない)。ワナの設計:
+     P2: story(物語)→見る / music(音楽)→考える / mention(言及)→考える / date(日付)→与える
+     P3: rich・capital・cost・rent の<b>お金っぽい4語が全部べつの家族</b>
+   =========================================================================== */
+const PUZZLES=[
+ [['kaput-',['head','captain','chief','chapter']],
+  ['gwei-',['vitamin','survive','vivid','quick']],
+  ['oi-no-',['alone','unique','once','only']],
+  ['yē-',['jet','injection','reject','subject']]],
+ [['weid-',['story','idea','history','view']],
+  ['bhā-2',['fate','fame','infant','phone']],
+  ['men-1',['mention','monster','music','mind']],
+  ['dō-',['date','tradition','surrender','add']]],
+ [['reg-',['rich','dress','address','rule']],
+  ['kaput-',['cattle','capital','achieve','chef']],
+  ['dō-',['rent','dose','editor','tradition']],
+  ['kom',['cost','court','country','common']]],
+ [['anə-',['animal','animation','inanimate','animated']],
+  ['mori-',['marine','mermaid','marsh','rosemary']],
+  ['weid-',['guide','visit','video','evidence']],
+  ['yē-',['disease','ease','adjacent','object']]],
+ [['per1',['first','problem','present','period']],
+  ['kom',['company','community','common','context']],
+  ['oi-no-',['unit','unique','alone','none']],
+  ['reg-',['source','region','direction','regular']]],
+ [['men-1',['museum','monitor','automatic','remind']],
+  ['bhā-2',['ban','blame','abandon','fairy']],
+  ['weid-',['vision','evidence','review','guide']],
+  ['gwei-',['hygiene','biography','revival','viable']]],
+];
+const MAXLIFE=4;
+
+/* ===========================================================================
+   データ
+   =========================================================================== */
+let ROOTS=dict(), WBY=dict(), ALLW=[], NOTES=dict();
+const rec=w=>WBY[String(w||'').toLowerCase()]||dict();
+const rootJa=k=>(ROOTS[k]&&ROOTS[k].ja)||k;
+/* roots.csv を読む(蘊蓄 note のため)。素朴なCSVなのでカンマ区切りで足りる…
+   と思いきや note にカンマは無いが、行内に引用符も無い前提で軽く読む */
+function parseCsv(t){
+  const lines=t.split(/\r?\n/).filter(l=>l.trim());
+  const head=lines[0].split(',');
+  return lines.slice(1).map(l=>{
+    const cells=l.split(',');
+    const o=dict();
+    head.forEach((h,i)=>{o[h]=i<cells.length-head.length+1+i?cells[i]:'';});
+    // note にカンマが入る行のため、末尾列は残り全部を結合する
+    o[head[head.length-1]]=cells.slice(head.length-1).join(',');
+    return o;
+  });
+}
+async function load(){
+  const [rt,words,csv]=await Promise.all([
+    fetch('data/pie/roots.json').then(r=>r.json()),
+    fetch('data/pie/words.json').then(r=>r.json()),
+    fetch('data/roots.csv').then(r=>r.text()).catch(()=>''),
+  ]);
+  rt.forEach(r=>{ROOTS[r.key]=r;});
+  const seen=new Set();
+  for(const x of words){
+    const k=x.w.toLowerCase();
+    if(seen.has(k))continue; seen.add(k); WBY[k]=x; ALLW.push(x);
+  }
+  if(csv)for(const row of parseCsv(csv)){
+    const k=CSVKEY[row.id]; if(k)NOTES[k]=row.note||'';
+  }
+}
+
+/* ===========================================================================
+   無限モード(7問目から)。単一クラン所属の よく使う語から自動で組む。
+   =========================================================================== */
+let POOLS=null;
+function buildPools(){
+  POOLS=dict();
+  for(const x of ALLW){
+    if(!x.ja||/^[A-Z]/.test(x.w)||/\s/.test(x.w)||x.w.length<3)continue;
+    if((x.r??9999)>1000)continue;
+    const ks=[...new Set((x.p||[]).filter(k=>CLAN.has(k)))];
+    if(ks.length!==1)continue;
+    (POOLS[ks[0]]||(POOLS[ks[0]]=[])).push(x.w);
+  }
+  for(const k in POOLS)POOLS[k].sort((a,b)=>(rec(a).r??9999)-(rec(b).r??9999));
+}
+function genPuzzle(){
+  if(!POOLS)buildPools();
+  const clans=shuffle(Object.keys(POOLS).filter(k=>POOLS[k].length>=6)).slice(0,4);
+  return clans.map(k=>[k,shuffle(POOLS[k].slice(0,18)).slice(0,4)]);
+}
+
+/* ===========================================================================
+   進行
+   =========================================================================== */
+let S=null;
+function newPuzzle(i){
+  const puz=i<PUZZLES.length?PUZZLES[i]:genPuzzle();
+  const tiles=[];
+  puz.forEach(([k,ws])=>ws.forEach(w=>tiles.push({w,k})));
+  S={pi:i, puz, tiles:shuffle(tiles), sel:new Set(), solved:[], life:MAXLIFE, over:0};
+  $('#over').classList.remove('on');
+  note('');
+  render();
+}
+function note(t,ok){const n=$('#note');n.textContent=t;n.style.color=ok?'var(--ok)':'var(--ng)';}
+function toggle(i){
+  if(!S||S.over)return;
+  if(S.sel.has(i))S.sel.delete(i);
+  else{ if(S.sel.size>=4)return; S.sel.add(i); }
+  note('');
+  render();
+}
+function submit(){
+  if(!S||S.over||S.sel.size!==4)return;
+  const picked=[...S.sel].map(i=>S.tiles[i]);
+  const cnt=dict();
+  picked.forEach(t=>{cnt[t.k]=(cnt[t.k]||0)+1;});
+  const best=Object.keys(cnt).sort((a,b)=>cnt[b]-cnt[a])[0];
+  if(cnt[best]===4){
+    // 家族成立
+    S.solved.push(best);
+    S.tiles=S.tiles.filter((t,i)=>!S.sel.has(i));
+    S.sel.clear();
+    note('');
+    render();
+    if(!S.tiles.length){S.over=1;setTimeout(()=>showOver(true),650);}
+    return;
+  }
+  // はずれ
+  S.life--;
+  const els=$$('#grid .tile');
+  [...S.sel].forEach(i=>{const el=els[S.tilePos?S.tilePos[i]:i];});
+  $$('#grid .tile.sel').forEach(el=>{el.classList.remove('shake');void el.offsetWidth;el.classList.add('shake');});
+  if(cnt[best]===3)note('おしい! 3つは同じ家族。あと1つだけ ちがう');
+  else note('ばらばらだ。意味が似てる、に つられていないか?');
+  renderLives();
+  if(S.life<=0){S.over=2;setTimeout(()=>showOver(false),800);}
+}
+function showOver(win){
+  const body=S.puz.map(([k,ws])=>{
+    const r=ROOTS[k]||{};
+    return `<div class="ovFam" style="--cc:${esc(r.color||'#8a7c96')}">
+      <span class="face">${r.img?`<img src="${A}${esc(r.img)}">`:''}</span>
+      <div><h4><span>${esc(rootJa(k))}</span> の一族　<small style="font-weight:800;color:#8d8299">*${esc(k.replace(/-$/,''))}</small></h4>
+      <div class="ws">${ws.map(w=>`${esc(w)}<em style="font-style:normal;font-size:16px;color:#8d8299">（${esc(rec(w).ja||'')}）</em>`).join('　')}</div>
+      <p>${esc(NOTES[k]||'')}</p></div>
+    </div>`;}).join('');
+  $('#ovT').textContent=win?'🎉 ぜんぶ 見ぬいた!':'💥 家族の正体は こうだった';
+  $('#ovBody').innerHTML=body;
+  $('#over .box').className='box '+(win?'clear':'dead');
+  $('#ovBtn').textContent='つぎのお題へ';
+  $('#ovBtn').onclick=()=>newPuzzle(S.pi+1);
+  $('#over').classList.add('on');
+}
+
+/* ===========================================================================
+   描画
+   =========================================================================== */
+function renderLives(){
+  $('#lives').textContent='❤'.repeat(S.life)+'♡'.repeat(MAXLIFE-S.life);
+}
+function render(){
+  if(!S)return;
+  $('#pnav').textContent=S.pi<PUZZLES.length?`お題 ${S.pi+1} / ${PUZZLES.length}`:`むげんモード ${S.pi-PUZZLES.length+1}`;
+  renderLives();
+  $('#fams').innerHTML=S.solved.map(k=>{
+    const r=ROOTS[k]||{};
+    const ws=S.puz.find(p=>p[0]===k)[1];
+    return `<div class="fam" style="--cc:${esc(r.color||'#8a7c96')}">
+      <span class="face">${r.img?`<img src="${A}${esc(r.img)}">`:''}</span>
+      <span class="fj">${esc(rootJa(k))} の一族</span>
+      <span class="fw">${ws.map(w=>`<span>${esc(w)}<em>（${esc(rec(w).ja||'')}）</em></span>`).join('')}</span>
+    </div>`;}).join('');
+  $('#grid').innerHTML=S.tiles.map((t,i)=>{
+    const ja=rec(t.w).ja||'';
+    return `<div class="tile${S.sel.has(i)?' sel':''}" data-i="${i}">
+      <span class="w"${t.w.length>=13?' style="font-size:30px"':''}>${esc(t.w)}</span>
+      <span class="j">${esc(ja)}</span>
+    </div>`;}).join('');
+  $$('#grid .tile').forEach(el=>el.onclick=()=>toggle(+el.dataset.i));
+  $('#btnPick').disabled=S.sel.size!==4;
+}
+
+/* ===== 起動 ===== */
+const fitStage=()=>{
+  const vw=(window.visualViewport&&visualViewport.width)||innerWidth;
+  const vh=(window.visualViewport&&visualViewport.height)||innerHeight;
+  $('#app').style.transform=`translate(-50%,-50%) scale(${Math.min(vw/1920,vh/1080)})`;
+};
+addEventListener('resize',fitStage);
+addEventListener('orientationchange',fitStage);
+if(window.visualViewport)visualViewport.addEventListener('resize',fitStage);
+
+async function boot(){
+  fitStage();
+  try{ await load(); }
+  catch(e){
+    $('#ask').innerHTML='データが読めない。http経由で開くこと（python3 -m http.server 8000）';
+    return;
+  }
+  $('#btnPick').onclick=submit;
+  $('#btnShuffle').onclick=()=>{if(!S||S.over)return;
+    const selW=new Set([...S.sel].map(i=>S.tiles[i].w));
+    shuffle(S.tiles); S.sel.clear();
+    S.tiles.forEach((t,i)=>{if(selW.has(t.w))S.sel.add(i);});
+    render();};
+  $('#btnRetry').onclick=()=>newPuzzle(S?S.pi:0);
+  newPuzzle(0);
+}
+window.G={get S(){return S;},newPuzzle,submit,toggle,PUZZLES,
+  pick(ws){S.sel=new Set(S.tiles.map((t,i)=>ws.includes(t.w)?i:-1).filter(i=>i>=0));render();}};
+boot();
+</script>
+</body>
+</html>

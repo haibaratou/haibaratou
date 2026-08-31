@@ -1,0 +1,973 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>透明人間ミエタラヤラレール戦</title>
+<style>
+:root{
+  --ink:#2b2430;
+  --paper:#fffaf0;
+  --cream:#fff7df;
+  --gold:#f8c33a;
+  --red:#ff5470;
+  --blue:#52b8f2;
+  --green:#55c68c;
+  --shadow:rgba(28,20,32,.28);
+}
+*{box-sizing:border-box}
+html,body{margin:0;width:100%;height:100%;overflow:hidden}
+body{
+  font-family:-apple-system,BlinkMacSystemFont,"Hiragino Sans","Yu Gothic",sans-serif;
+  color:var(--ink);
+  background:#1d1a24;
+  user-select:none;
+}
+#stage{
+  position:relative;
+  width:100vw;
+  height:100vh;
+  overflow:hidden;
+  background:#e7f6ff;
+}
+#stage::before{
+  content:"";
+  position:absolute;
+  inset:0;
+  background:url("../assets/ground/T_BG_base_ruin.png") center/cover no-repeat;
+  filter:saturate(1.04);
+}
+#stage::after{
+  content:"";
+  position:absolute;
+  inset:0;
+  background:
+    linear-gradient(180deg,rgba(255,255,255,.14),rgba(255,250,238,.06) 48%,rgba(30,22,38,.18)),
+    radial-gradient(circle at 50% 18%,rgba(255,255,255,.55),transparent 24%);
+  pointer-events:none;
+}
+.topbar{
+  position:absolute;
+  z-index:10;
+  left:34px;
+  right:34px;
+  top:22px;
+  display:flex;
+  align-items:flex-start;
+  justify-content:space-between;
+  gap:16px;
+}
+.titleBlock{
+  background:rgba(255,250,240,.9);
+  border:4px solid rgba(255,255,255,.65);
+  border-radius:24px;
+  padding:14px 22px 15px;
+  box-shadow:0 8px 0 rgba(43,36,48,.14);
+  max-width:520px;
+}
+h1{
+  margin:0;
+  font-size:clamp(26px,3vw,48px);
+  line-height:1.1;
+  letter-spacing:.03em;
+  text-shadow:0 3px 0 rgba(255,255,255,.7);
+}
+.sub{
+  margin-top:6px;
+  font-weight:900;
+  color:#705d76;
+  font-size:clamp(14px,1.35vw,22px);
+}
+.button{
+  border:0;
+  border-radius:18px;
+  padding:13px 18px;
+  background:#fff1cf;
+  color:var(--ink);
+  box-shadow:0 5px 0 rgba(43,36,48,.2);
+  font-size:18px;
+  font-weight:1000;
+  cursor:pointer;
+}
+.button:active{transform:translateY(3px);box-shadow:0 2px 0 rgba(43,36,48,.2)}
+.arena{
+  position:absolute;
+  z-index:3;
+  inset:0;
+}
+.partyZone,.enemyZone{
+  position:absolute;
+  z-index:8;
+  border-radius:28px;
+}
+.partyZone{
+  left:64px;
+  bottom:330px;
+  width:690px;
+  height:300px;
+}
+.enemyZone{
+  right:86px;
+  top:210px;
+  width:560px;
+  height:410px;
+}
+.partyZone.targetOn{
+  outline:7px solid rgba(76,190,242,.72);
+  background:rgba(92,190,242,.12);
+}
+.enemyZone.targetOn{
+  outline:7px solid rgba(255,84,112,.72);
+  background:rgba(255,84,112,.1);
+}
+.party{
+  position:absolute;
+  left:74px;
+  bottom:335px;
+  z-index:6;
+  display:flex;
+  align-items:flex-end;
+  gap:10px;
+}
+.chara{
+  position:relative;
+  width:170px;
+  height:210px;
+  object-fit:contain;
+  filter:drop-shadow(0 12px 10px rgba(23,15,32,.22));
+}
+.chara:nth-child(2){width:160px;height:200px}
+.chara:nth-child(3){width:156px;height:198px}
+.chara:nth-child(4){width:150px;height:194px}
+.partyBuff .chara{animation:cheer .7s ease-out}
+@keyframes cheer{
+  0%{transform:translateY(0) rotate(0)}
+  35%{transform:translateY(-32px) rotate(-4deg)}
+  70%{transform:translateY(-8px) rotate(3deg)}
+  100%{transform:translateY(0) rotate(0)}
+}
+.enemyWrap{
+  position:absolute;
+  right:105px;
+  top:230px;
+  z-index:5;
+  width:520px;
+  height:390px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+}
+.enemyAura{
+  position:absolute;
+  width:350px;
+  height:390px;
+  border-radius:48% 52% 45% 45%;
+  background:
+    radial-gradient(circle at 50% 20%,rgba(255,255,255,.72),rgba(255,255,255,.2) 36%,rgba(120,180,255,.08) 62%,transparent 70%),
+    linear-gradient(90deg,transparent,rgba(255,255,255,.42),transparent);
+  border:5px dashed rgba(255,255,255,.72);
+  box-shadow:0 0 44px rgba(255,255,255,.62), inset 0 0 38px rgba(92,185,255,.18);
+  opacity:.74;
+}
+.enemyFace{
+  position:absolute;
+  top:128px;
+  display:flex;
+  gap:62px;
+  opacity:.5;
+}
+.eye{
+  width:22px;
+  height:22px;
+  border-radius:50%;
+  background:rgba(43,36,48,.5);
+  box-shadow:0 0 18px rgba(255,255,255,.9);
+}
+.enemyName{
+  position:absolute;
+  z-index:7;
+  right:108px;
+  top:180px;
+  min-width:520px;
+  text-align:center;
+  font-size:34px;
+  font-weight:1000;
+  color:#fffdf8;
+  text-shadow:0 5px 0 rgba(43,36,48,.55),0 0 18px rgba(255,255,255,.9);
+}
+.hpPanel{
+  position:absolute;
+  z-index:120;
+  right:92px;
+  top:126px;
+  width:410px;
+  background:rgba(255,250,240,.94);
+  border:4px solid rgba(255,255,255,.7);
+  border-radius:999px;
+  padding:12px 18px;
+  box-shadow:0 8px 0 rgba(43,36,48,.16);
+}
+.hpLabel{
+  display:flex;
+  justify-content:space-between;
+  font-weight:1000;
+  margin-bottom:7px;
+}
+.hpBar{
+  height:22px;
+  border:3px solid var(--ink);
+  border-radius:999px;
+  overflow:hidden;
+  background:#efe6d5;
+}
+.hpFill{
+  width:100%;
+  height:100%;
+  background:linear-gradient(90deg,#ff5570,#ffaf3e);
+  transition:width .45s ease;
+}
+.message{
+  position:absolute;
+  z-index:12;
+  left:50%;
+  top:228px;
+  transform:translateX(-50%);
+  width:clamp(520px,38vw,780px);
+  min-height:70px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  text-align:center;
+  padding:12px 28px;
+  background:rgba(255,250,240,.96);
+  border:4px solid rgba(255,255,255,.8);
+  border-radius:24px;
+  box-shadow:0 8px 0 rgba(43,36,48,.14);
+  font-size:clamp(18px,1.55vw,27px);
+  font-weight:1000;
+  line-height:1.35;
+}
+.miniHelp{display:none}
+.deck{
+  position:absolute;
+  z-index:20;
+  left:50%;
+  bottom:18px;
+  transform:translateX(-50%);
+  height:300px;
+  display:flex;
+  align-items:flex-end;
+  justify-content:center;
+  pointer-events:none;
+  padding-bottom:0;
+}
+.handCard{
+  position:relative;
+  width:196px;
+  height:292px;
+  margin:0 -28px;
+  pointer-events:auto;
+  transform-origin:50% 100%;
+  transition:filter .15s ease;
+}
+.handCard.used{filter:grayscale(.85) opacity(.38);pointer-events:none}
+.handCard .cardInner{
+  position:absolute;
+  left:50%;
+  bottom:18px;
+  width:204px;
+  height:276px;
+  margin-left:-102px;
+  border:4px solid #4b3f4f;
+  border-radius:14px;
+  background:linear-gradient(180deg,#fff9e6,#f6dfb5);
+  box-shadow:0 14px 0 rgba(43,36,48,.25);
+  overflow:hidden;
+  transform:rotate(var(--rot,0deg));
+  transition:transform .14s ease,box-shadow .14s ease;
+}
+.handCard:hover .cardInner{
+  transform:translateY(-24px) scale(1.05) rotate(0deg);
+  box-shadow:0 18px 0 rgba(43,36,48,.22);
+  z-index:90;
+}
+.handCard.dragging .cardInner{opacity:.15}
+.cardHead{
+  height:56px;
+  padding:8px 10px;
+  background:linear-gradient(180deg,#fff6c9,#f5e5bb);
+  border-bottom:4px solid #4b3f4f;
+}
+.cardWord{font-size:23px;font-weight:1000;line-height:1}
+.cardJp{font-size:16px;font-weight:900;color:#66546b;margin-top:5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.artBox{
+  height:132px;
+  margin:10px 10px 8px;
+  border:3px solid #4b3f4f;
+  border-radius:8px;
+  background:radial-gradient(circle,#fffef8 0,#fffdf8 34%,#f8f0e2 100%);
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  overflow:hidden;
+}
+.artBox img{
+  width:86%;
+  height:86%;
+  object-fit:contain;
+  image-rendering:auto;
+}
+.fallbackArt{
+  display:none;
+  width:108px;
+  height:108px;
+  border:6px solid var(--ink);
+  border-radius:50%;
+  align-items:center;
+  justify-content:center;
+  font-size:58px;
+  font-weight:1000;
+  color:var(--ink);
+  background:#fff8d8;
+}
+.stars{
+  padding:0 16px;
+  color:#f6b72d;
+  font-size:16px;
+  letter-spacing:1px;
+  white-space:nowrap;
+}
+.cardText{
+  margin:7px 12px 0;
+  padding:8px 9px;
+  height:48px;
+  border:3px solid #4b3f4f;
+  border-radius:8px;
+  background:#fffaf1;
+  font-weight:900;
+  font-size:12px;
+  line-height:1.35;
+}
+.dragGhost{
+  position:fixed;
+  z-index:60;
+  width:250px;
+  height:330px;
+  pointer-events:none;
+  transform:translate(-50%,-50%) scale(1.04);
+}
+.dragGhost .cardInner{
+  position:static;
+  width:250px;
+  height:330px;
+  margin:0;
+  transform:none;
+}
+#dragArrow{
+  position:fixed;
+  z-index:55;
+  inset:0;
+  pointer-events:none;
+  display:none;
+}
+#dragArrow line{
+  stroke:var(--gold);
+  stroke-width:14;
+  stroke-linecap:round;
+  filter:drop-shadow(0 4px 0 rgba(43,36,48,.35));
+}
+#dragArrow polygon{fill:var(--gold);filter:drop-shadow(0 4px 0 rgba(43,36,48,.35))}
+#dragArrow.enemy line{stroke:#ff5470}
+#dragArrow.enemy polygon{fill:#ff5470}
+#dragArrow.ally line{stroke:#4ec5f1}
+#dragArrow.ally polygon{fill:#4ec5f1}
+.targetLabel{
+  position:fixed;
+  z-index:61;
+  display:none;
+  padding:10px 18px;
+  border-radius:999px;
+  background:#fffdf8;
+  border:4px solid var(--ink);
+  box-shadow:0 5px 0 rgba(43,36,48,.2);
+  font-size:22px;
+  font-weight:1000;
+  pointer-events:none;
+}
+.effectText{
+  position:absolute;
+  z-index:40;
+  left:50%;
+  top:50%;
+  transform:translate(-50%,-50%);
+  color:#fff7c7;
+  font-size:clamp(42px,6.5vw,108px);
+  font-weight:1000;
+  text-align:center;
+  text-shadow:0 8px 0 rgba(43,36,48,.65),0 0 26px rgba(255,220,82,.8);
+  opacity:0;
+  pointer-events:none;
+}
+.effectText.show{animation:boomText 1.25s ease-out}
+@keyframes boomText{
+  0%{opacity:0;transform:translate(-50%,-50%) scale(.72)}
+  18%{opacity:1;transform:translate(-50%,-50%) scale(1.08)}
+  72%{opacity:1;transform:translate(-50%,-50%) scale(1)}
+  100%{opacity:0;transform:translate(-50%,-54%) scale(1.04)}
+}
+.flash{
+  position:absolute;
+  z-index:35;
+  inset:0;
+  background:#fff;
+  opacity:0;
+  pointer-events:none;
+}
+.flash.on{animation:flash .55s ease-out}
+@keyframes flash{
+  0%{opacity:0}
+  25%{opacity:.82}
+  100%{opacity:0}
+}
+.enemyHit .enemyAura{animation:enemyHit .55s ease-out}
+@keyframes enemyHit{
+  0%,100%{transform:translateX(0)}
+  20%{transform:translateX(-22px)}
+  45%{transform:translateX(18px)}
+  70%{transform:translateX(-8px)}
+}
+.enemyDead .enemyAura,.enemyDead .enemyFace{
+  animation:vanish 1.2s ease forwards;
+}
+@keyframes vanish{
+  0%{opacity:.72;filter:blur(0)}
+  55%{opacity:.9;filter:blur(2px);transform:scale(1.08)}
+  100%{opacity:0;filter:blur(10px);transform:scale(.55)}
+}
+.confetti{
+  position:absolute;
+  z-index:70;
+  inset:0;
+  overflow:hidden;
+  pointer-events:none;
+}
+.battleEffects{
+  position:absolute;
+  inset:0;
+  z-index:42;
+  pointer-events:none;
+  overflow:hidden;
+}
+.battleFx{
+  position:absolute;
+  left:0;
+  top:0;
+  width:150px;
+  height:150px;
+  display:grid;
+  place-items:center;
+  filter:drop-shadow(0 10px 0 rgba(43,36,48,.18));
+}
+.battleFx img{width:100%;height:100%;object-fit:contain}
+.fxCabbage{animation:cabbageThrow .72s cubic-bezier(.2,.9,.32,1) forwards}
+.fxMonster{width:210px;height:210px;animation:monsterSummon 1.05s ease forwards}
+.fxWitness{width:170px;height:190px;animation:witnessAppear 1.15s ease forwards}
+.fxVision{width:230px;height:230px;border:9px solid rgba(255,245,130,.9);border-radius:50%;
+  background:radial-gradient(circle,rgba(255,255,190,.82),rgba(255,255,190,.18) 55%,transparent 70%);
+  animation:visionReveal .9s ease forwards}
+.fxJet{width:230px;height:170px;animation:jetDive .8s cubic-bezier(.18,.82,.3,1) forwards}
+.fxApple{animation:allySnack .95s ease forwards}
+.fxCap{animation:allyCap .95s ease forwards}
+.fxText{
+  position:absolute;
+  left:50%;
+  top:-20px;
+  transform:translateX(-50%);
+  white-space:nowrap;
+  color:#fffaf0;
+  background:#ff5470;
+  border:4px solid #2b2430;
+  border-radius:999px;
+  padding:5px 12px;
+  font-size:26px;
+  font-weight:1000;
+}
+@keyframes cabbageThrow{
+  0%{transform:translate(340px,560px) rotate(-24deg) scale(.72);opacity:0}
+  18%{opacity:1}
+  78%{transform:translate(calc(100vw - 410px),320px) rotate(530deg) scale(1.15)}
+  100%{transform:translate(calc(100vw - 350px),310px) rotate(610deg) scale(.82);opacity:0}
+}
+@keyframes monsterSummon{
+  0%{transform:translate(calc(100vw - 520px),430px) scale(.2);opacity:0}
+  24%{transform:translate(calc(100vw - 520px),380px) scale(1.16);opacity:1}
+  62%{transform:translate(calc(100vw - 400px),310px) scale(1.35) rotate(-8deg)}
+  100%{transform:translate(calc(100vw - 430px),330px) scale(.95);opacity:0}
+}
+@keyframes witnessAppear{
+  0%{transform:translate(calc(100vw - 650px),470px) scale(.35);opacity:0}
+  28%{transform:translate(calc(100vw - 650px),360px) scale(1);opacity:1}
+  64%{transform:translate(calc(100vw - 560px),320px) scale(1.08)}
+  100%{transform:translate(calc(100vw - 560px),320px) scale(1.02);opacity:0}
+}
+@keyframes visionReveal{
+  0%{transform:translate(calc(100vw - 430px),300px) scale(.1);opacity:0}
+  45%{transform:translate(calc(100vw - 430px),300px) scale(1.7);opacity:1}
+  100%{transform:translate(calc(100vw - 430px),300px) scale(2.25);opacity:0}
+}
+@keyframes jetDive{
+  0%{transform:translate(-260px,210px) rotate(-7deg);opacity:0}
+  20%{opacity:1}
+  74%{transform:translate(calc(100vw - 380px),290px) rotate(-2deg)}
+  100%{transform:translate(calc(100vw + 80px),220px) rotate(4deg);opacity:0}
+}
+@keyframes allySnack{
+  0%{transform:translate(390px,480px) scale(.5);opacity:0}
+  35%{transform:translate(405px,390px) scale(1.2);opacity:1}
+  100%{transform:translate(405px,350px) scale(.9);opacity:0}
+}
+@keyframes allyCap{
+  0%{transform:translate(355px,500px) scale(.6);opacity:0}
+  45%{transform:translate(355px,330px) scale(1.1);opacity:1}
+  100%{transform:translate(355px,300px) scale(.92);opacity:0}
+}
+.piece{
+  position:absolute;
+  width:16px;
+  height:24px;
+  border-radius:4px;
+  animation:fall 1.9s ease-in forwards;
+}
+@keyframes fall{
+  to{transform:translateY(110vh) rotate(700deg);opacity:.2}
+}
+.result{
+  position:absolute;
+  z-index:80;
+  inset:0;
+  display:none;
+  place-items:center;
+  background:rgba(28,21,35,.45);
+}
+.result.show{display:grid}
+.resultCard{
+  width:min(760px,calc(100vw - 60px));
+  background:#fffaf0;
+  border:5px solid #fff;
+  border-radius:32px;
+  box-shadow:0 18px 0 rgba(43,36,48,.28);
+  padding:34px;
+  text-align:center;
+}
+.resultCard h2{
+  margin:0 0 12px;
+  font-size:clamp(42px,6vw,78px);
+  color:#ffcf3f;
+  text-shadow:0 5px 0 #4b3f4f;
+}
+.resultCard p{margin:0 0 22px;font-size:24px;font-weight:1000;line-height:1.55}
+.miniHelp{display:none}
+@media (max-width:900px){
+  .party{left:20px;bottom:250px;gap:0}
+  .chara{width:120px;height:160px}
+  .enemyWrap{right:20px;width:340px}
+  .enemyName{right:20px;min-width:340px;font-size:24px}
+  .hpPanel{right:30px;top:118px;width:310px}
+  .deck{transform:translateX(-50%) scale(.78);transform-origin:50% 100%}
+}
+</style>
+</head>
+<body>
+<div id="stage">
+  <div class="topbar">
+    <div class="titleBlock">
+      <h1>透明人間<br>ミエタラヤラレール戦</h1>
+      <div class="sub">戦闘用の英単語カードを、味方か敵へドラッグ</div>
+    </div>
+    <button class="button" onclick="location.href='index.html'">indexへ</button>
+  </div>
+
+  <div class="message" id="message">カードをつかむと矢印が出ます。敵へ落とすか、味方へ落とすかで効果が変わります。</div>
+  <div class="miniHelp">vision / witness は「見えない敵」を見つける特攻カード。一撃で倒せます。</div>
+
+  <div class="arena">
+    <div class="partyZone" id="partyZone"></div>
+    <div class="enemyZone" id="enemyZone"></div>
+    <div class="party" id="party">
+      <img class="chara" src="../assets/chara/T_ch_kaput_head.png" alt="カプト">
+      <img class="chara" src="../assets/chara/T_ch_ane_breath.png" alt="アネ">
+      <img class="chara" src="../assets/chara/T_ch_bha_speak.png" alt="バーファ">
+      <img class="chara" src="../assets/chara/T_ch_ye_throw.png" alt="イェ">
+    </div>
+    <div class="enemyName">透明人間 ミエタラヤラレール</div>
+    <div class="enemyWrap" id="enemyWrap">
+      <div class="enemyAura"></div>
+      <div class="enemyFace"><span class="eye"></span><span class="eye"></span></div>
+    </div>
+    <div class="hpPanel">
+      <div class="hpLabel"><span>ミエタラヤラレール</span><span id="hpText">120 / 120</span></div>
+      <div class="hpBar"><div class="hpFill" id="hpFill"></div></div>
+    </div>
+  </div>
+
+  <div class="deck" id="deck"></div>
+  <svg id="dragArrow" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
+    <line id="arrowLine" x1="0" y1="0" x2="0" y2="0"></line>
+    <polygon id="arrowHead" points="0,0 0,0 0,0"></polygon>
+  </svg>
+  <div class="targetLabel" id="targetLabel"></div>
+  <div class="effectText" id="effectText"></div>
+  <div class="battleEffects" id="battleEffects"></div>
+  <div class="flash" id="flash"></div>
+  <div class="confetti" id="confetti"></div>
+  <div class="result" id="result">
+    <div class="resultCard">
+      <h2>CONGRATULATIONS!</h2>
+      <p>見えない敵の正体を見破った。<br>ことばの使い方で、戦いの結果が変わる。</p>
+      <button class="button" onclick="restart()">もう一度たたかう</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const cards = [
+  {id:"vision", jp:"見る力", stars:10, root:"weid", target:"enemy", text:"見えないものを見抜く。特攻。", damage:120, special:true},
+  {id:"witness", jp:"目撃者", stars:10, root:"spek", target:"enemy", text:"目撃者が現れる。特攻。", damage:120, special:true, art:"../assets/chara/T_ch_weid_see.png"},
+  {id:"cabbage", jp:"キャベツ", stars:2, root:"kaput", target:"enemy", text:"投げつけて場所を暴く。", damage:24},
+  {id:"monster", jp:"怪物", stars:7, root:"men", target:"enemy", text:"怪物を召喚して戦う。", damage:48},
+  {id:"jet", jp:"ジェット機", stars:7, root:"ye", target:"enemy", text:"風圧で吹き飛ばす。", damage:36},
+  {id:"animation", jp:"アニメーション", stars:5, root:"ane", target:"ally", text:"上映して味方を元気にする。", buff:"HP+20"},
+  {id:"cap", jp:"帽子", stars:3, root:"kaput", target:"ally", text:"帽子をかぶって守る。", buff:"防御+3"},
+  {id:"apple", jp:"リンゴ", stars:1, root:"kaput", target:"ally", text:"食べて立て直す。", buff:"HP+12"}
+];
+
+let bossHp = 120;
+let dragging = null;
+let target = null;
+let audioCtx = null;
+
+const deck = document.getElementById("deck");
+const message = document.getElementById("message");
+const partyZone = document.getElementById("partyZone");
+const enemyZone = document.getElementById("enemyZone");
+const enemyWrap = document.getElementById("enemyWrap");
+const hpFill = document.getElementById("hpFill");
+const hpText = document.getElementById("hpText");
+const dragArrow = document.getElementById("dragArrow");
+const arrowLine = document.getElementById("arrowLine");
+const arrowHead = document.getElementById("arrowHead");
+const targetLabel = document.getElementById("targetLabel");
+const effectText = document.getElementById("effectText");
+const battleEffects = document.getElementById("battleEffects");
+const flash = document.getElementById("flash");
+const confetti = document.getElementById("confetti");
+const result = document.getElementById("result");
+
+function makeCard(card, index){
+  const el = document.createElement("div");
+  el.className = "handCard";
+  el.dataset.id = card.id;
+  const mid = (cards.length - 1) / 2;
+  el.style.setProperty("--rot", `${(index - mid) * 4.6}deg`);
+  el.style.zIndex = 20 + index;
+  el.innerHTML = cardMarkup(card);
+  el.addEventListener("pointerdown", ev => startDrag(ev, el, card));
+  return el;
+}
+
+function cardMarkup(card){
+  const filled = "★".repeat(card.stars);
+  const empty = "☆".repeat(Math.max(0, 10 - card.stars));
+  const img = card.art || `../assets/word/${card.id}.png`;
+  return `
+    <div class="cardInner">
+      <div class="cardHead">
+        <div class="cardWord">${card.id[0].toUpperCase()}${card.id.slice(1)}</div>
+        <div class="cardJp">${card.jp}</div>
+      </div>
+      <div class="artBox">
+        <img src="${img}" alt="${card.id}" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">
+        <div class="fallbackArt">${card.id[0].toUpperCase()}</div>
+      </div>
+      <div class="stars">${filled}<span style="color:#d9cfbc">${empty}</span></div>
+      <div class="cardText">${card.text}</div>
+    </div>`;
+}
+
+function renderDeck(){
+  deck.innerHTML = "";
+  cards.forEach((card, index) => deck.appendChild(makeCard(card, index)));
+}
+
+function startDrag(ev, el, card){
+  if(el.classList.contains("used")) return;
+  ev.preventDefault();
+  initAudio();
+  beep(420, .04, "triangle");
+  const ghost = document.createElement("div");
+  ghost.className = "dragGhost";
+  ghost.innerHTML = cardMarkup(card);
+  document.body.appendChild(ghost);
+  el.classList.add("dragging");
+  dragging = {card, el, ghost, x:ev.clientX, y:ev.clientY};
+  window.addEventListener("pointermove", moveDrag);
+  window.addEventListener("pointerup", endDrag, {once:true});
+  moveGhost(ev.clientX, ev.clientY);
+  setMessage("カードをどこへ使う？ 敵なら攻撃、味方なら支援。");
+}
+
+function moveDrag(ev){
+  if(!dragging) return;
+  moveGhost(ev.clientX, ev.clientY);
+}
+
+function moveGhost(x, y){
+  dragging.x = x;
+  dragging.y = y;
+  dragging.ghost.style.left = `${x}px`;
+  dragging.ghost.style.top = `${y}px`;
+  const nextTarget = pointIn(enemyZone, x, y) ? "enemy" : pointIn(partyZone, x, y) ? "ally" : null;
+  setTarget(nextTarget, x, y);
+}
+
+function endDrag(){
+  if(!dragging) return;
+  const usedTarget = target;
+  const {card, el, ghost} = dragging;
+  cleanupDrag();
+  if(!usedTarget){
+    setMessage("カードを敵か味方へ落としてください。矢印が出たところが対象です。");
+    return;
+  }
+  el.classList.add("used");
+  if(usedTarget === "enemy") useOnEnemy(card);
+  else useOnAlly(card);
+}
+
+function cleanupDrag(){
+  window.removeEventListener("pointermove", moveDrag);
+  if(dragging){
+    dragging.el.classList.remove("dragging");
+    dragging.ghost.remove();
+  }
+  dragging = null;
+  setTarget(null, 0, 0);
+}
+
+function pointIn(el, x, y){
+  const r = el.getBoundingClientRect();
+  return x >= r.left && x <= r.right && y >= r.top && y <= r.bottom;
+}
+
+function setTarget(nextTarget, x, y){
+  target = nextTarget;
+  partyZone.classList.toggle("targetOn", target === "ally");
+  enemyZone.classList.toggle("targetOn", target === "enemy");
+  if(!target || !dragging){
+    dragArrow.style.display = "none";
+    targetLabel.style.display = "none";
+    return;
+  }
+  const zone = target === "enemy" ? enemyZone : partyZone;
+  const zr = zone.getBoundingClientRect();
+  const tx = zr.left + zr.width / 2;
+  const ty = zr.top + zr.height / 2;
+  drawArrow(x, y, tx, ty, target);
+  targetLabel.style.display = "block";
+  targetLabel.textContent = target === "enemy" ? "敵に使う" : "味方に使う";
+  targetLabel.style.left = `${(x + tx) / 2 - 56}px`;
+  targetLabel.style.top = `${(y + ty) / 2 - 48}px`;
+}
+
+function drawArrow(x1, y1, x2, y2, mode){
+  dragArrow.style.display = "block";
+  dragArrow.className.baseVal = mode;
+  const w = window.innerWidth;
+  const h = window.innerHeight;
+  const sx = x1 / w * 100;
+  const sy = y1 / h * 100;
+  const ex = x2 / w * 100;
+  const ey = y2 / h * 100;
+  arrowLine.setAttribute("x1", sx);
+  arrowLine.setAttribute("y1", sy);
+  arrowLine.setAttribute("x2", ex);
+  arrowLine.setAttribute("y2", ey);
+  const angle = Math.atan2(ey - sy, ex - sx);
+  const size = 3.2;
+  const p1 = [ex, ey];
+  const p2 = [ex - Math.cos(angle - .55) * size, ey - Math.sin(angle - .55) * size];
+  const p3 = [ex - Math.cos(angle + .55) * size, ey - Math.sin(angle + .55) * size];
+  arrowHead.setAttribute("points", `${p1[0]},${p1[1]} ${p2[0]},${p2[1]} ${p3[0]},${p3[1]}`);
+}
+
+function useOnEnemy(card){
+  enemyWrap.classList.remove("enemyHit");
+  void enemyWrap.offsetWidth;
+  enemyWrap.classList.add("enemyHit");
+  playCardEffect(card, "enemy");
+  flashOnce();
+  if(card.special){
+    bossHp = 0;
+    updateHp();
+    boom(card.id === "vision" ? "見えた!" : "証言した!");
+    setMessage(card.id === "witness"
+      ? "目撃者が飛び出して「見た！」と指さした。透明人間は逃げ場を失った！"
+      : "vision が光になって、見えない体の輪郭をすべて映した。一撃で決着！");
+    enemyWrap.classList.add("enemyDead");
+    victory();
+    return;
+  }
+  bossHp = Math.max(0, bossHp - card.damage);
+  updateHp();
+  boom(`${card.damage} DAMAGE`);
+  setMessage(enemyMessage(card));
+  if(bossHp <= 0) victory();
+}
+
+function useOnAlly(card){
+  document.getElementById("party").classList.remove("partyBuff");
+  void document.getElementById("party").offsetWidth;
+  document.getElementById("party").classList.add("partyBuff");
+  playCardEffect(card, "ally");
+  boom(card.buff || "POWER UP");
+  setMessage(allyMessage(card));
+  beep(720, .06, "sine");
+  setTimeout(()=>document.getElementById("party").classList.remove("partyBuff"), 800);
+}
+
+function enemyMessage(card){
+  if(card.id === "cabbage") return "キャベツを投げつけた。見えない体に当たり、そこにいる場所がはっきりした！";
+  if(card.id === "monster") return "monster が召喚された。見えない相手をつかまえて、まとめてぶっ飛ばした！";
+  if(card.id === "jet") return "jet が低空で突っ込み、強い風で透明人間を吹き飛ばした！";
+  if(card.id === "cap") return "帽子を敵へ投げたが、かぶせる相手が見えない。少しだけ動きが止まった。";
+  if(card.id === "apple") return "リンゴを転がすと、透明人間が思わず足を止めた。";
+  if(card.id === "animation") return "上映の光で、透明人間の影が少しだけ浮かび上がった。";
+  return "攻撃が当たった。vision や witness なら決定打になる。";
+}
+
+function allyMessage(card){
+  if(card.id === "animation") return "みんなでアニメを見た。緊張がほどけて、味方のHPが回復した！";
+  if(card.id === "cap") return "帽子をかぶった。見えない攻撃にも少し落ち着いて構えられる。";
+  if(card.id === "apple") return "リンゴを食べた。甘さで元気を取り戻した！";
+  if(card.id === "jet") return "jet に乗って姿勢を立て直した。次の行動が速くなる。";
+  if(card.id === "cabbage") return "キャベツを食べた。お腹が落ち着いて、もう一度ふんばれる。";
+  if(card.id === "monster") return "monster が前に立った。味方の前で大きく構える。";
+  return `${card.id} を味方に使った。${card.buff || "みんなが勢いづいた"}。`;
+}
+
+function playCardEffect(card, mode){
+  if(!battleEffects) return;
+  const fx = document.createElement("div");
+  fx.className = "battleFx";
+  const img = card.art || `../assets/word/${card.id}.png`;
+  if(mode === "enemy"){
+    if(card.id === "vision"){
+      fx.className += " fxVision";
+      fx.innerHTML = `<div class="fxText">見えた!</div>`;
+    }else if(card.id === "witness"){
+      fx.className += " fxWitness";
+      fx.innerHTML = `<img src="../assets/chara/T_ch_weid_see.png" alt=""><div class="fxText">見た!</div>`;
+    }else if(card.id === "monster"){
+      fx.className += " fxMonster";
+      fx.innerHTML = `<img src="${img}" alt="">`;
+    }else if(card.id === "jet"){
+      fx.className += " fxJet";
+      fx.innerHTML = `<img src="${img}" alt="">`;
+    }else{
+      fx.className += card.id === "cabbage" ? " fxCabbage" : " fxJet";
+      fx.innerHTML = `<img src="${img}" alt="">`;
+    }
+  }else{
+    fx.className += card.id === "cap" ? " fxCap" : " fxApple";
+    fx.innerHTML = `<img src="${img}" alt="">`;
+  }
+  battleEffects.appendChild(fx);
+  setTimeout(()=>fx.remove(), 1300);
+}
+
+function updateHp(){
+  if(!Number.isFinite(bossHp)) bossHp = 120;
+  hpFill.style.width = `${Math.max(0, bossHp / 120 * 100)}%`;
+  hpText.textContent = `${bossHp} / 120`;
+}
+
+function setMessage(text){
+  message.textContent = text;
+}
+
+function boom(text){
+  effectText.textContent = text;
+  effectText.classList.remove("show");
+  void effectText.offsetWidth;
+  effectText.classList.add("show");
+  beep(180, .05, "sawtooth");
+  setTimeout(()=>beep(360, .05, "triangle"), 70);
+}
+
+function flashOnce(){
+  flash.classList.remove("on");
+  void flash.offsetWidth;
+  flash.classList.add("on");
+}
+
+function victory(){
+  setTimeout(()=>{
+    confettiBurst();
+    fanfare();
+    result.classList.add("show");
+  }, 850);
+}
+
+function confettiBurst(){
+  confetti.innerHTML = "";
+  const colors = ["#ff5470","#ffd23e","#52b8f2","#55c68c","#ffffff"];
+  for(let i=0;i<90;i++){
+    const p = document.createElement("i");
+    p.className = "piece";
+    p.style.left = `${Math.random()*100}%`;
+    p.style.top = `${-10 - Math.random()*30}%`;
+    p.style.background = colors[i % colors.length];
+    p.style.animationDelay = `${Math.random()*.35}s`;
+    p.style.animationDuration = `${1.4 + Math.random()*1.4}s`;
+    confetti.appendChild(p);
+  }
+}
+
+function initAudio(){
+  if(!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+}
+
+function beep(freq, dur, type){
+  if(!audioCtx) return;
+  const osc = audioCtx.createOscillator();
+  const gain = audioCtx.createGain();
+  osc.type = type;
+  osc.frequency.value = freq;
+  gain.gain.setValueAtTime(.0001, audioCtx.currentTime);
+  gain.gain.exponentialRampToValueAtTime(.07, audioCtx.currentTime + .01);
+  gain.gain.exponentialRampToValueAtTime(.0001, audioCtx.currentTime + dur);
+  osc.connect(gain).connect(audioCtx.destination);
+  osc.start();
+  osc.stop(audioCtx.currentTime + dur + .02);
+}
+
+function fanfare(){
+  initAudio();
+  [523,659,784,1046].forEach((f,i)=>setTimeout(()=>beep(f,.12,"triangle"), i*95));
+}
+
+function restart(){
+  bossHp = 120;
+  updateHp();
+  battleEffects.innerHTML = "";
+  result.classList.remove("show");
+  enemyWrap.classList.remove("enemyDead","enemyHit");
+  setMessage("カードをつかむと矢印が出ます。敵へ落とすか、味方へ落とすかで効果が変わります。");
+  renderDeck();
+}
+
+renderDeck();
+updateHp();
+</script>
+</body>
+</html>

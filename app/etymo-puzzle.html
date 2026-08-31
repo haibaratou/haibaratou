@@ -1,0 +1,559 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>エティモリンゴ:一筆書きバトル</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+:root{
+  --bg:#141019; --panel:#1e1826; --line:#332b40; --ink:#f2eef7; --dim:#9c92ab;
+  --cell:#2a2334; --cellline:#3d3349; --hot:#ffd166; --bad:#ff5d73; --good:#5ddba1;
+}
+html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--ink);
+  font-family:"Hiragino Sans","Noto Sans JP",system-ui,sans-serif;
+  user-select:none;touch-action:none}
+#app{height:100%;display:flex;flex-direction:column}
+
+/* ---- 上: 敵 ---- */
+#top{flex:0 0 auto;position:relative;display:flex;align-items:center;
+  justify-content:center;min-height:clamp(140px,25vh,220px);padding:6px 14px;
+  background:radial-gradient(120% 100% at 50% 0%,#241c2e 0%,#141019 72%)}
+#foes{display:flex;justify-content:center;align-items:center;gap:clamp(10px,3vw,56px)}
+.foe{display:flex;flex-direction:column;align-items:center;gap:3px;cursor:pointer;
+  padding:6px 12px;border-radius:14px;border:2px solid transparent;
+  transition:border-color .12s;min-width:120px}
+.foe.on{border-color:var(--hot);background:#ffd1660f}
+.foe.dead{opacity:.16;pointer-events:none;filter:grayscale(1)}
+.foe .body{font-size:clamp(34px,8vh,74px);line-height:1;filter:drop-shadow(0 5px 10px #0009);
+  position:relative}
+.foe.hurt{animation:shake .28s}
+@keyframes shake{25%{transform:translateX(-7px)}75%{transform:translateX(7px)}}
+.foe .nm{font-size:11px;color:var(--dim)}
+.foe .st{font-size:11px;padding:1px 8px;border-radius:99px;background:#3a2f47;
+  border:1px solid var(--line);white-space:nowrap}
+.foe.on .st{background:var(--hot);color:#241c2e;font-weight:700;border-color:var(--hot)}
+.foe .ct{position:absolute;right:-6px;top:-4px;min-width:24px;height:24px;border-radius:99px;
+  background:var(--bad);color:#fff;font-size:13px;font-weight:800;display:flex;
+  align-items:center;justify-content:center;border:2px solid #141019}
+.foe .ct.soon{background:#fff;color:var(--bad)}
+.hp{width:100%;height:7px;border-radius:99px;background:#3a2f47;overflow:hidden}
+.hp i{display:block;height:100%;background:linear-gradient(90deg,#ff8a5c,#ff5d73);
+  transition:width .3s}
+.foe .num{font-size:10px;color:var(--dim);letter-spacing:.04em}
+
+/* ---- 中央: 主人公パーティー ---- */
+#mid{flex:0 0 auto;display:flex;flex-direction:column;align-items:center;gap:5px;
+  padding:8px 14px;background:linear-gradient(180deg,#1b1524,#181321);
+  border-top:1px solid var(--line);border-bottom:1px solid var(--line)}
+#party{display:flex;gap:clamp(6px,1.4vw,14px);justify-content:center}
+.mem{width:clamp(40px,7.4vh,64px);aspect-ratio:1;border-radius:12px;overflow:hidden;
+  border:2px solid var(--line);background:#2a2334}
+.mem img{width:100%;height:100%;object-fit:cover}
+.mem.fire{animation:pop .34s}
+@keyframes pop{40%{transform:translateY(-11px) scale(1.16)}}
+#hpline{display:flex;align-items:center;gap:10px;width:min(720px,100%)}
+#hpline .bar{flex:1 1 auto;height:13px;border-radius:99px;background:#3a2f47;overflow:hidden}
+#hpline .bar i{display:block;height:100%;
+  background:linear-gradient(90deg,#5ddba1,#39b98a);transition:width .3s}
+#hpline .n{font-size:11px;color:var(--dim);white-space:nowrap;
+  font-variant-numeric:tabular-nums}
+#hpline .ch{font-size:11px;color:var(--hot);font-weight:700;min-width:56px;text-align:right}
+
+#cutin{position:absolute;left:14px;top:10px;display:flex;align-items:center;gap:8px;
+  opacity:0;transform:translateX(-24px);pointer-events:none;transition:.16s}
+#cutin.on{opacity:1;transform:none}
+#cutin img{width:clamp(52px,10vh,88px);height:clamp(52px,10vh,88px);object-fit:cover;
+  border-radius:12px;border:2px solid var(--hot);background:#2a2334}
+#cutin .tx b{display:block;font-size:clamp(15px,2.4vh,21px);letter-spacing:.04em}
+#cutin .tx s{display:block;font-size:11px;color:var(--dim);text-decoration:none}
+
+#pop{position:absolute;inset:0;pointer-events:none;overflow:hidden}
+.dmg{position:absolute;font-weight:800;font-size:clamp(19px,3.4vh,32px);
+  text-shadow:0 2px 6px #000;animation:rise .85s forwards}
+.dmg.w{color:var(--hot)}
+@keyframes rise{to{transform:translateY(-58px);opacity:0}}
+#log{position:absolute;right:14px;top:8px;width:min(30vw,330px);
+  font-size:11px;line-height:1.45;color:var(--dim);text-align:right;pointer-events:none}
+#log b{color:var(--ink)}
+
+/* ---- 下: 盤面 ---- */
+#bottom{flex:1 1 auto;position:relative;display:flex;gap:10px;min-height:0;
+  align-items:stretch;justify-content:center;padding:6px 14px 12px;background:#181321}
+#boardwrap{flex:0 1 auto;min-width:0;min-height:0;display:flex;
+  flex-direction:column;align-items:center}
+#trace{height:19px;font-size:13px;letter-spacing:.34em;font-weight:700;
+  color:var(--hot);margin-bottom:3px;text-transform:uppercase}
+#board{display:grid;gap:3px;height:calc(100% - 22px);max-width:100%}
+.c{position:relative;aspect-ratio:1;border-radius:8px;background:var(--cell);
+  border:1px solid var(--cellline);display:flex;align-items:center;justify-content:center;
+  font-weight:800;font-size:clamp(11px,2.4vh,22px);transition:transform .1s,filter .1s}
+.c.empty{background:#1c1725;border-color:#241d2f}
+.c.pic{padding:3px;border-width:2px}
+.c.pic img{width:100%;height:100%;object-fit:contain;
+  filter:drop-shadow(0 1px 2px #0006)}
+.c.on{filter:brightness(1.7);transform:scale(.92)}
+.c.gone{opacity:0;pointer-events:none}
+.c.head::after{content:"";position:absolute;inset:3px;border-radius:5px;
+  border:2px dashed currentColor;opacity:.55}
+.c.no{animation:no .3s}
+@keyframes no{25%{transform:translateX(-4px)}75%{transform:translateX(4px)}}
+
+#side{position:absolute;right:14px;bottom:12px;width:clamp(96px,11vw,132px);
+  display:flex;flex-direction:column;gap:6px}
+button{font-family:inherit;font-weight:700;border:1px solid var(--line);
+  background:var(--panel);color:var(--ink);border-radius:10px;cursor:pointer;
+  padding:8px 6px;font-size:12px;transition:.12s}
+button:hover{background:#2a2334;border-color:var(--hot)}
+button:disabled{opacity:.35;cursor:default}
+button:focus-visible,#typed:focus-visible{outline:2px solid var(--hot);outline-offset:2px}
+#reload{font-size:13px;line-height:1.5;padding:14px 6px}
+#reload small{display:block;font-weight:400;color:var(--dim);font-size:10px}
+#typed{width:100%;text-align:center;font-size:13px;letter-spacing:.16em;
+  text-transform:uppercase;padding:7px 4px;border-radius:9px;border:1px solid var(--line);
+  background:#241d2f;color:var(--hot);font-weight:700;font-family:inherit}
+#typed::placeholder{color:#6b6079;letter-spacing:0;font-weight:400;text-transform:none}
+
+/* ---- オーバーレイ ---- */
+#ov{position:absolute;inset:0;background:#100d15f5;display:flex;align-items:center;
+  justify-content:center;z-index:20;padding:18px;overflow:auto}
+#ov.off{display:none}
+.card{width:min(1000px,100%);text-align:center}
+.card h1{font-size:clamp(20px,3.6vh,30px);margin-bottom:4px;letter-spacing:.03em}
+.card p{color:var(--dim);font-size:13px;line-height:1.7;margin-bottom:12px}
+#pick{display:flex;flex-wrap:wrap;gap:6px;justify-content:center;margin-bottom:12px;
+  max-height:42vh;overflow:auto;padding:2px}
+.pk{width:clamp(76px,8.4vw,104px);padding:6px;border-radius:11px;background:var(--panel);
+  border:2px solid var(--line);cursor:pointer;transition:.12s}
+.pk:hover{border-color:var(--dim)}
+.pk.on{border-color:var(--hot);background:#ffd1660f}
+.pk img{width:100%;aspect-ratio:1;object-fit:cover;border-radius:8px;background:#2a2334}
+.pk b{display:block;font-size:12px;margin-top:4px}
+.pk s{display:block;font-size:10px;color:var(--dim);text-decoration:none}
+.row{display:flex;gap:8px;justify-content:center;align-items:center;margin-bottom:10px;
+  flex-wrap:wrap}
+.seg{display:flex;border:1px solid var(--line);border-radius:10px;overflow:hidden}
+.seg button{border:0;border-radius:0;padding:7px 16px}
+.seg button.on{background:var(--hot);color:#241c2e}
+#go{padding:11px 44px;font-size:15px;background:var(--hot);color:#241c2e;border-color:var(--hot)}
+#go:disabled{background:var(--panel);color:var(--dim)}
+.help{font-size:11px;color:#6b6079;line-height:1.8;max-width:660px;margin:10px auto 0;
+  text-align:left;border-top:1px solid var(--line);padding-top:9px}
+.help b{color:var(--dim)}
+#dexlist{display:flex;flex-wrap:wrap;gap:6px;justify-content:center;margin:10px 0 4px;
+  max-height:40vh;overflow:auto}
+.dx{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:7px;
+  font-size:11px;text-align:left;width:186px;display:flex;gap:7px}
+.dx img{width:38px;height:38px;object-fit:contain;flex:0 0 auto}
+.dx b{font-size:13px;letter-spacing:.03em;display:block}
+.dx s{display:block;color:var(--dim);text-decoration:none;margin-top:2px;line-height:1.35}
+@media(prefers-reduced-motion:reduce){
+  *,*::before,*::after{animation-duration:.01ms!important;animation-iteration-count:1!important;
+    transition-duration:.01ms!important}}
+</style>
+</head>
+<body>
+<div id="app">
+  <div id="top">
+    <div id="log"></div>
+    <div id="foes"></div>
+    <div id="cutin"><img alt=""><div class="tx"><b></b><s></s></div></div>
+    <div id="pop"></div>
+  </div>
+  <div id="mid">
+    <div id="party"></div>
+    <div id="hpline"><span class="n" id="hpn"></span><div class="bar"><i></i></div>
+      <span class="ch" id="chain"></span></div>
+  </div>
+  <div id="bottom">
+    <div id="boardwrap">
+      <div id="trace"></div>
+      <div id="board"></div>
+    </div>
+    <div id="side">
+      <button id="reload">リロード<small>1手つかう</small></button>
+      <input id="typed" placeholder="打つ" autocomplete="off" spellcheck="false">
+    </div>
+  </div>
+  <div id="ov"><div class="card" id="ovc"></div></div>
+</div>
+
+<script>
+const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
+const CHDIR='../assets/chara/', WDIR='../assets/word/';
+const CH=n=>(self.__IMG&&self.__IMG[n])||CHDIR+n;
+const WI=n=>(self.__WIMG&&self.__WIMG[n])||WDIR+n;
+// 斜めは使わない。斜めを許すと、綴りを知っていても次の文字がどこにあるか目で追えない
+const D4=[[0,-1],[1,0],[0,1],[-1,0]];
+
+// 語ごとの色は 初級の補助輪でだけ使う。
+// 中級から上は文字を無地にする。色をつけると 絵から色の連なりを辿るだけで解けてしまい、
+// 綴りを一文字も知らなくても通ってしまう(=読解が起きない)
+const WCOL=['#ff8f6b','#5ec8ff','#ffd166','#7ede8e','#c79bff','#ff8fbe','#5fe0d0','#ffb066'];
+
+const LV={
+  easy:{n:4,lo:3,hi:6 ,rank:700 ,head:1,tint:1,label:'初級'},
+  mid :{n:6,lo:3,hi:8 ,rank:1400,head:0,tint:0,label:'中級'},
+  hard:{n:8,lo:4,hi:10,rank:9999,head:0,tint:0,label:'上級'},
+};
+const FILL=0.78;   // 盤面のうち文字が占める割合
+let DATA=null, G=null;
+
+/* ================= 盤面生成 ================= */
+function layPath(grid,W,H,n,rnd){
+  const free=[];
+  for(let y=0;y<H;y++)for(let x=0;x<W;x++)if(grid[y][x]===null)free.push([x,y]);
+  if(free.length<n)return null;
+  for(let t=0;t<80;t++){
+    const path=[free[(rnd()*free.length)|0]];
+    const used=new Set([path[0]+'']);
+    const deg=c=>{let d=0;for(const[dx,dy]of D4){const a=c[0]+dx,b=c[1]+dy;
+      if(a>=0&&a<W&&b>=0&&b<H&&grid[b][a]===null&&!used.has([a,b]+''))d++}return d};
+    while(path.length<n){
+      const [x,y]=path[path.length-1];
+      const nb=D4.map(([dx,dy])=>[x+dx,y+dy]).filter(([a,b])=>
+        a>=0&&a<W&&b>=0&&b<H&&grid[b][a]===null&&!used.has([a,b]+''));
+      if(!nb.length)break;
+      // 行き止まりに入らないよう、空き隣接の少ない先から埋める。
+      // 直進を優遇すると横一列ばかりになって謎が消えるので、そこは足さない
+      nb.sort((p,q)=>deg(p)-deg(q)+(rnd()-.5)*.5);
+      path.push(nb[0]); used.add(nb[0]+'');
+    }
+    if(path.length===n)return path;
+  }
+  return null;
+}
+function makeBoard(pool,lv,rnd,foes){
+  const need=(foes||[]).filter(f=>f.hp>0).flatMap(f=>f.wk.tags);
+  const isWeak=w=>w.tk.some(t=>need.includes(t));
+  let pick=null;
+  for(let t=0;t<140;t++){
+    const s=shuffle(pool.slice(),rnd).slice(0,lv.n);
+    if(s.length<lv.n)break;
+    const cells=s.reduce((a,w)=>a+w.w.length+1,0);
+    if(cells>108)continue;
+    // 特攻できる語が1枚も無いと 誰で殴るかの判断が消える。最低2枚
+    if(need.length&&s.filter(isWeak).length<2&&t<120)continue;
+    pick=s;break;
+  }
+  if(!pick)pick=shuffle(pool.slice(),rnd).sort((a,b)=>a.w.length-b.w.length).slice(0,lv.n);
+  pick.sort((a,b)=>b.w.length-a.w.length);
+
+  // 盤面は 必要なセル数から作り、なるべく正方形に寄せる。
+  // 横長にすると 8文字の語が一行に収まってしまい、折れも交差も起きない
+  const cells=pick.reduce((a,w)=>a+w.w.length+1,0);
+  const area=Math.ceil(cells/FILL);
+  const H=Math.max(5,Math.min(9,Math.round(Math.sqrt(area))));
+  const W=Math.max(5,Math.min(12,Math.ceil(area/H)));
+
+  const grid=[...Array(H)].map(()=>Array(W).fill(null));
+  const words=[];
+  for(const wd of pick){
+    const p=layPath(grid,W,H,wd.w.length+1,rnd);
+    if(!p)continue;
+    const wi=words.length;
+    p.forEach(([x,y],i)=>grid[y][x]={wi,i});
+    words.push({...wd,path:p,dead:false,col:WCOL[wi%WCOL.length]});
+  }
+  return {grid,words,W,H};
+}
+function shuffle(a,rnd){for(let i=a.length-1;i>0;i--){const j=(rnd()*(i+1))|0;
+  [a[i],a[j]]=[a[j],a[i]]}return a}
+function mulberry(s){return function(){s|=0;s=s+0x6D2B79F5|0;let t=Math.imul(s^s>>>15,1|s);
+  t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296}}
+
+/* ================= 描画 ================= */
+function drawBoard(){
+  const b=$('#board'), W=G.board.W, H=G.board.H;
+  b.style.gridTemplateColumns=`repeat(${W},1fr)`;
+  b.style.aspectRatio=`${W} / ${H}`;
+  b.innerHTML='';
+  for(let y=0;y<H;y++)for(let x=0;x<W;x++){
+    const g=G.board.grid[y][x], d=document.createElement('div');
+    d.className='c'; d.dataset.x=x; d.dataset.y=y;
+    if(!g){d.classList.add('empty')}
+    else{
+      const w=G.board.words[g.wi];
+      if(g.i===w.w.length){
+        // 絵の枠は「どのエティモンが撃つか」を示す編成4色。語ごとの色ではない
+        d.classList.add('pic');
+        d.style.borderColor=w.slotcol;
+        d.style.background=w.slotcol+'26';
+        const im=document.createElement('img');
+        im.src=WI(w.img); im.alt=w.ja; im.draggable=false;
+        d.appendChild(im);
+      }else{
+        d.textContent=w.w[g.i].toUpperCase();
+        if(G.lv.tint){d.style.color=w.col;d.style.borderColor=w.col+'99';
+          d.style.background=w.col+'1f'}
+        if(G.lv.head&&g.i===0)d.classList.add('head');
+      }
+      if(w.dead)d.classList.add('gone');
+    }
+    b.appendChild(d);
+  }
+}
+function drawFoes(){
+  $('#foes').innerHTML=G.foes.map((f,i)=>`
+    <div class="foe ${i===G.target?'on':''} ${f.hp<=0?'dead':''}" data-i="${i}">
+      <div class="body">${f.icon}<span class="ct ${f.ct<=1?'soon':''}">${f.ct}</span></div>
+      <div class="nm">${f.name}</div>
+      <div class="st">${f.wk.icon} ${f.wk.jp}</div>
+      <div class="hp"><i style="width:${Math.max(0,f.hp/f.max*100)}%"></i></div>
+      <div class="num">${Math.max(0,f.hp)} / ${f.max}</div>
+    </div>`).join('');
+  $$('#foes .foe').forEach(e=>e.onclick=()=>{G.target=+e.dataset.i;drawFoes()});
+}
+function drawParty(){
+  $('#party').innerHTML=G.party.map((p,i)=>
+    `<div class="mem" style="border-color:${['#ff8a5c','#63c7ff','#ffd166','#8de08a'][i]}">
+       <img src="${CH(p.img)}" alt="${p.jp}"></div>`).join('');
+}
+function drawHP(){
+  $('#hpline .bar i').style.width=Math.max(0,G.hp/G.maxhp*100)+'%';
+  $('#hpn').textContent=`味方HP ${Math.max(0,G.hp)} / ${G.maxhp}`;
+  $('#chain').textContent=G.chain>1?G.chain+'連鎖':'';
+}
+function log(html){const l=$('#log');const d=document.createElement('div');
+  d.innerHTML=html;l.prepend(d);while(l.children.length>5)l.lastChild.remove()}
+
+/* ================= 判定 ================= */
+function dmgOf(w,foe,chain){
+  const lenK=1+(w.w.length-4)*0.18;
+  const rareK=1+Math.log(w.r+1)*0.15;
+  const weak=w.tk.some(t=>foe.wk.tags.includes(t))?2:1;
+  return {n:Math.round(40*lenK*rareK*weak*Math.pow(1.15,chain-1)),weak:weak>1};
+}
+function fire(wi){
+  const w=G.board.words[wi];
+  if(w.dead||!G.running)return;
+  w.dead=true; G.chain++;
+  const foe=G.foes[G.target];
+  const d=dmgOf(w,foe,G.chain);
+  foe.hp-=d.n;
+  G.dex.set(w.w,w);
+
+  const slot=G.party.findIndex(p=>p.key===w.key);
+  const ci=$('#cutin');
+  ci.querySelector('img').src=CH(w.cimg);
+  ci.querySelector('b').textContent=w.w.toUpperCase();
+  ci.querySelector('s').textContent=w.ja+' — '+w.jp;
+  ci.classList.add('on'); clearTimeout(G.ciT);
+  G.ciT=setTimeout(()=>ci.classList.remove('on'),1000);
+  const mem=$$('#party .mem')[slot];
+  if(mem){mem.classList.remove('fire');void mem.offsetWidth;mem.classList.add('fire')}
+
+  const fe=$$('#foes .foe')[G.target];
+  if(fe){fe.classList.remove('hurt');void fe.offsetWidth;fe.classList.add('hurt');
+    const r=fe.getBoundingClientRect(), t=$('#top').getBoundingClientRect();
+    const p=document.createElement('div');
+    p.className='dmg'+(d.weak?' w':'');
+    p.textContent=(d.weak?'特攻 ':'')+d.n;
+    p.style.left=(r.left-t.left+r.width/2-24)+'px';
+    p.style.top=(r.top-t.top+6)+'px';
+    $('#pop').appendChild(p); setTimeout(()=>p.remove(),850);
+  }
+  log(`<b>${w.w}</b> ${w.ja}${d.weak?' <span style="color:#ffd166">特攻!</span>':''}
+       ${G.chain>1?`<span style="color:#5ddba1">${G.chain}連鎖</span>`:''}`);
+
+  if(foe.hp<=0){foe.hp=0;log(`<b>${foe.name}</b> をたおした`);
+    if(G.foes.every(f=>f.hp<=0))return finish(true);
+    if(G.foes[G.target].hp<=0)G.target=G.foes.findIndex(f=>f.hp>0);}
+
+  drawBoard();drawHP();
+  step(); // 1語 = 1手
+}
+function step(){
+  let dmg=0;
+  G.foes.filter(f=>f.hp>0).forEach(f=>{
+    if(--f.ct<=0){f.ct=f.iv;dmg+=f.atk}
+  });
+  if(dmg){
+    G.hp-=dmg; G.chain=0;
+    log(`<span style="color:#ff5d73">敵の攻撃 -${dmg}</span>`);
+    if(G.hp<=0){G.hp=0;drawHP();drawFoes();return finish(false)}
+  }
+  drawHP();drawFoes();
+  if(G.board.words.every(x=>x.dead)){log('盤面クリア → 無料でリロード');newBoard()}
+}
+
+/* ================= なぞる ================= */
+let path=[];
+function cellAt(el){
+  if(!el||!el.classList||!el.classList.contains('c'))return null;
+  return [+el.dataset.x,+el.dataset.y];
+}
+function paint(){
+  $$('#board .c').forEach(e=>e.classList.remove('on'));
+  path.forEach(([x,y])=>{const e=$(`#board .c[data-x="${x}"][data-y="${y}"]`);
+    if(e)e.classList.add('on')});
+  $('#trace').textContent=path.map(([x,y])=>{
+    const g=G.board.grid[y][x];
+    return !g?'':(g.i===G.board.words[g.wi].w.length?'→':G.board.words[g.wi].w[g.i]);
+  }).join('');
+}
+function pushCell(c){
+  if(!c)return;
+  const g=G.board.grid[c[1]][c[0]];
+  if(!g||G.board.words[g.wi].dead)return;
+  if(path.length){
+    const [px,py]=path[path.length-1];
+    if(px===c[0]&&py===c[1])return;
+    if(path.length>1){const [bx,by]=path[path.length-2];
+      if(bx===c[0]&&by===c[1]){path.pop();paint();return}}
+    if(Math.abs(px-c[0])+Math.abs(py-c[1])!==1)return;   // 斜め禁止
+    if(path.some(([a,b])=>a===c[0]&&b===c[1]))return;
+  }
+  path.push(c);paint();
+}
+function endTrace(){
+  if(!path.length)return;
+  let hit=-1;
+  G.board.words.forEach((w,wi)=>{
+    if(w.dead||w.path.length!==path.length)return;
+    if(w.path.every((c,i)=>c[0]===path[i][0]&&c[1]===path[i][1]))hit=wi;
+  });
+  const p=path; path=[];
+  if(hit>=0){paint();fire(hit)}
+  else{
+    if(p.length>2)p.forEach(([x,y])=>{const e=$(`#board .c[data-x="${x}"][data-y="${y}"]`);
+      if(e){e.classList.remove('no');void e.offsetWidth;e.classList.add('no')}});
+    setTimeout(paint,10);
+  }
+}
+function bindBoard(){
+  const b=$('#board');
+  b.addEventListener('pointerdown',e=>{
+    if(!G||!G.running)return;
+    b.setPointerCapture(e.pointerId);path=[];pushCell(cellAt(e.target.closest('.c')));
+  });
+  b.addEventListener('pointermove',e=>{
+    if(!G||!G.running||!path.length)return;
+    const el=document.elementFromPoint(e.clientX,e.clientY);
+    pushCell(cellAt(el&&el.closest?el.closest('.c'):el));
+  });
+  b.addEventListener('pointerup',endTrace);
+  b.addEventListener('pointercancel',()=>{path=[];paint()});
+}
+
+/* ================= 打つ ================= */
+function bindType(){
+  const t=$('#typed');
+  t.addEventListener('input',()=>{
+    if(!G||!G.running)return;
+    const v=t.value.trim().toLowerCase();
+    const wi=G.board.words.findIndex(w=>!w.dead&&w.w===v);
+    if(wi>=0){t.value='';fire(wi)}
+  });
+  document.addEventListener('keydown',e=>{
+    if(!G||!G.running)return;
+    if(e.key>='1'&&e.key<='9'&&document.activeElement!==t){
+      const i=+e.key-1; if(G.foes[i]&&G.foes[i].hp>0){G.target=i;drawFoes()}}
+    if(/^[a-zA-Z]$/.test(e.key)&&document.activeElement!==t)t.focus();
+  });
+}
+
+/* ================= 進行 ================= */
+function newBoard(){
+  G.board=makeBoard(G.pool,G.lv,G.rnd,G.foes);
+  path=[];drawBoard();$('#trace').textContent='';
+}
+function finish(win){
+  G.running=false;
+  const list=[...G.dex.values()].map(w=>
+    `<div class="dx"><img src="${WI(w.img)}" alt=""><div><b>${w.w}</b> ${w.ja}
+       <s>${w.b||w.jp+'の語根から'}</s></div></div>`).join('');
+  $('#ovc').innerHTML=`
+    <h1>${win?'勝利':'敗北'}</h1>
+    <p>使った英単語 ${G.dex.size} 語。語源はエティモペディアで引ける。</p>
+    <div id="dexlist">${list||'<span style="color:#6b6079">1語も撃てなかった</span>'}</div>
+    <div class="row"><button id="again">もう一度</button></div>`;
+  $('#ov').classList.remove('off');
+  $('#again').onclick=title;
+}
+
+/* ================= 開始画面 ================= */
+let selKeys=[], selLv='mid';
+function title(){
+  $('#ov').classList.remove('off');
+  $('#ovc').innerHTML=`
+    <h1>エティモリンゴ:一筆書きバトル</h1>
+    <p>盤面のアルファベットを、絵まで一筆書きでなぞる。<br>
+       消した英単語の語根＝エティモンが攻撃する。<b>4体えらぶ</b></p>
+    <div id="pick"></div>
+    <div class="row">
+      <div class="seg">${Object.entries(LV).map(([k,v])=>
+        `<button data-lv="${k}" class="${k===selLv?'on':''}">${v.label}</button>`).join('')}</div>
+    </div>
+    <div class="row"><button id="go">はじめる</button></div>
+    <div class="help">
+      <b>あそびかた</b><br>
+      ・手がかりは<b>その単語の絵</b>。キャベツの絵があれば C-A-B-B-A-G-E が一筆書きで敷いてある<br>
+      ・文字をなぞって<b>絵で終わる</b>と、その語が消えて そのエティモンが撃つ<br>
+      ・中級から上は<b>文字に色が付かない</b>。綴りが分からないと どの文字が その絵のものか判らない<br>
+      ・綴りを知っていれば<b>キーボードで打っても</b>いい(右下の欄。数字キーでターゲット変更)<br>
+      ・敵の<b>状態</b>に噛み合う語は<b>特攻</b>。燃えている敵には水の語、闇にまぎれる敵には見る語<br>
+      ・<b>1語＝1手</b>。敵の頭の数字が0になると殴られる。時間制限は無い<br>
+      ・盤面を<b>全部消しきると無料でリロード</b>。連鎖が続くほど威力が上がる
+    </div>`;
+  $('#pick').innerHTML=DATA.fams.map(f=>`
+    <div class="pk ${selKeys.includes(f.key)?'on':''}" data-k="${f.key}">
+      <img src="${CH(f.img)}" alt=""><b>${f.jp}</b><s>${f.words.length}語</s></div>`).join('');
+  $$('#pick .pk').forEach(e=>e.onclick=()=>{
+    const k=e.dataset.k, i=selKeys.indexOf(k);
+    if(i>=0)selKeys.splice(i,1); else if(selKeys.length<4)selKeys.push(k);
+    $$('#pick .pk').forEach(p=>p.classList.toggle('on',selKeys.includes(p.dataset.k)));
+    $('#go').disabled=selKeys.length!==4;
+  });
+  $$('.seg button').forEach(e=>e.onclick=()=>{selLv=e.dataset.lv;
+    $$('.seg button').forEach(b=>b.classList.toggle('on',b===e))});
+  $('#go').disabled=selKeys.length!==4;
+  $('#go').onclick=start;
+}
+
+const FOES=[
+  {name:'かげのぬし',  icon:'👹',max:900 ,atk:210,iv:4},
+  {name:'ささやき',    icon:'👻',max:700 ,atk:160,iv:3},
+  {name:'かたつむり',  icon:'🐌',max:1300,atk:280,iv:6},
+  {name:'むれ',        icon:'🦇',max:800 ,atk:190,iv:4},
+  {name:'いしあたま',  icon:'🗿',max:1500,atk:240,iv:5},
+];
+function start(){
+  const lv=LV[selLv];
+  const rnd=mulberry(Date.now()&0xffffff);
+  const party=selKeys.map(k=>DATA.fams.find(x=>x.key===k));
+  const SLOT=['#ff8a5c','#63c7ff','#ffd166','#8de08a'];
+  const mk=(p,i)=>w=>({...w,key:p.key,jp:p.jp,cimg:p.img,slotcol:SLOT[i]});
+  let pool=party.flatMap((p,i)=>p.words
+    .filter(w=>w.w.length>=lv.lo&&w.w.length<=lv.hi&&w.r<=lv.rank).map(mk(p,i)));
+  if(pool.length<lv.n*3)   // ふるいすぎたら 頻度の条件だけ外す
+    pool=party.flatMap((p,i)=>p.words.map(mk(p,i)));
+
+  // 敵の状態は「この編成で4語以上答えられるもの」からしか選ばない。
+  // 8種から自由に選ぶと 答えが0語の敵が出て、特攻という判断が死ぬ
+  let wk=shuffle(DATA.weak.filter(k=>
+    pool.filter(w=>w.tk.some(t=>k.tags.includes(t))).length>=4),rnd);
+  while(wk.length<3)wk=wk.concat(shuffle(DATA.weak.slice(),rnd));
+  const foes=shuffle(FOES.slice(),rnd).slice(0,3).map((f,i)=>
+    ({...f,hp:f.max,wk:wk[i],ct:f.iv}));
+
+  G={lv,rnd,party,pool,foes,target:0,hp:3000,maxhp:3000,chain:0,
+     dex:new Map(),running:true,board:null};
+  $('#log').innerHTML='';
+  drawParty();drawFoes();drawHP();newBoard();
+  $('#ov').classList.add('off');
+  $('#typed').value='';
+  log(`プール ${pool.length}語。敵の状態に噛み合う語が<b>特攻</b>`);
+}
+
+$('#reload').onclick=()=>{if(!G||!G.running)return;
+  newBoard();G.chain=0;log('リロード');step()};
+
+(async function(){
+  DATA=self.__DATA||await fetch('data/pie/puzzle.json').then(r=>r.json());
+  selKeys=DATA.fams.slice(0,4).map(f=>f.key);
+  bindBoard();bindType();title();
+})();
+</script>
+</body>
+</html>

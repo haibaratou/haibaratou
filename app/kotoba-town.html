@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>ことばの町</title>
+<style>
+:root{
+  --sky:#bfe3f5; --sky2:#e8f6fd; --grass:#8ecf6a; --grass2:#7bc158;
+  --ink:#3a3226; --dim:#8a7d68; --card:#fffdf6; --line:#e3d9c2;
+  --gold:#f5b942; --pop:#ff7a59;
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;height:100%;overflow:hidden}
+body{background:var(--sky);color:var(--ink);
+  font-family:"Hiragino Maru Gothic ProN","Hiragino Sans","Noto Sans JP",system-ui,sans-serif;
+  font-size:15px;user-select:none;display:flex;flex-direction:column}
+
+/* ---- うえのおび ---- */
+.top{flex:0 0 auto;display:flex;align-items:center;gap:10px;padding:8px 12px;
+  background:linear-gradient(#fff,#fdf6e4);border-bottom:3px solid var(--line);z-index:5}
+.top h1{font-size:17px;margin:0;letter-spacing:1px}
+.count{margin-left:auto;display:flex;align-items:center;gap:6px;font-size:14px;font-weight:700}
+.count b{font-size:21px;color:var(--pop)}
+.tinybtn{border:2px solid var(--line);background:#fff;border-radius:12px;
+  padding:5px 12px;font:inherit;font-size:13px;cursor:pointer}
+.tinybtn:active{transform:scale(.95)}
+
+/* ---- まち ---- */
+.town{flex:1 1 auto;position:relative;overflow:hidden;
+  background:linear-gradient(var(--sky2) 0%,var(--sky) 32%,var(--grass) 32%,var(--grass2) 100%)}
+.town .bg{position:absolute;inset:0;background-repeat:repeat-x;background-position:center 30%;
+  background-size:auto 62%;opacity:.5;pointer-events:none}
+#grid{position:absolute;inset:0;display:grid;gap:6px;padding:12px;
+  grid-template-columns:repeat(6,1fr);grid-template-rows:repeat(4,1fr);align-content:center}
+.cell{border-radius:14px;background:rgba(255,255,255,.16);
+  border:2px dashed rgba(255,255,255,.45);position:relative;
+  display:flex;align-items:center;justify-content:center;transition:.15s}
+.cell.free.aim{background:rgba(255,255,255,.5);border-color:#fff;transform:scale(1.05)}
+.cell.on{background:var(--card);border:3px solid var(--cc,#ccc);border-style:solid;
+  box-shadow:0 3px 0 rgba(0,0,0,.12)}
+.cell img{width:80%;height:70%;object-fit:contain;pointer-events:none;
+  filter:drop-shadow(0 2px 2px rgba(0,0,0,.18))}
+.cell .nm{position:absolute;bottom:2px;left:0;right:0;text-align:center;
+  font-size:10.5px;font-weight:700;letter-spacing:.2px;pointer-events:none;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap;padding:0 3px}
+.cell.pop{animation:pop .45s cubic-bezier(.2,1.6,.4,1)}
+@keyframes pop{0%{transform:scale(.2) rotate(-12deg);opacity:0}100%{transform:none;opacity:1}}
+.cell.glow{animation:glow 1.1s ease-in-out infinite alternate}
+@keyframes glow{to{box-shadow:0 0 0 6px var(--cc),0 3px 0 rgba(0,0,0,.12)}}
+
+/* ---- ぬし ---- */
+#nushi{position:absolute;inset:0;display:none;align-items:center;justify-content:center;
+  background:rgba(20,14,30,.45);z-index:20;flex-direction:column;gap:6px}
+#nushi.on{display:flex;animation:fade .3s}
+@keyframes fade{from{opacity:0}}
+#nushi img{width:min(46vw,240px);animation:drop .6s cubic-bezier(.2,1.5,.4,1)}
+@keyframes drop{0%{transform:translateY(-70px) scale(.5);opacity:0}100%{transform:none;opacity:1}}
+#nushi .say{background:#fff;border:4px solid var(--gold);border-radius:20px;
+  padding:12px 22px;text-align:center;max-width:88vw;box-shadow:0 6px 0 rgba(0,0,0,.2)}
+#nushi .say .big{font-size:20px;font-weight:700}
+#nushi .say .sub{font-size:13px;color:var(--dim);margin-top:2px}
+#nushi .go{margin-top:4px;background:var(--gold);border:0;border-radius:16px;
+  padding:11px 30px;font:inherit;font-size:17px;font-weight:700;color:#4a3410;
+  box-shadow:0 4px 0 #c08c1e;cursor:pointer}
+#nushi .go:active{transform:translateY(3px);box-shadow:0 1px 0 #c08c1e}
+
+/* ---- てふだ ---- */
+.hand{flex:0 0 auto;background:linear-gradient(#fdf6e4,#fff);border-top:3px solid var(--line);
+  padding:8px 8px 10px;display:flex;gap:8px;overflow-x:auto;align-items:stretch}
+.hand::-webkit-scrollbar{display:none}
+.wc{flex:0 0 96px;background:var(--card);border:3px solid var(--wc,#ddd);border-radius:16px;
+  padding:6px 4px 4px;text-align:center;cursor:pointer;transition:.12s;
+  box-shadow:0 3px 0 rgba(0,0,0,.1);position:relative}
+.wc:active{transform:translateY(2px)}
+.wc.sel{transform:translateY(-8px) scale(1.06);box-shadow:0 8px 0 rgba(0,0,0,.14)}
+.wc img{width:100%;height:52px;object-fit:contain}
+.wc .en{font-size:12.5px;font-weight:700;line-height:1.2;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.wc .ja{font-size:10.5px;color:var(--dim);
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.wc .dot{position:absolute;top:4px;right:5px;width:11px;height:11px;border-radius:50%;
+  background:var(--wc);border:2px solid #fff}
+
+/* ---- ずかん ---- */
+#book{position:absolute;inset:0;background:rgba(20,14,30,.5);z-index:30;
+  display:none;align-items:center;justify-content:center;padding:16px}
+#book.on{display:flex}
+#book .sheet{background:#fffdf6;border-radius:22px;padding:16px;max-width:560px;width:100%;
+  max-height:86%;overflow:auto;border:4px solid var(--line)}
+#book h2{margin:0 0 10px;font-size:17px}
+.bk{display:grid;grid-template-columns:repeat(auto-fill,minmax(74px,1fr));gap:8px}
+.bk .n{text-align:center;border:3px solid var(--line);border-radius:14px;padding:6px 2px;
+  background:#f4efe2;opacity:.45}
+.bk .n.got{opacity:1;background:#fff}
+.bk .n img{width:100%;height:46px;object-fit:contain}
+.bk .n div{font-size:10.5px;font-weight:700;margin-top:2px}
+@media(max-width:520px){ #grid{grid-template-columns:repeat(4,1fr);grid-template-rows:repeat(5,1fr)} }
+</style>
+</head>
+<body>
+
+<div class="top">
+  <h1>ことばの町</h1>
+  <button class="tinybtn" id="bookBtn">ずかん</button>
+  <div class="count">ぬし <b id="nCount">0</b> / <span id="nAll">0</span></div>
+</div>
+
+<div class="town">
+  <div class="bg" id="bg"></div>
+  <div id="grid"></div>
+  <div id="nushi">
+    <img id="nushiImg" alt="">
+    <div class="say"><div class="big" id="nushiName"></div><div class="sub" id="nushiSub"></div></div>
+    <button class="go" id="nushiGo">やったー!</button>
+  </div>
+</div>
+
+<div class="hand" id="hand"></div>
+
+<div id="book"><div class="sheet"><h2>あつめた ぬし</h2><div class="bk" id="bkList"></div>
+  <div style="text-align:center;margin-top:14px">
+    <button class="go" id="bookClose" style="background:var(--line);box-shadow:0 4px 0 #c9bda2;color:var(--ink)">とじる</button>
+  </div></div></div>
+
+<script id="towndata" type="application/json">{"clans":[{"key":"reg-","jp":"まっすぐ","color":"#5aa7e8","img":"T_ch_reg_straight.png","note":"まっすぐな線は、道になり、規則になり、王の支配にもなる。right は正しさ、rule は定規とルール、regal は民を導く王の言葉。","words":[{"w":"dressing","ja":"ドレッシング","ts":"食物","r":568,"b":"もとは「整えること」。料理のソースを指すのは1500年ごろから。"},{"w":"real","ja":"スペインの旧銀貨","ts":"道具","r":221,"b":"「本物の」real とは別語。スペイン語で「王の」。royal の仲間。"},{"w":"rail","ja":"レール","ts":"道具","r":599,"b":"もとは木の横木。金属のレールを指すのは1830年代から。"},{"w":"rack","ja":"棚","ts":"道具","r":660,"b":"原義は「引き伸ばしたもの」。皮を張って干す枠から。"},{"w":"source","ja":"源","ts":"場所","r":299,"b":"原義は「泉が湧き上がるところ」。sub(下から)+regere(導く)。"},{"w":"direction","ja":"方向","ts":"場所","r":312,"b":"原義は「まっすぐ整えること」。方角を指すのは17世紀から。"},{"w":"region","ja":"地域","ts":"場所","r":320,"b":"語根は「まっすぐ導く・支配する」。線で区切った統治の範囲が原義。"},{"w":"address","ja":"住所","ts":"場所","r":341,"b":"原義は「まっすぐ向ける」。ゴルフのアドレスに古い意味が残る。"},{"w":"director","ja":"監督","ts":"人","r":472,"b":"最初はただの「案内人」。映画や舞台の「監督」の意は1911年から。"},{"w":"royal","ja":"王の","ts":"人","r":493,"b":"米語では1940年代から「ひどい」の強め言葉にもなった。"},{"w":"regiment","ja":"連隊","ts":"人","r":664,"b":"もとは「統治・支配」の意。軍の単位になったのは1570年代から。"},{"w":"escort","ja":"護衛","ts":"人","r":679,"b":"escort と correct は同じ語。「まっすぐに正す」が中身。"},{"w":"regulator","ja":"調整者","ts":"人","r":726,"b":"1767年の米国では、地方の自警団も regulator と呼ばれた。"},{"w":"royalty","ja":"王族","ts":"人","r":732,"b":"王の特権から転じて、本の印税もroyaltyと呼ぶようになった。"},{"w":"surrogate","ja":"代理の","ts":"人","r":764,"b":"もとは司教や裁判官の代理を指した。代理母の意はずっと後。"}]},{"key":"kaput-","jp":"頭","color":"#e8875a","img":"T_ch_kaput_head.png","note":"頭は体のてっぺんで、集団のリーダーでもある。captain は先頭に立つ人、capital は都市やお金の「頭」、cabbage は頭みたいに丸い野菜。","words":[{"w":"cattle","ja":"牛","ts":"生物","r":534,"b":"cattle はもと財産全般を指した。牛だけになるのは16世紀末。"},{"w":"cabbage","ja":"キャベツ","ts":"食物","r":754,"b":"葉が巻いてできた「小さな頭」。野菜の名前に頭が残っている。"},{"w":"headquarters","ja":"本部","ts":"建物","r":608,"b":"単数の a headquarter は存在しない。原義は「司令官の住まい」。"},{"w":"headline","ja":"大見出し","ts":"道具","r":759,"b":"もとは印刷用語で、ページ上端の題と番号の行のこと。新聞の見出しは1890年から。"},{"w":"header","ja":"ヘディング","ts":"道具","r":784,"b":"15世紀には「首切り役人」の意味だった。サッカーのヘディングは1906年から。"},{"w":"precipitation","ja":"降水","ts":"自然","r":637,"b":"原義は「頭から真っ逆さま」。雨が降る意はあとから加わった。"},{"w":"capital","ja":"首都","ts":"場所","r":324,"b":"首都も資本も大文字も、原義は「頭の」。ラテン語 caput から。"},{"w":"ahead","ja":"前方に","ts":"場所","r":391,"b":"中身は「頭の側に」。もとは船の用語で astern の反対だった。"},{"w":"chief","ja":"長","ts":"人","r":424,"b":"フランス語では chef になった同じ語。原義はラテン語の「頭」。"},{"w":"captain","ja":"船長","ts":"人","r":513,"b":"船長も機長も主将も、みんなラテン語の「頭」から。"},{"w":"chef","ja":"シェフ","ts":"人","r":710,"b":"厨房の「頭」。chief と綴りが分かれただけの同じ語。"},{"w":"cadet","ja":"士官学校生","ts":"人","r":939,"b":"中世ラテン語で「小さな頭」。長男が家の頭、次男は小さな頭。"}]},{"key":"kers-2","jp":"走る","color":"#a06ee0","img":"T_ch_kers2.png","note":"","words":[{"w":"horse","ja":"馬","ts":"生物","r":399,"b":"実は語源不明の語。古英語には eoh という別の「馬」もあった。"},{"w":"car","ja":"自動車","ts":"道具","r":273,"b":"起源はケルトの二輪戦車 karros。語根は「走る」を表す kers-。"},{"w":"carriage","ja":"乗り物","ts":"道具","r":565,"b":"「身のこなし、姿勢」の意もある。人を運ぶ馬車は1706年から。"},{"w":"corridor","ja":"廊下","ts":"建物","r":588,"b":"語の正体は「走る者」。城壁沿いを走る通路が、家の廊下になった。"},{"w":"cargo","ja":"船荷","ts":"道具","r":613,"b":"ラテン語の「荷車に積む」から。car(車)と同じ荷車が元にある。"},{"w":"crawl","ja":"生簀","ts":"道具","r":700,"b":"這う crawl とは別語。囲いを表す corral と同じ出どころ。"},{"w":"chariot","ja":"戦車","ts":"道具","r":756,"b":"フランス語 char「車」の拡大形。car と同じ語から来た戦車。"},{"w":"course","ja":"進路","ts":"場所","r":192,"b":"ラテン語 currere「走る」から。走る線がすべての意味の元。"},{"w":"carrier","ja":"運ぶ人","ts":"人","r":566,"b":"病気を広める「保菌者」の意は1899年、空母の略は1917年から。"},{"w":"carpenter","ja":"大工","ts":"人","r":791,"b":"原義は「二輪馬車を作る人」。ガリア語の車を指す語から生まれた。"}]},{"key":"wel-3","jp":"転がる","color":"#5ec8c8","img":"T_ch_wel3.png","note":"","words":[{"w":"well","ja":"井戸","ts":"建物","r":59,"b":"「うまく」の well とは別語。語根は「転がる」、水がわき返る動き。"},{"w":"reveal","ja":"窓枠","ts":"建物","r":468,"b":"秘密を明かす reveal とは別語。原義は「下へ下げる」。"},{"w":"valve","ja":"バルブ","ts":"道具","r":575,"b":"原義は「開き戸の片側」。回って開くものが弁の名になった。"},{"w":"helicopter","ja":"ヘリコプター","ts":"道具","r":688,"b":"切れ目は heli-copter でなく helico-pter。「らせん」+「翼」。"},{"w":"wallet","ja":"財布","ts":"道具","r":693,"b":"もとは旅人の背負い袋。札入れの意味は1834年のアメリカから。"},{"w":"vault","ja":"天井","ts":"建物","r":741,"b":"l の字は1400年ごろ挿入された飾り。fault の l と同じ事情。"},{"w":"channel","ja":"海峡","ts":"場所","r":454,"b":"もとは「川床」。電信の回線を経て、1928年に放送の局へ。"},{"w":"valley","ja":"谷","ts":"場所","r":524,"b":"「死の陰の谷」は中英語で Helldale「地獄の谷」と訳された。"}]},{"key":"kʷo-","jp":"誰・何","color":"#7cba62","img":"T_ch_kwo.png","note":"","words":[{"w":"cheese","ja":"チーズ","ts":"食物","r":528,"b":"ゲルマン語がラテン語から借りた古い外来語。語源は「発酵」か。"},{"w":"who","ja":"誰","ts":"人","r":1,"b":"疑問代名詞の語根がほとんどそのまま残った語。"},{"w":"where","ja":"どこに","ts":"場所","r":49,"b":"where it's at「核心」は1903年から。場所を問う語が本質を指すように。"},{"w":"somewhere","ja":"どこかに","ts":"場所","r":435,"b":"第一次大戦の記事は、検閲で地名を「どこか」と伏せた。"},{"w":"anywhere","ja":"どこでも","ts":"場所","r":475,"b":"14世紀末に any と where がくっついた新顔。古くは owhere。"},{"w":"elsewhere","ja":"他の場所で","ts":"場所","r":487,"b":"elseとwhereがくっついた語。古英語では二語に分かれていた。"},{"w":"wherever","ja":"一体どこへ","ts":"場所","r":570,"b":"where + ever。もとは where を強めるための言い方だった。"}]},{"key":"deuk-","jp":"導く","color":"#e8875a","img":"T_ch_deuk.png","note":"","words":[{"w":"product","ja":"製品","ts":"道具","r":306,"b":"英語での初出は掛け算の「積」。原義は「前へ導き出されたもの」。"},{"w":"dock","ja":"ドック","ts":"建物","r":676,"b":"もとは、乗り上げた船が泥に刻む溝のことだったらしい。"},{"w":"team","ja":"チーム","ts":"人","r":289,"b":"古英語では「家族、血筋」。語根は「引く」で、車を引く馬の一組も team。"},{"w":"producer","ja":"生産者","ts":"人","r":612,"b":"原義は「前へ引き出す」。映画の意味は1891年から。"},{"w":"conductor","ja":"指揮者","ts":"人","r":674,"b":"原義は「導く人」。楽団の指揮者を指すのは1784年から。"},{"w":"duke","ja":"公爵","ts":"人","r":684,"b":"原義は「導く者」。14世紀に英語本来の earl を押しのけた。"},{"w":"educator","ja":"教育者","ts":"人","r":719,"b":"ラテン語では「養い育てる人、里親」。教える人の意味は後から。"}]},{"key":"g(e)r-2","jp":"曲がった","color":"#f26d99","img":"T_ch_ger2.png","note":"","words":[{"w":"crop","ja":"作物","ts":"生物","r":505,"b":"古英語では「鳥の胃袋」や「草木の先端」。収穫の意は英語だけ。"},{"w":"grape","ja":"葡萄","ts":"食物","r":737,"b":"元は摘み取り用の「かぎ」。古英語の「ワインの実」を追い出した。"},{"w":"cart","ja":"荷車","ts":"道具","r":620,"b":"昔は罪人を処刑場へ運ぶ車で、さらし者を乗せる車でもあった。"},{"w":"cradle","ja":"揺りかご","ts":"道具","r":754,"b":"もとの意味は「かご」。16世紀から「発祥の地」の意味も。"},{"w":"creek","ja":"小川","ts":"自然","r":700,"b":"原義は「曲がった隅」。英国では入り江、米国では小川を指す。"},{"w":"group","ja":"集団","ts":"人","r":189,"b":"もとは絵画批評の用語で、画面の中の人物のかたまりのこと。"}]},{"key":"sterə-","jp":"広げる","color":"#43b5a0","img":"T_ch_stere.png","note":"","words":[{"w":"strawberry","ja":"イチゴ","ts":"食物","r":783,"b":"なぜ「藁」なのかは今も不明。古英語には「土の実」という別名もあった。"},{"w":"structure","ja":"構造","ts":"建物","r":261,"b":"もとは「積み上げて建てること」。出来上がった形ではなく作る作業を指した。"},{"w":"instrument","ja":"器具","ts":"道具","r":477,"b":"英語に入った13世紀末、まず指したのは「楽器」だった。"},{"w":"straw","ja":"麦わら","ts":"自然","r":621,"b":"中身は「まき散らされたもの」。飲み物のストローは1851年から。"},{"w":"street","ja":"通り","ts":"場所","r":367,"b":"原義は「敷きならした道」。ローマ時代から英国で使われ続ける稀な語。"},{"w":"instructor","ja":"教授者","ts":"人","r":656,"b":"古典ラテン語では「準備する人」。積み上げて組み立てる語根から。"}]},{"key":"(s)ker-1","jp":"切る","color":"#7cba62","img":"T_ch_sker1.png","note":"","words":[{"w":"screen","ja":"ついたて","ts":"道具","r":415,"b":"最初は暖炉の火よけの衝立。今の画面はその子孫にあたる。"},{"w":"screw","ja":"ネジ","ts":"道具","r":649,"b":"借りた古フランス語 escroe は、ねじ穴のほうを指す語だった。"},{"w":"scarf","ja":"継ぎ手","ts":"道具","r":725,"b":"首に巻くスカーフとは別語。語根は「切る」で、木材の切り継ぎ。"},{"w":"scrap","ja":"切れはし","ts":"道具","r":727,"b":"もとは食べ残しのこと。金属くずの意味は1790年から。"},{"w":"scar","ja":"断崖","ts":"自然","r":666,"b":"傷跡ではなく岩の断崖を指す scar。語根は「切る」。"},{"w":"shore","ja":"岸","ts":"場所","r":526,"b":"語根は「切る」。陸と水を切り分ける線、という見方がある。"}]},{"key":"ei-","jp":"行く","color":"#d4a05a","img":"T_ch_ei.png","note":"","words":[{"w":"entrance","ja":"入り口","ts":"建物","r":462,"b":"「うっとりさせる」の entrance は別語。en+trance から。"},{"w":"circuit","ja":"回路","ts":"道具","r":504,"b":"原義は「ぐるりと回ること」。裁判官の巡回から回路まで広がった。"},{"w":"exit","ja":"出口","ts":"建物","r":538,"b":"元は「彼は退場する」という芝居のト書き。出口の意は1786年から。"},{"w":"count","ja":"伯爵","ts":"人","r":448,"b":"「数える」count とは別語。原義は皇帝の「お供」、そこから総督へ。"},{"w":"county","ja":"郡","ts":"場所","r":524,"b":"「伯爵の支配地」が原義。古英語の shire を押しのけた語。"}]},{"key":"perə-2","jp":"認める","color":"#7f8ff0","img":"T_ch_pere2.png","note":"","words":[{"w":"apartment","ja":"アパート","ts":"建物","r":454,"b":"原義は「切り離された場所」。家の中の独立した一区画。"},{"w":"parcel","ja":"小包","ts":"道具","r":721,"b":"原義は「小さな一部分」。土地の一区画を指す用法にその名残。"},{"w":"particle","ja":"微粒子","ts":"自然","r":506,"b":"ラテン語「部分」の縮小形。ほんのひとかけら、が原義。"},{"w":"partner","ja":"相棒","ts":"人","r":418,"b":"もとは parcener で「分け前を分かち合う人」。part の影響で今の形に。"}]},{"key":"mori-","jp":"水域","color":"#46b8d8","img":"T_ch_mori_water.png","note":"海は、単語と物語を生む場所だった。marine・submarine・aquamarine は水の一族。Merlin は「海の丘」の名を持ち、アヴァロンへ続く魔法使い。","words":[{"w":"mermaid","ja":"人魚","ts":"生物","r":894,"b":"原義はそのまま「海の乙女」。mere は今は使われない「海」の古語。"},{"w":"submarine","ja":"潜水艦","ts":"道具","r":735,"b":"1703年には「海の下に住む生き物」を指す語だった。"},{"w":"marine","ja":"海の","ts":"自然","r":553,"b":"同じ「海」でも古英語は sælic。ラテン語 mare がそれを追い出した。"},{"w":"aquamarine","ja":"アクアマリン","ts":"自然","r":1084,"b":""}]},{"key":"ked-","jp":"行く","color":"#f2a444","img":"T_ch_ked.png","note":"","words":[{"w":"ancestor","ja":"先祖","ts":"人","r":728,"b":"直訳は「先に行った人」。ラテン語 antecessor から。"},{"w":"predecessor","ja":"前任者","ts":"人","r":729,"b":"decessor は「退官する人」。原義は「先に去った人」。"},{"w":"ancestry","ja":"先祖","ts":"人","r":750,"b":"「先を行った人」が原義。ant-(前)+ ked-(行く)の語根から。"}]},{"key":"med-","jp":"処置する","color":"#f2a444","img":"T_ch_med.png","note":"","words":[{"w":"model","ja":"模型","ts":"道具","r":186,"b":"ラテン語 modus「はかり」の指小形 modulus「小さな寸法」から。"},{"w":"medicine","ja":"薬","ts":"道具","r":449,"b":"最初は「治療」の意味。「薬」を指すのは14世紀から。"},{"w":"mold","ja":"鋳型","ts":"道具","r":692,"b":"ラテン語 modulus「小さな尺度」から。型は元は「はかる」もの。"}]}],"kinds":{"生物":"🌱","食物":"🍞","道具":"🔨","建物":"🏠","場所":"🗺️","人":"🧍","自然":"⛰️"}}</script>
+<script>
+const A = '../assets/';
+const $ = s=>document.querySelector(s);
+let DATA = JSON.parse(document.getElementById('towndata').textContent);
+let CLANS = DATA.clans || [];
+const CELLS = 24;
+let cells = [], hand = [], sel = -1, arrived = new Set(), pool = [];
+
+/* ぬしが来る前は、どの一族も「はじめの3枚」までしか出てこない。
+   3つ置くと ぬしが来て、その一族の のこりが手札に加わる(town-catalog.md のルール) */
+function openWords(c){ return arrived.has(c.key) ? c.words : c.words.slice(0,3); }
+
+function buildPool(){
+  pool = [];
+  CLANS.forEach(c=>openWords(c).forEach(w=>pool.push({...w, clan:c})));
+}
+function placedCount(key){ return cells.filter(x=>x && x.clan.key===key).length; }
+
+/* 手札の配り方。子ども向けなので「がんばれば ぬしが来る」状態を切らさない。
+   ① 町にすでに2つ置いてある一族があれば、その3枚目を必ず入れる
+   ② そうでなければ、手札の中に同じ一族が2枚そろうように配る
+   ③ 残りは自由 */
+function draw(want){
+  const used = new Set(cells.filter(Boolean).map(x=>x.w).concat(hand.map(h=>h.w)));
+  let cand = pool.filter(p=>!used.has(p.w));
+  if(!cand.length) return null;
+  if(want){ const w = cand.filter(p=>p.clan.key===want); if(w.length) cand = w; }
+  const near = cand.filter(p=>!arrived.has(p.clan.key) && placedCount(p.clan.key)===2);
+  const src = near.length ? near : cand;
+  return src[Math.floor(Math.random()*src.length)];
+}
+function refill(){
+  while(hand.length<5){ const c=draw(); if(!c)break; hand.push(c); }
+  // 手札にも町にも あと一歩が無いなら、手札の中でペアを作る
+  const readyOnBoard = CLANS.some(c=>!arrived.has(c.key)&&placedCount(c.key)===2);
+  const cnt={}; hand.forEach(h=>cnt[h.clan.key]=(cnt[h.clan.key]||0)+1);
+  const hasPair = Object.entries(cnt).some(([k,n])=>n>=2&&!arrived.has(k));
+  if(readyOnBoard||hasPair) return;
+  const seed = hand.find(h=>!arrived.has(h.clan.key));
+  if(!seed) return;
+  const mate = draw(seed.clan.key);
+  if(!mate) return;
+  const i = hand.findIndex(h=>h.clan.key!==seed.clan.key);
+  if(i>=0) hand[i]=mate; else hand.push(mate);
+}
+
+function imgOf(w){ return A+'word/'+w+'.png'; }
+
+function render(){
+  $('#grid').innerHTML = cells.map((x,i)=>{
+    if(!x) return `<div class="cell free" data-i="${i}"></div>`;
+    return `<div class="cell on" data-i="${i}" style="--cc:${x.clan.color}">
+      <img src="${imgOf(x.w)}" alt="${x.w}" onerror="this.style.display='none'">
+      <div class="nm" style="color:${x.clan.color}">${x.w}</div></div>`;
+  }).join('');
+  $('#hand').innerHTML = hand.map((c,i)=>`
+    <div class="wc${sel===i?' sel':''}" data-h="${i}" style="--wc:${c.clan.color}">
+      <span class="dot"></span>
+      <img src="${imgOf(c.w)}" alt="" onerror="this.style.visibility='hidden'">
+      <div class="en">${c.w}</div><div class="ja">${c.ja||'　'}</div></div>`).join('');
+  document.querySelectorAll('.cell.free').forEach(el=>el.classList.toggle('aim', sel>=0));
+  $('#nCount').textContent = arrived.size;
+}
+
+$('#hand').addEventListener('click', ev=>{
+  const el=ev.target.closest('.wc'); if(!el)return;
+  const i=+el.dataset.h; sel = (sel===i? -1 : i); render();
+});
+$('#grid').addEventListener('click', ev=>{
+  const el=ev.target.closest('.cell.free'); if(!el||sel<0)return;
+  const i=+el.dataset.i, card=hand[sel];
+  cells[i]=card; hand.splice(sel,1); sel=-1;
+  refill(); render();
+  const cell=document.querySelector(`.cell[data-i="${i}"]`);
+  if(cell) cell.classList.add('pop');
+  checkNushi(card.clan);
+});
+
+/* にたものが 3つ あつまると、その ぬしが くる */
+function checkNushi(clan){
+  if(arrived.has(clan.key)) return;
+  const idx = cells.map((x,i)=>x&&x.clan.key===clan.key?i:-1).filter(i=>i>=0);
+  if(idx.length < 3) return;
+  arrived.add(clan.key);
+  idx.forEach(i=>{ const c=document.querySelector(`.cell[data-i="${i}"]`); if(c)c.classList.add('glow'); });
+  setTimeout(()=>showNushi(clan, idx), 480);
+}
+function showNushi(clan, idx){
+  $('#nushiImg').src = A+'chara/'+clan.img;
+  $('#nushiName').textContent = `${clan.jp} の ぬしが きた!`;
+  const ws = idx.map(i=>cells[i].w).join('・');
+  $('#nushiSub').textContent = `${ws} は みんな なかま`;
+  $('#nushi').classList.add('on');
+  buildPool(); refill();
+}
+$('#nushiGo').addEventListener('click', ()=>{
+  $('#nushi').classList.remove('on');
+  document.querySelectorAll('.cell.glow').forEach(c=>c.classList.remove('glow'));
+  render();
+});
+
+$('#bookBtn').addEventListener('click', ()=>{
+  $('#bkList').innerHTML = CLANS.map(c=>`
+    <div class="n${arrived.has(c.key)?' got':''}">
+      <img src="${A+'chara/'+c.img}" alt=""><div>${arrived.has(c.key)?c.jp:'？'}</div></div>`).join('');
+  $('#book').classList.add('on');
+});
+$('#bookClose').addEventListener('click', ()=>$('#book').classList.remove('on'));
+
+(async ()=>{
+  if(location.protocol!=='file:'){
+    try{ const r=await fetch('data/pie/town.json');
+      if(r.ok){ const j=await r.json(); if(j.clans&&j.clans.length) CLANS=j.clans; } }catch(e){}
+  }
+  if(!CLANS.length){ $('#grid').innerHTML='<div style="grid-column:1/-1;text-align:center">'
+    +'データがありません。python3 app/build_town_data.py を実行してください。</div>'; return; }
+  $('#bg').style.backgroundImage = `url("${A}ground/T_BG_base_ground.png")`;
+  $('#nAll').textContent = CLANS.length;
+  cells = new Array(CELLS).fill(null);
+  buildPool(); refill(); render();
+})();
+</script>
+</body>
+</html>

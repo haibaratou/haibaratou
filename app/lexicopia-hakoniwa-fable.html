@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>エティモリンゴ レキシコピア・ファブル</title>
+<!--
+  大型プレイアブル版の入口。実装は app/lexicopia-fable/ に分割:
+    game.css … 見た目 / data.js … ゲーム効果データ / game.js … 本体
+  言語学データは data/pie/*.json(etymon-explorer と同一データ)を参照し、
+  ゲーム側から綴りで引く。既存の lexicopia-hakoniwa_IP360.html には触れない。
+-->
+<link rel="stylesheet" href="lexicopia-fable/game.css">
+</head>
+<body>
+<div id="wrap"><div id="app">
+  <header>
+    <h1>🌳 レキシコピア・ファブル</h1>
+    <span id="resbar"></span>
+    <span class="sp"></span>
+    <button class="hbtn" id="btnTown">🏘 町</button>
+    <button class="hbtn" id="btnSet">⚙ 設定</button>
+  </header>
+  <div id="errbar"></div>
+  <div id="stagebody"></div>
+  <div id="modal"></div>
+</div></div>
+<script src="lexicopia-fable/data.js"></script>
+<script src="lexicopia-fable/game.js"></script>
+</body>
+</html>

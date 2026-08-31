@@ -1,0 +1,1172 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>エティモリンゴ ことばの工房旅（プロトタイプ9）</title>
+<!--
+  ============================================================================
+  エティモリンゴ:ことばの工房旅(プロトタイプ7)
+  ============================================================================
+  Nanbara の発明:<b>「名詞は場に出るだけ。根源動詞と組み合わせて 初めて世界が動く」</b>。
+
+    ・jet を出す        → ジェットが 画面に あらわれる<b>だけ</b>
+    ・のる → とぶ       → ジェットに乗って とびたち、谷でも川でも門でも 一気にこえる
+    ・cabbage を出す    → キャベツが ころんと あらわれるだけ
+    ・なげる            → けものに ぶつける /  たべる → 自分の おやつ /  わたす → 贈りもの
+  同じ名詞が動詞しだいで 何通りにも働く = <b>無限の回答</b>。
+
+  ■ ものの理(ことわり)
+    ・名詞には<b>受動的な性質</b>だけがある。ランタンは出せば ひかる(だから
+      きり・やみは 出すだけで晴れる)。はしは かかる。ジェットは<b>とばない</b>
+      (とぶには のる が要る)。「現れるだけ」と「性質」の線引きが 納得の芯。
+    ・動詞は<b>ワイルドが演じる</b>。なげる=投げるの一族(yē-)、わたす=与える(dō-)、
+      みる=見る(weid-)、うたう=話す(bhā-)。jet も 実は yē-の子(噴き出す=投げ出す)。
+      使った動詞・出したものの祖先が<b>旅の仲間</b>に ならんでいく。
+    ・cabbage はDB外だが roots.csv の蘊蓄どおり kaput-(頭)の子として手登録。
+
+  ■ クイズにしない決めごと(前作から継続)
+    正解は無限(場面ごとに複数ルート+とんち)。失敗は存在しない ―
+    かみあわない組み合わせは 芝居で受け止める(石に のる、ジェットを かじる…)。
+    ライフも数値も無い。判定は 手書きの (動詞×もの×場面) 規則だけ。
+
+  画面は 1920x1080 固定キャンバス + scale(箱庭と同じ)。
+  ============================================================================
+-->
+<style>
+:root{
+  --ink:#241f26; --soft:#6f6673; --line:#e3d9cc; --paper:#fffdf8;
+  --ok:#2f7a52; --ng:#a4415c; --gold:#b8860b;
+  --hp:#e0455f; --enemy:#7f5aa0;
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+html,body{width:100%;height:100%;overflow:hidden;background:#141019}
+body{font-family:-apple-system,BlinkMacSystemFont,"Hiragino Sans","Yu Gothic",sans-serif;color:var(--ink)}
+#wrap{position:fixed;inset:0;overflow:hidden}
+button{font-family:inherit;cursor:pointer}
+#app{position:absolute;left:50%;top:50%;width:1920px;height:1080px;
+  transform:translate(-50%,-50%) scale(1);transform-origin:center center;
+  background:var(--paper);display:flex;flex-direction:column;overflow:hidden}
+header{display:flex;align-items:center;gap:10px;padding:8px 14px;background:#2f2833;color:#fff}
+header h1{font-size:15px;font-weight:900;letter-spacing:.03em;white-space:nowrap}
+header .sp{flex:1}
+.hbtn{background:rgba(255,255,255,.14);border:1.5px solid rgba(255,255,255,.3);color:#fff;
+  border-radius:9px;padding:4px 9px;font-size:11.5px;font-weight:bold;text-decoration:none;white-space:nowrap}
+.hbtn:hover{background:rgba(255,255,255,.26)}
+#trail{display:flex;align-items:center;gap:8px;font-size:12px;font-weight:900}
+#trail .nd{padding:3px 10px;border-radius:99px;background:rgba(255,255,255,.12);opacity:.55}
+#trail .nd.cur{opacity:1;background:#ffd23e;color:#241f26}
+#trail .nd.done{opacity:1;background:rgba(124,186,98,.85);color:#fff}
+
+/* ===== 戦場 ===== */
+#field{position:relative;flex:1 1 auto;overflow:hidden;background:#bfe3f5}
+#bg{position:absolute;inset:0;background-repeat:repeat-x;background-size:auto 100%;background-position:0 bottom}
+#field.night #bg{filter:brightness(.55) saturate(.8) hue-rotate(-15deg)}
+#foeBox{position:absolute;right:430px;bottom:10px;height:300px;width:auto;cursor:pointer;transition:transform .15s}
+#foeBox img{height:100%;width:auto;display:block;
+  filter:brightness(.58) sepia(1) hue-rotate(228deg) saturate(2.3) contrast(1.05)
+  drop-shadow(0 8px 6px rgba(30,20,40,.45))}
+/* 困難(trial)は敵ではない。青く沈めて「自然のもの」に見せる */
+#foeBox.trial img{filter:brightness(.75) sepia(1) hue-rotate(160deg) saturate(2.6) contrast(1.02)
+  drop-shadow(0 8px 6px rgba(20,40,60,.45))}
+#foeBox.hit{animation:shake .32s}
+@keyframes shake{0%,100%{transform:translateX(0)}25%{transform:translateX(-9px)}75%{transform:translateX(9px)}}
+#foeBox.lunge{animation:lunge .34s ease-in-out}
+@keyframes lunge{0%,100%{transform:translateX(0) scale(1)}45%{transform:translateX(-34px) scale(1.1)}}
+#foeBox.sleeping::after{content:"💤";position:absolute;right:-6px;top:-4px;font-size:26px;
+  animation:zzz 1.6s ease-in-out infinite}
+@keyframes zzz{0%,100%{transform:translateY(0);opacity:.6}50%{transform:translateY(-10px);opacity:1}}
+#foeBox.down{animation:downFall 1.1s cubic-bezier(.4,0,.7,1) forwards}
+#foeBox.down img{animation:downImg 1.1s ease-in forwards}
+@keyframes downFall{0%{transform:rotate(0) translateY(0)}30%{transform:rotate(6deg) translateY(4px)}
+  100%{transform:rotate(78deg) translateY(46px)}}
+@keyframes downImg{0%{opacity:1}100%{filter:grayscale(1) brightness(.45);opacity:.25}}
+#foeBox.asc{animation:ascend 2.1s cubic-bezier(.3,.7,.4,1) forwards}
+#foeBox.asc img{animation:ascendImg 2.1s ease-out forwards}
+@keyframes ascend{0%{transform:translateY(0) scale(1)}18%{transform:translateY(6px) scale(1.05,.94)}
+  100%{transform:translateY(-70px) scale(1.02)}}
+@keyframes ascendImg{0%{opacity:1}35%{filter:none;opacity:1}
+  100%{filter:brightness(1.5) drop-shadow(0 0 40px #ffe98a);opacity:0}}
+.halo{position:absolute;left:50%;top:44%;width:20px;height:20px;margin:-10px 0 0 -10px;border-radius:50%;
+  border:4px solid #ffe98a;pointer-events:none;z-index:14;animation:halo 1.5s ease-out forwards}
+@keyframes halo{0%{transform:scale(.4);opacity:0}20%{opacity:.95}100%{transform:scale(13);opacity:0;border-width:1px}}
+.sparkle{position:absolute;font-size:26px;pointer-events:none;z-index:15;animation:spk 1.6s ease-out forwards}
+@keyframes spk{0%{transform:translate(0,0) scale(.4);opacity:0}25%{opacity:1}
+  100%{transform:translate(var(--dx),-120px) scale(1.1);opacity:0}}
+#flash{position:absolute;inset:0;pointer-events:none;z-index:18;opacity:0}
+#flash.asc{animation:flashAsc 1.6s ease-out forwards;
+  background:radial-gradient(circle at 72% 52%,#fff8dc 0%,#ffd23e55 38%,transparent 70%)}
+#flash.down{animation:flashDown .55s ease-out forwards;
+  background:radial-gradient(circle at 72% 52%,#ff4d6a 0%,#8b0f2288 45%,transparent 75%)}
+@keyframes flashAsc{0%{opacity:0}22%{opacity:.85}100%{opacity:0}}
+@keyframes flashDown{0%{opacity:0}10%{opacity:.9}100%{opacity:0}}
+#field.quake{animation:quake .5s}
+@keyframes quake{0%,100%{transform:translate(0,0)}15%{transform:translate(-9px,4px)}
+  35%{transform:translate(8px,-5px)}55%{transform:translate(-6px,-3px)}78%{transform:translate(4px,3px)}}
+#slash{position:absolute;inset:0;pointer-events:none;z-index:16;opacity:0}
+#slash.on{animation:slashA .38s ease-out}
+@keyframes slashA{0%{opacity:0}25%{opacity:.85;background:linear-gradient(105deg,transparent 42%,#fff 47%,#ffd23e 50%,#fff 53%,transparent 58%)}
+  100%{opacity:0}}
+#foeMeta{position:absolute;top:10px;right:430px;z-index:12;width:330px;
+  display:flex;flex-direction:column;gap:3px;align-items:stretch;pointer-events:none}
+#foeTag{text-align:center;font-size:11.5px;font-weight:900;color:#fff;
+  background:rgba(30,20,40,.72);border-radius:8px;padding:3px 9px;line-height:1.35}
+#foeHp{position:relative;height:20px;border-radius:99px;background:rgba(0,0,0,.5);overflow:hidden;
+  border:2px solid rgba(255,255,255,.45)}
+#foeHp em{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
+  font-style:normal;font-size:13px;font-weight:900;color:#fff;text-shadow:0 1px 2px rgba(0,0,0,.8)}
+#foeHp i{display:block;height:100%;border-radius:99px;transition:width .3s;
+  background:linear-gradient(90deg,#b79ad6,#7f5aa0)}
+#foeHp.trial i{background:linear-gradient(90deg,#7ec8e8,#3a7fb5)}
+#foeInt{text-align:center;font-size:12px;font-weight:900;color:#ffd7d7;line-height:1.2}
+#foeInt span{background:rgba(60,18,26,.82);border:1.5px solid #ff9db4;border-radius:8px;padding:2px 8px}
+#foeInt b{font-size:15px;color:#fff}
+#heroBox{position:absolute;left:430px;bottom:6px;height:250px;width:auto;cursor:pointer;transition:transform .15s}
+#heroBox.hit{animation:shake .32s}
+#heroBox.flinch{animation:flinch .42s ease-out}
+@keyframes flinch{0%{transform:translateX(0) rotate(0)}25%{transform:translateX(-16px) rotate(-5deg)}
+  55%{transform:translateX(8px) rotate(3deg)}100%{transform:translateX(0) rotate(0)}}
+#heroBox img{height:100%;width:auto;display:block;transform:scaleX(-1);
+  filter:drop-shadow(0 8px 6px rgba(30,20,40,.4))}
+#foeBox .drop,#heroBox .drop{position:absolute;inset:-8px;border:3px dashed transparent;border-radius:16px;
+  transition:.12s;pointer-events:none}
+#foeBox.zon .drop,#heroBox.zon .drop{border-color:rgba(255,255,255,.7);background:rgba(255,255,255,.12)}
+#foeBox.hot .drop,#heroBox.hot .drop{border-color:#ffd23e;background:rgba(255,210,62,.28);
+  box-shadow:0 0 22px rgba(255,210,62,.6)}
+#myBars{position:absolute;left:8px;bottom:6px;width:240px;background:rgba(30,22,38,.62);
+  border:1.5px solid rgba(255,255,255,.32);border-radius:12px;padding:6px 9px;z-index:9}
+#myBars .grow{display:flex;align-items:center;gap:5px;margin-bottom:2px}
+.gname{font-size:10.5px;font-weight:900;color:#fff;text-shadow:0 1px 2px rgba(0,0,0,.6);white-space:nowrap}
+.gnum{font-size:10.5px;font-weight:800;color:#fff;opacity:.9;font-variant-numeric:tabular-nums;margin-left:auto}
+.bar{flex:1;height:9px;border-radius:99px;background:rgba(0,0,0,.5);overflow:hidden}
+.bar i{display:block;height:100%;border-radius:99px;transition:width .3s;background:linear-gradient(90deg,#ff9db4,var(--hp))}
+.bar.warn{animation:pulse .8s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.45}}
+#myNum .gd{color:#9fd0ff;margin-left:6px}
+.pop{position:absolute;z-index:30;font-size:24px;font-weight:900;pointer-events:none;
+  -webkit-text-stroke:5px #fff;paint-order:stroke fill;animation:popUp 1.05s ease-out forwards;white-space:nowrap}
+.pop.dmg{color:var(--hp)} .pop.heal{color:var(--ok)} .pop.sat{color:#f2a444}
+@keyframes popUp{0%{transform:translateY(0) scale(.55);opacity:0}14%{opacity:1}
+  100%{transform:translateY(-72px) scale(1.06);opacity:0}}
+
+/* ===== 吹き出し ===== */
+#bubble{position:relative;width:1160px;margin:10px auto 0;background:rgba(255,253,246,.98);
+  border:3px solid #2e2536;border-radius:16px;padding:9px 15px 10px;
+  box-shadow:0 5px 0 rgba(30,20,40,.3);height:120px;z-index:14;flex:0 0 auto;
+  display:flex;align-items:center;transition:opacity .2s}
+#bubble::after{content:"";position:absolute;left:50%;margin-left:-11px;bottom:-14px;width:0;height:0;
+  border:11px solid transparent;border-top-color:#2e2536;border-bottom:0}
+#bubble .btxt{width:100%;max-height:100%;overflow:hidden;font-size:21px;font-weight:800;line-height:1.6;
+  color:#241f26;white-space:pre-wrap}
+#bubble .btxt b{color:#a4415c}
+#bubble.calm{background:#f3fbf4;border-color:#2f7a52;box-shadow:0 5px 0 rgba(47,122,82,.35)}
+#bubble.calm::after{border-top-color:#2f7a52}
+#bubble .cur{display:inline-block;width:.6em;animation:blink .7s steps(1) infinite}
+#bubble .nx{position:absolute;right:12px;bottom:6px;font-size:15px;color:#a4415c;animation:blink .9s steps(1) infinite}
+@keyframes blink{50%{opacity:0}}
+
+/* ===== メッセージ欄 ===== */
+#msg{flex:0 0 auto;height:104px;overflow-y:auto;overscroll-behavior:contain;
+  background:#1d1822;color:#f4eee6;border-top:3px solid #0f0c14;
+  padding:10px 20px 11px;font-size:19px;line-height:1.7;position:relative}
+#msg .wrap{text-align:left;width:1160px;margin:0 auto}
+#msg .ln{padding:1px 0}
+#msg .ln b{color:#ffd23e}
+#msg .ln.crit{color:#ffe98a;font-weight:bold}
+#msg .ln.bad{color:#ff9db4}
+#msg .nx{position:absolute;right:14px;bottom:8px;font-size:16px;color:#ffd23e;animation:blink .9s steps(1) infinite}
+
+/* ===== 手札 ===== */
+#handWrap{background:
+  linear-gradient(rgba(255,235,200,.10),rgba(30,12,0,.22)),
+  repeating-linear-gradient(90deg,#8a6440 0 178px,#7d5a39 178px 184px,#916b45 184px 366px,#7a5836 366px 372px),
+  #8a6440;
+  padding:6px 9px 4px;display:flex;flex-direction:column;gap:4px;
+  position:relative;overflow:visible;z-index:30;flex:0 0 auto}
+#hand{display:flex;align-items:flex-end;justify-content:center;height:332px;pointer-events:none;
+  position:relative;z-index:40}
+#handBar{display:flex;align-items:center;gap:10px;padding:0 6px 2px}
+#handBar .note{font-size:12.5px;font-weight:900;color:#ffe9c9;text-shadow:0 1px 2px rgba(0,0,0,.5)}
+#handBar .sp{flex:1}
+#btnReload{background:#fff3dd;border:2.5px solid #4a3c50;border-radius:11px;padding:6px 14px;
+  font-size:13px;font-weight:900;color:#241f26;box-shadow:0 3px 0 rgba(46,37,54,.4)}
+#deckN{font-size:12px;font-weight:900;color:#ffe9c9;text-shadow:0 1px 2px rgba(0,0,0,.5)}
+.handCard{position:relative;flex:0 0 286px;width:286px;height:330px;cursor:grab;
+  touch-action:none;user-select:none;pointer-events:auto;z-index:1}
+.handCard:active{cursor:grabbing}
+.handCard .hcInner{position:absolute;left:50%;bottom:0;width:352px;margin-left:-176px;
+  transform-origin:50% 100%;transition:transform .16s ease,filter .16s ease}
+.handCard:hover,.handCard.dragging{z-index:9000}
+.handCard:hover .hcInner{filter:drop-shadow(0 16px 12px rgba(20,14,28,.4))}
+.handCard.dragging .hcInner{opacity:.28}
+/* 錬成できる相手。ドラッグ中、実在の単語が生まれる札が金色に光る */
+.handCard.mate .hcInner{filter:drop-shadow(0 0 18px #ffd23e) drop-shadow(0 0 6px #ffd23e)}
+.handCard.mateHot .hcInner{filter:drop-shadow(0 0 26px #ff9a3d) drop-shadow(0 0 10px #ffd23e) brightness(1.08)}
+.dragGhost{position:fixed;left:0;top:0;width:352px;z-index:9000;pointer-events:none;transform-origin:50% 50%;
+  filter:drop-shadow(0 18px 16px rgba(20,14,28,.45))}
+
+/* ===== 語根カード =====
+   対話戦闘の wordCard と同じ紙・同じ枠。中身は語根キャラが主役。
+     上段   … 数値ジェム(右上)
+     顔     … キャラ 150px。その下に意味の札
+     つづり … 英語での姿(vid / spect / re- / com- …)。錬成の手がかり
+     ★     … レア度(派生語が少ない語根ほど強い) */
+.rootCard{position:relative;width:352px;aspect-ratio:63/88;border-radius:16px;text-align:left;
+  background:linear-gradient(160deg,color-mix(in srgb,var(--cc,#e8875a) 30%,#f5e9d2),#efe0c4 55%,
+    color-mix(in srgb,var(--cc,#e8875a) 18%,#e9dabb));
+  border:3px solid #2e2536;box-shadow:0 14px 30px rgba(30,20,40,.35),inset 0 0 0 2px #fff8;
+  padding:12px 13px 11px;overflow:hidden;display:flex;flex-direction:column;align-items:center}
+.rootCard::before{content:"";position:absolute;inset:0;pointer-events:none;opacity:.5;
+  background:repeating-linear-gradient(115deg,transparent 0 7px,rgba(255,255,255,.16) 7px 8px)}
+/* 修飾語根(接頭辞)は角にリボンを出して「前につく札」と分かるように */
+.rootCard .modRibbon{position:absolute;left:-34px;top:20px;transform:rotate(-45deg);z-index:3;
+  background:#7a6bd8;color:#fff;font-size:15px;font-weight:900;padding:3px 40px;
+  box-shadow:0 2px 4px rgba(30,20,40,.35);letter-spacing:.06em}
+.rootCard .gem{position:absolute;right:10px;top:10px;z-index:4;width:104px;height:104px;border-radius:50%;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:0;
+  border:5px solid #fff;box-shadow:0 5px 10px rgba(30,20,40,.45),inset 0 0 0 3px rgba(255,255,255,.35);
+  color:#fff;text-shadow:0 2px 3px rgba(0,0,0,.4)}
+.rootCard .gem i{font-style:normal;font-size:34px;line-height:1}
+.rootCard .gem b{font-size:34px;line-height:1.05;font-variant-numeric:tabular-nums}
+.rootCard .gem.a{background:radial-gradient(circle at 50% 35%,#ff8f6d,#c94f3d 78%)}
+.rootCard .gem.g{background:radial-gradient(circle at 50% 35%,#7fb8ef,#3c6fb4 78%)}
+.rootCard .gem.h{background:radial-gradient(circle at 50% 35%,#8fd99a,#3f9058 78%)}
+.rootCard .gem.d{background:radial-gradient(circle at 50% 35%,#d9b3f0,#8a55c2 78%)}
+.rootCard .gem.m{background:radial-gradient(circle at 50% 35%,#ffd982,#c98f2e 78%)}
+.rootCard .face{margin-top:16px;width:195px;height:195px;border-radius:50%;background:#fffdf6;
+  border:6px solid var(--cc,#e8875a);box-shadow:0 5px 10px rgba(30,20,40,.4);overflow:hidden;
+  display:flex;align-items:center;justify-content:center;flex:0 0 auto}
+.rootCard .face img{width:92%;height:92%;object-fit:contain;display:block}
+.rootCard .meaning{margin-top:-16px;z-index:2;font-size:30px;font-weight:900;color:#fff;
+  background:color-mix(in srgb,var(--cc,#e8875a) 62%,#241f26);border:3px solid #fff;
+  border-radius:99px;padding:2px 18px;line-height:1.3;white-space:nowrap;
+  box-shadow:0 3px 6px rgba(30,20,40,.45)}
+/* 英語でのつづり。錬成の答え合わせはこの字面で起きる(re-+vid=review) */
+.rootCard .sp{margin-top:10px;font-size:38px;font-weight:900;color:#4a3c50;letter-spacing:.03em;
+  line-height:1.1;text-align:center}
+.rootCard .sp small{display:block;font-size:14px;font-weight:800;color:#8d8299;letter-spacing:.02em}
+.rootCard .hint{margin-top:auto;font-size:16.5px;font-weight:800;color:#5d5266;text-align:center;
+  line-height:1.35;padding:0 6px}
+.rootCard .stars{margin-top:6px;display:flex;gap:2px}
+.rootCard .stars img{width:26px;height:26px}
+.rootCard .stars img.off{filter:grayscale(1) opacity(.3)}
+
+/* ===== 錬成された単語カード ===== */
+.forgeCard{position:relative;width:352px;aspect-ratio:63/88;border-radius:16px;text-align:left;
+  background:linear-gradient(160deg,#fff3d6,#f7e7bd 55%,#eeda9e);
+  border:3px solid #8a6a1c;box-shadow:0 14px 30px rgba(30,20,40,.35),inset 0 0 0 2px #fff8,
+    0 0 18px rgba(240,193,79,.5);
+  padding:12px 13px 11px;overflow:hidden;display:flex;flex-direction:column;align-items:center}
+.forgeCard::before{content:"";position:absolute;inset:0;pointer-events:none;opacity:.55;
+  background:repeating-linear-gradient(115deg,transparent 0 7px,rgba(255,255,255,.2) 7px 8px)}
+.forgeCard .gem{position:absolute;right:10px;top:10px;z-index:4;width:104px;height:104px;border-radius:50%;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  border:5px solid #fff;box-shadow:0 5px 10px rgba(30,20,40,.45);color:#fff;text-shadow:0 2px 3px rgba(0,0,0,.4)}
+.forgeCard .gem i{font-style:normal;font-size:34px;line-height:1}
+.forgeCard .gem b{font-size:34px;line-height:1.05}
+.forgeCard .gem.a{background:radial-gradient(circle at 50% 35%,#ff8f6d,#c94f3d 78%)}
+.forgeCard .gem.g{background:radial-gradient(circle at 50% 35%,#7fb8ef,#3c6fb4 78%)}
+.forgeCard .gem.h{background:radial-gradient(circle at 50% 35%,#8fd99a,#3f9058 78%)}
+.forgeCard .recipe{margin-top:8px;align-self:flex-start;display:flex;align-items:center;gap:5px}
+.forgeCard .recipe .rc{width:56px;height:56px;border-radius:50%;background:#fffdf6;overflow:hidden;
+  border:3px solid var(--c1,#e8875a);display:flex;align-items:center;justify-content:center}
+.forgeCard .recipe .rc img{width:90%;height:90%;object-fit:contain}
+.forgeCard .recipe em{font-style:normal;font-weight:900;font-size:22px;color:#8a6a1c}
+.forgeCard .wicon{margin-top:8px;width:120px;height:120px;display:flex;align-items:center;justify-content:center;
+  background:radial-gradient(circle at 50% 42%,#fff 0 40%,#ffedb8 100%);
+  border:3px solid #8a6a1c;border-radius:14px;overflow:hidden}
+.forgeCard .wicon img{width:88%;height:88%;object-fit:contain}
+.forgeCard .wicon i{font-style:normal;font-size:64px;line-height:1}
+.forgeCard .wEn{margin-top:6px;font-size:40px;font-weight:900;color:#241f26;line-height:1.05;
+  max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.forgeCard .wJa{font-size:26px;font-weight:900;color:#4a3c50;line-height:1.2;max-width:100%;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.forgeCard .lit{margin-top:auto;font-size:16.5px;font-weight:800;color:#7a6320;text-align:center;line-height:1.35}
+
+/* ===== 錬成のひらめき(結果の見せ場) ===== */
+#reveal{position:absolute;inset:0;z-index:9500;display:none;align-items:center;justify-content:center;
+  background:rgba(20,14,26,.78)}
+#reveal.on{display:flex}
+#reveal .box{width:900px;background:linear-gradient(#fffdf4,#f8ecd2);border:4px solid #8a6a1c;
+  border-radius:24px;padding:30px 36px 26px;text-align:center;
+  box-shadow:0 24px 60px rgba(10,6,16,.6),0 0 40px rgba(240,193,79,.35);
+  animation:revealIn .5s cubic-bezier(.2,1.4,.4,1)}
+@keyframes revealIn{0%{transform:scale(.6);opacity:0}100%{transform:scale(1);opacity:1}}
+#reveal .eq{display:flex;align-items:center;justify-content:center;gap:18px;margin-bottom:14px}
+#reveal .eq .rc{display:flex;flex-direction:column;align-items:center;gap:4px}
+#reveal .eq .rc .c{width:110px;height:110px;border-radius:50%;background:#fffdf6;overflow:hidden;
+  border:5px solid var(--cc,#e8875a);display:flex;align-items:center;justify-content:center;
+  box-shadow:0 4px 8px rgba(30,20,40,.3)}
+#reveal .eq .rc .c img{width:90%;height:90%;object-fit:contain}
+#reveal .eq .rc em{font-style:normal;font-weight:900;font-size:20px;color:#4a3c50}
+#reveal .eq .op{font-size:52px;font-weight:900;color:#8a6a1c}
+#reveal .born{font-size:64px;font-weight:900;color:#241f26;letter-spacing:.01em;line-height:1.1}
+#reveal .bornJa{font-size:30px;font-weight:900;color:#4a3c50;margin-top:2px}
+#reveal .lit{font-size:22px;font-weight:800;color:#7a6320;margin-top:10px;line-height:1.5}
+#reveal .fx{font-size:22px;font-weight:900;color:#a4415c;margin-top:8px}
+#reveal .new{display:inline-block;margin-top:12px;font-size:18px;font-weight:900;color:#fff;
+  background:linear-gradient(90deg,#e8759b,#b8860b);border-radius:99px;padding:5px 18px;
+  box-shadow:0 3px 8px rgba(180,90,40,.4)}
+#reveal .tap{margin-top:14px;font-size:16px;font-weight:800;color:#8d8299;animation:blink 1.1s steps(1) infinite}
+
+/* ===== 結果 ===== */
+#over{position:absolute;inset:0;z-index:9600;display:none;align-items:center;justify-content:center;
+  background:rgba(20,14,26,.82)}
+#over.on{display:flex}
+#over .box{width:940px;max-height:920px;overflow-y:auto;background:#fffdf4;border:4px solid #2e2536;
+  border-radius:24px;padding:30px 38px;box-shadow:0 24px 60px rgba(10,6,16,.6)}
+#over .box.clear{border-color:#2f7a52}
+#over .box.dead{border-color:#a4415c}
+#ovT{font-size:40px;font-weight:900;margin-bottom:10px}
+#ovP{font-size:20px;font-weight:800;line-height:1.8;color:#3f3548}
+#ovDex{margin-top:14px;border-top:2px dashed #c9bcd4;padding-top:12px}
+#ovDex h3{font-size:18px;color:#8a6a1c;margin-bottom:6px}
+#ovDex .dw{display:flex;align-items:baseline;gap:10px;font-size:19px;font-weight:800;padding:2px 0}
+#ovDex .dw b{font-size:23px;color:#241f26;min-width:170px}
+#ovDex .dw span{color:#6f6673}
+#over button{margin-top:18px;background:#ffd23e;border:3px solid #2e2536;border-radius:14px;
+  padding:10px 26px;font-size:19px;font-weight:900;box-shadow:0 4px 0 rgba(46,37,54,.4)}
+
+/* ===== 狙いの矢印 ===== */
+#aim{position:absolute;inset:0;width:1920px;height:1080px;z-index:9000;
+  pointer-events:none;opacity:0;transition:opacity .12s}
+#aim.on{opacity:1}
+#aimPath{fill:none;stroke:#9aa3b2;stroke-width:11;stroke-linecap:round;
+  filter:drop-shadow(0 3px 6px rgba(10,6,16,.55))}
+#aim.hit #aimPath{stroke:#ffd23e;stroke-width:14}
+#aim.forge #aimPath{stroke:#e8759b;stroke-width:14}
+
+/* ===== デバッグ ===== */
+#dbg{position:absolute;right:0;top:0;bottom:0;width:430px;background:#241f2b;color:#e8e2ee;z-index:9700;
+  transform:translateX(100%);transition:transform .2s;padding:14px;overflow-y:auto;font-size:13px}
+#dbg.on{transform:none}
+#dbg h3{color:#ffd23e;font-size:13px;margin:12px 0 5px}
+#dbg .db{background:#3a3344;border:1.5px solid #575066;color:#fff;border-radius:8px;
+  padding:5px 10px;font-size:12px;font-weight:bold;margin:2px 2px 2px 0}
+#dbg pre{white-space:pre-wrap;background:#1a1620;border-radius:8px;padding:8px;font-size:11.5px;line-height:1.6}
+#btnDbg{position:absolute;right:10px;bottom:10px;z-index:9650;background:rgba(36,31,43,.7);color:#fff;
+  border:1.5px solid rgba(255,255,255,.3);border-radius:10px;padding:6px 10px;font-size:13px}
+
+/* ===== 英単語カード ===== */
+.wordCard2{position:relative;width:352px;aspect-ratio:63/88;border-radius:16px;text-align:left;
+  background:linear-gradient(160deg,color-mix(in srgb,var(--cc,#e8875a) 30%,#f5e9d2),#efe0c4 55%,
+    color-mix(in srgb,var(--cc,#e8875a) 18%,#e9dabb));
+  border:3px solid #2e2536;box-shadow:0 14px 30px rgba(30,20,40,.35),inset 0 0 0 2px #fff8;
+  padding:12px 13px 11px;overflow:hidden;display:flex;flex-direction:column;align-items:center}
+.wordCard2::before{content:"";position:absolute;inset:0;pointer-events:none;opacity:.5;
+  background:repeating-linear-gradient(115deg,transparent 0 7px,rgba(255,255,255,.16) 7px 8px)}
+.wordCard2 .gem{position:absolute;right:10px;top:10px;z-index:4;width:100px;height:100px;border-radius:50%;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  border:5px solid #fff;box-shadow:0 5px 10px rgba(30,20,40,.45);color:#fff;text-shadow:0 2px 3px rgba(0,0,0,.4)}
+.wordCard2 .gem i{font-style:normal;font-size:32px;line-height:1}
+.wordCard2 .gem b{font-size:32px;line-height:1.05;font-variant-numeric:tabular-nums}
+.wordCard2 .gem.a{background:radial-gradient(circle at 50% 35%,#ff8f6d,#c94f3d 78%)}
+.wordCard2 .gem.g{background:radial-gradient(circle at 50% 35%,#7fb8ef,#3c6fb4 78%)}
+.wordCard2 .gem.h{background:radial-gradient(circle at 50% 35%,#8fd99a,#3f9058 78%)}
+.wordCard2 .gem.ab{background:radial-gradient(circle at 50% 35%,#ffb36d,#c9702e 78%)}
+.wordCard2 .gem.db{background:radial-gradient(circle at 50% 35%,#b8c4d9,#5c6f8e 78%)}
+/* 祖先チップ。<b>これが弱点当ての手がかり</b>なので、顔+意味を必ず出す */
+.wordCard2 .anc{align-self:flex-start;display:flex;gap:10px;min-height:124px}
+.wordCard2 .anc .ac{display:flex;flex-direction:column;align-items:center;flex:0 0 auto}
+.wordCard2 .anc .ac .f{width:92px;height:92px;border-radius:50%;background:#fffdf6;overflow:hidden;
+  border:4px solid var(--cc,#e8875a);display:flex;align-items:center;justify-content:center;
+  box-shadow:0 3px 6px rgba(30,20,40,.35)}
+.wordCard2 .anc .ac .f img{width:90%;height:90%;object-fit:contain}
+.wordCard2 .anc .ac .f i{font-style:normal;font-size:15px;font-weight:900;color:#6a5c74;text-align:center;line-height:1.15;padding:0 3px}
+.wordCard2 .anc .ac em{margin-top:-11px;z-index:2;font-style:normal;font-size:19px;font-weight:900;color:#fff;
+  background:color-mix(in srgb,var(--cc,#e8875a) 62%,#241f26);border:2px solid #fff;border-radius:99px;
+  padding:0 8px;line-height:1.4;white-space:nowrap;box-shadow:0 2px 4px rgba(30,20,40,.4)}
+.wordCard2 .wEn{margin-top:2px;font-size:44px;font-weight:900;color:#241f26;line-height:1.05;
+  max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.wordCard2 .wJa{margin-top:2px;font-size:27px;font-weight:900;color:#fff;
+  background:color-mix(in srgb,var(--cc,#e8875a) 62%,#241f26);border:3px solid #fff;border-radius:99px;
+  padding:2px 16px;line-height:1.3;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+  box-shadow:0 3px 6px rgba(30,20,40,.45)}
+.wordCard2 .eff{margin-top:12px;font-size:24px;font-weight:900;color:#31283a;line-height:1.35;
+  background:rgba(255,255,255,.55);border:2px solid rgba(74,60,80,.35);border-radius:12px;
+  padding:7px 12px;width:100%;text-align:center}
+.wordCard2 .stars{margin-top:auto;display:flex;gap:2px}
+.wordCard2 .stars img{width:26px;height:26px}
+.wordCard2 .stars img.off{filter:grayscale(1) opacity(.3)}
+/* ===== キャラクターカード(チェンジ) ===== */
+.charCard{position:relative;width:352px;aspect-ratio:63/88;border-radius:16px;
+  background:linear-gradient(160deg,#efe6ff,#ded0f5 55%,#cdbcec);
+  border:3px solid #4a3480;box-shadow:0 14px 30px rgba(30,20,40,.35),inset 0 0 0 2px #fff8,
+    0 0 16px rgba(122,107,216,.45);
+  padding:12px 13px 11px;overflow:hidden;display:flex;flex-direction:column;align-items:center}
+.charCard::before{content:"";position:absolute;inset:0;pointer-events:none;opacity:.5;
+  background:repeating-linear-gradient(115deg,transparent 0 7px,rgba(255,255,255,.2) 7px 8px)}
+.charCard .tag{position:absolute;left:-34px;top:20px;transform:rotate(-45deg);z-index:3;
+  background:#7a6bd8;color:#fff;font-size:15px;font-weight:900;padding:3px 40px;
+  box-shadow:0 2px 4px rgba(30,20,40,.35);letter-spacing:.06em}
+.charCard .gem{position:absolute;right:10px;top:10px;z-index:4;width:100px;height:100px;border-radius:50%;
+  display:flex;align-items:center;justify-content:center;font-size:44px;
+  border:5px solid #fff;box-shadow:0 5px 10px rgba(30,20,40,.45);
+  background:radial-gradient(circle at 50% 35%,#c3b4f2,#7a6bd8 78%)}
+.charCard .face{margin-top:16px;width:195px;height:195px;border-radius:50%;background:#fffdf6;
+  border:6px solid #7a6bd8;box-shadow:0 5px 10px rgba(30,20,40,.4);overflow:hidden;
+  display:flex;align-items:center;justify-content:center;flex:0 0 auto}
+.charCard .face img{width:92%;height:92%;object-fit:contain;display:block}
+.charCard .meaning{margin-top:-16px;z-index:2;font-size:30px;font-weight:900;color:#fff;
+  background:#5b4aa8;border:3px solid #fff;border-radius:99px;padding:2px 18px;line-height:1.3;
+  white-space:nowrap;box-shadow:0 3px 6px rgba(30,20,40,.45)}
+.charCard .eff{margin-top:14px;font-size:23px;font-weight:900;color:#2f2452;line-height:1.4;
+  background:rgba(255,255,255,.6);border:2px solid rgba(74,52,128,.4);border-radius:12px;
+  padding:8px 12px;width:100%;text-align:center}
+
+/* ===== きぶん ===== */
+#mood{display:flex;align-items:center;justify-content:flex-end;gap:6px;min-height:52px}
+#mood .pf{width:48px;height:48px;border-radius:50%;background:#fffdf6;overflow:hidden;
+  border:3px solid #fff;box-shadow:0 3px 6px rgba(30,20,40,.4);
+  display:flex;align-items:center;justify-content:center;animation:famIn .5s cubic-bezier(.2,1.3,.4,1)}
+#mood .pf img{width:90%;height:90%;object-fit:contain}
+#mood .plabel{font-size:12px;font-weight:900;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.7)}
+@keyframes famIn{0%{transform:scale(.4);opacity:0}100%{transform:scale(1);opacity:1}}
+/* ===== 反応の芝居 ===== */
+#foeBox.hop{animation:rHop .55s ease-out}
+@keyframes rHop{0%,100%{transform:translateY(0)}30%{transform:translateY(-46px)}55%{transform:translateY(0)}75%{transform:translateY(-16px)}}
+#foeBox.shiver{animation:rShiver .6s ease-in-out}
+@keyframes rShiver{0%,100%{transform:translateX(0)}15%,45%,75%{transform:translateX(-7px) rotate(-2deg)}30%,60%,90%{transform:translateX(7px) rotate(2deg)}}
+#foeBox.wiggle{animation:rWiggle .8s ease-in-out}
+@keyframes rWiggle{0%,100%{transform:rotate(0)}25%{transform:rotate(-5deg)}50%{transform:rotate(4deg)}75%{transform:rotate(-2deg)}}
+#foeBox.snooze{animation:rSnooze 1.4s ease-in-out}
+@keyframes rSnooze{0%,100%{transform:rotate(0)}40%{transform:rotate(6deg) translateY(8px)}70%{transform:rotate(6deg) translateY(8px)}}
+.rfx{position:absolute;z-index:30;font-size:44px;pointer-events:none;animation:rfxUp 1.3s ease-out forwards}
+@keyframes rfxUp{0%{transform:translateY(0) scale(.5);opacity:0}18%{opacity:1}
+  100%{transform:translateY(-110px) scale(1.15);opacity:0}}
+
+/* ===== 場に出た もの ===== */
+#fieldItems{position:absolute;left:50%;bottom:120px;transform:translateX(-50%);
+  display:flex;gap:14px;z-index:11}
+.fitem{display:flex;flex-direction:column;align-items:center;gap:2px;
+  background:rgba(255,253,246,.95);border:3px solid #2e2536;border-radius:16px;
+  padding:8px 16px;box-shadow:0 5px 0 rgba(46,37,54,.3);animation:itemIn .45s cubic-bezier(.2,1.4,.4,1)}
+@keyframes itemIn{0%{transform:translateY(60px) scale(.4);opacity:0}100%{transform:none;opacity:1}}
+.fitem i{font-style:normal;font-size:52px;line-height:1.1}
+.fitem b{font-size:20px;font-weight:900;color:#241f26}
+.fitem em{font-style:normal;font-size:14px;font-weight:800;color:#6f6673}
+.fitem.gone{animation:itemGone .5s forwards}
+@keyframes itemGone{100%{transform:translateY(-80px) rotate(20deg);opacity:0}}
+#mount{position:absolute;left:430px;bottom:262px;z-index:12;font-size:30px;
+  background:rgba(255,253,246,.95);border:3px solid #2e2536;border-radius:99px;
+  padding:3px 14px;font-weight:900;display:none}
+/* 動詞カード(ワイルドが演者) */
+.verbCard{position:relative;width:352px;aspect-ratio:63/88;border-radius:16px;
+  background:linear-gradient(160deg,#efe6ff,#ded0f5 55%,#cdbcec);
+  border:3px solid #4a3480;box-shadow:0 14px 30px rgba(30,20,40,.35),inset 0 0 0 2px #fff8;
+  padding:12px;overflow:hidden;display:flex;flex-direction:column;align-items:center}
+.verbCard .face{margin-top:22px;width:170px;height:170px;border-radius:50%;background:#fffdf6;
+  border:6px solid #7a6bd8;box-shadow:0 5px 10px rgba(30,20,40,.4);overflow:hidden;
+  display:flex;align-items:center;justify-content:center}
+.verbCard .face img{width:92%;height:92%;object-fit:contain}
+.verbCard .face i{font-style:normal;font-size:86px}
+.verbCard .vj{margin-top:-16px;z-index:2;font-size:36px;font-weight:900;color:#fff;
+  background:#5b4aa8;border:3px solid #fff;border-radius:99px;padding:2px 22px;
+  box-shadow:0 3px 6px rgba(30,20,40,.45)}
+.verbCard .eff{margin-top:auto;font-size:19px;font-weight:900;color:#2f2452;
+  background:rgba(255,255,255,.6);border:2px solid rgba(74,52,128,.4);border-radius:12px;
+  padding:7px 12px;width:100%;text-align:center}
+/* ものカード */
+.thingCard .em{font-size:100px;line-height:1;margin-top:auto}
+</style>
+</head>
+<body>
+<div id="wrap">
+<div id="app">
+  <header>
+    <h1>エティモリンゴ ことばの工房旅 <small style="opacity:.65">プロトタイプ9</small></h1>
+    <span id="trail"></span>
+    <span class="sp"></span>
+    
+    <button class="hbtn" id="btnRetry">🔁 さいしょから</button>
+  </header>
+  <div id="field">
+    <div id="bg"></div>
+    <div id="flash"></div><div id="slash"></div>
+    <div id="foeBox"><img id="foeImg" alt=""><span class="drop"></span></div>
+    <div id="foeMeta">
+      <span id="mood"></span>
+      <span id="foeTag"></span>
+    </div>
+    <div id="heroBox"><img id="heroImg" alt=""><span class="drop"></span></div>
+    <div id="fieldItems"></div><div id="mount"></div>
+
+  </div>
+  <div id="bubble"><div class="btxt" id="btxt"></div></div>
+  <div id="msg"></div>
+  <div id="handWrap">
+    <div id="hand"></div>
+    <div id="handBar">
+      <span class="note">🃏 ことば1回=<b>ことばの力✨1つ</b>。力が尽きると にもつを落とす(🎒3つで遠征失敗)。余した力で★</span>
+      <span class="sp"></span>
+      <span id="deckN"></span>
+      <button id="btnReload">🔄 引き直す</button>
+    </div>
+  </div>
+  <svg id="aim" viewBox="0 0 1920 1080" preserveAspectRatio="none"><defs>
+    <marker id="aimHead" viewBox="0 0 12 12" refX="9" refY="6" markerWidth="7" markerHeight="7"
+      orient="auto-start-reverse"><path d="M0,0 L12,6 L0,12 z" fill="context-stroke"></path></marker>
+  </defs><path id="aimPath" marker-end="url(#aimHead)"></path></svg>
+  <div id="reveal"></div>
+  <div id="over"><div class="box"><div id="ovT"></div><div id="ovP"></div><div id="ovDex"></div>
+    <button id="ovBtn">もういちど</button></div></div>
+  <div id="dbg"><button class="db" id="dbgClose">✕ 閉じる</button><div id="dbgBody"></div></div>
+  <button id="btnDbg">🐞</button>
+</div>
+</div>
+<script>
+'use strict';
+const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
+const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const A='../assets/';
+const dict=o=>Object.assign(Object.create(null),o||{});
+let seed=(Math.random()*1e9)|0;
+function rnd(){seed^=seed<<13;seed>>>=0;seed^=seed>>17;seed^=seed<<5;seed>>>=0;return seed/4294967296;}
+const ri=n=>Math.floor(rnd()*n);
+function shuffle(a){for(let i=a.length-1;i>0;i--){const j=ri(i+1);[a[i],a[j]]=[a[j],a[i]];}return a;}
+
+const CLAN=new Set(['kaput-','anə-','bhā-2','gwei-','oi-no-','reg-','weid-','yē-',
+  'mori-','men-1','dō-','genu-1','per1','kom']);
+
+/* ===========================================================================
+   もの(名詞)。<b>場に出るだけ</b>。cat が受動的な性質。
+     food=たべられる / ride=のれる(fly付きは空をとべる) / light=ひかる /
+     music=ならせる / comfort=あたたかい / misc=ただの もの
+   anc は祖先(14語根にいるときだけ)。jaFix はDBの語義が固いときの表示。
+   =========================================================================== */
+const ITEMS=dict({
+  /* ==== 召喚できるのは<b>エティモペディア収録語だけ</b> ====
+     memo は words.csv の語源メモそのまま。となえるたびに まめちしきが出る。
+     絵は図鑑の図版(assets/word/)。辞典が そのまま「召喚の書」になる。
+     person:1 は<b>ひと</b>。ものは受動だが、ひとは召喚すると自分の意思で動く。 */
+  jet:    {cat:'ride', fly:1, em:'🛩', anc:'yē-', jaFix:'ジェット機',
+           memo:'フランス語 jeter(投げる)から。空に投げ出されるもの'},
+  cabbage:{cat:'food', em:'🥬', anc:'kaput-', jaFix:'キャベツ', noDb:1,
+           memo:'昔のフランスの人もキャベツを見て「頭じゃん」と思った'},
+  cap:    {cat:'wear', em:'🧢', anc:'kaput-',
+           memo:'「頭」そのものではなく「頭にのせるもの」へ横すべり'},
+  telephone:{cat:'voice', em:'☎', anc:'bhā-2',
+           memo:'tele(遠く)+phone(声)。とおくの こえ'},
+  smartphone:{cat:'voice', em:'📱', anc:'bhā-2', jaFix:'スマートフォン', noDb:1,
+           memo:'かしこい“声”の板。一皮むくと5000年前の“声”の祖先がいる'},
+  fable:  {cat:'book', em:'📖', anc:'bhā-2',
+           memo:'「語られるもの」。文字より先に、ことばは話されるものだった'},
+  video:  {cat:'see', em:'📺', anc:'weid-',
+           memo:'ラテン語で「私は見る」。audio は「私は聞く」'},
+  animal: {cat:'animal', em:'🐾', anc:'anə-',
+           memo:'「息をするもの」。古代人による動物の定義'},
+  zoo:    {cat:'place', em:'🦁', anc:'gwei-',
+           memo:'zoological garden(生きもの学の庭)の頭だけが残った省略形'},
+  rule:   {cat:'stick', em:'📏', anc:'reg-',
+           memo:'まっすぐな棒 → ものさし → ルール。定規(ruler)と同じことば'},
+  captain:{cat:'person', person:1, em:'⚓', anc:'kaput-',
+           memo:'集団の「頭」に立つ人。船長・機長・キャプテン'},
+  chef:   {cat:'person', person:1, em:'🍳', anc:'kaput-',
+           memo:'厨房の「頭」。caput が縮んで chef になった'},
+  wizard: {cat:'person', person:1, em:'🧙', anc:'weid-',
+           memo:'wise(賢い)+〜な人。知恵が振り切れると魔法になる'},
+  merlin: {cat:'person', person:1, em:'🌊', anc:'mori-', jaFix:'魔法使いマーリン',
+           memo:'「海の丘」の名をもつ大魔法使い'},
+  prophet:{cat:'person', person:1, em:'🔮', anc:'bhā-2',
+           memo:'pro(前もって)+phet(語る)。先に語る人'},
+  infant: {cat:'person', person:1, em:'👶', anc:'bhā-2',
+           memo:'「まだ話せない子」が語源。ちょっと失礼だが一発で覚えられる'},
+});
+/* 根源どうし(動詞)。<b>ワイルドが演じる</b>。clan があればそのキャラの顔が出る */
+const VERBS=dict({
+  throw:{ja:'なげる', clan:'yē-',  em:'💪', hint:'場のものを なげつける'},
+  ride: {ja:'のる',              em:'🏇', hint:'のりものに のる'},
+  fly:  {ja:'とぶ',              em:'🕊', hint:'のっていれば 空へ'},
+  eat:  {ja:'たべる',            em:'😋', hint:'場のたべものを ぱくり'},
+  give: {ja:'わたす', clan:'dō-', em:'🎁', hint:'場のものを 相手に'},
+  look: {ja:'みる',  clan:'weid-',em:'👀', hint:'目をこらして みる'},
+  sing: {ja:'うたう', clan:'bhā-2',em:'🎶', hint:'こえを ひびかせる'},
+});
+
+/* ===========================================================================
+   旅の場面。resolve(ev,S) が全てを決める。ev:
+     {k:'summon', w, it}                … ものが場に出た(受動性質はここで効く)
+     {k:'verb', v, it?}                 … 根源どうし(it=自動で選ばれた対象)
+   返り値 {line, clear, eat?, consume?, mount?} 。line は吹き出しに出る。
+   =========================================================================== */
+const SCENES=[
+ {ttl:'きりの谷', goal:'きりが ふかくて、みちが 見えない',
+  bg:'ground/T_BG_base_ground.png', night:true, img:'',
+  text:'しろい きりが たちこめて、みちが きえてしまった。まえも うしろも まっしろだ。',
+  kits:[['look'],['video','look'],['jet','ride','fly']],
+  resolve(ev,S){
+    if(ev.k==='verb'&&ev.v==='look'&&S.items.includes('video'))
+      return {clear:'route-video', line:'「video」の がめんに、きりの おくの みちすじが うつしだされた! “私は見る”の 名にはじない はたらきだ。'};
+    if(ev.k==='verb'&&ev.v==='look')
+      return {clear:'route-look', line:'目を こらす…… きりの おくに、ほそい みちすじが うかんできた。いける!'};
+    if(ev.k==='verb'&&ev.v==='fly'&&S.mounted&&it2(S.mounted).fly)
+      return {clear:'route-fly', line:`${S.mounted}で ぶうんと とびあがり、きりの うみを ひとっとび!`};
+    if(ev.k==='verb'&&ev.v==='sing')return {line:'こえは きりに すいこまれていった。'};
+  },
+  miss:['きりは しずかに ながれていく。','あしもとが ひんやりする。'],
+ },
+ {ttl:'あれた大川', goal:'川が あれていて、わたれない',
+  bg:'ground/T_BG_base_sea.png', img:'',
+  text:'ゴウゴウと 川が あれている。はしは ながされてしまったらしい。むこうぎしは とおい。',
+  kits:[['captain'],['merlin'],['jet','ride','fly']],
+  resolve(ev,S){
+    if(ev.k==='person'&&ev.w==='captain')
+      return {clear:'route-captain', line:'「captain」―― ふねのりの<b>頭</b>が あらわれた。「わしに まかせろ!」あっというまに いかだを くみ、みんなを むこうぎしへ わたしてくれた。'};
+    if(ev.k==='person'&&ev.w==='merlin')
+      return {clear:'route-merlin', line:'「merlin」―― “海の丘”の 名をもつ 魔法使い。つえを ひとふりすると、あれた ながれが すうっと しずまり、あるいて わたれた。'};
+    if(ev.k==='verb'&&ev.v==='fly'&&S.mounted&&it2(S.mounted).fly)
+      return {clear:'route-fly', line:`${S.mounted}が ごうっと とびたち、あれた川を ひとまたぎ!`};
+    if(ev.k==='verb'&&ev.v==='throw'&&ev.it)
+      return {consume:ev.it, line:`「${ev.it}」を なげたら、ぽちゃんと ながされていった……。`};
+  },
+  miss:['川は ごうごうと ほえるばかりだ。','みずしぶきが つめたい!'],
+ },
+ {ttl:'はらぺこの けもの', goal:'けものが みちを ふさいでいる',
+  bg:'ground/T_BG_base_ruin.png', img:'chara/T_ch_enemy_01.png',
+  text:'おおきな けものが みちの まんなかで グウグウ おなかを ならしている。どいてくれそうにない。',
+  kits:[['cabbage','give'],['cabbage','throw'],['chef','cabbage'],['zoo'],['sing']],
+  resolve(ev,S){
+    if(ev.k==='summon'&&it(ev).cat==='food')
+      return {line:`「${ev.w}」が あらわれた とたん、けものの 目が くぎづけに。よだれが つうっ…… <b>わたすか、なげてやるか</b>。`};
+    if(ev.k==='summon'&&ev.w==='zoo')
+      return {clear:'route-zoo', line:'「zoo」―― とおくから なかまたちの こえが きこえてきた。けものは みみを ぴんと たて、うれしそうに かけていった。'};
+    if(ev.k==='person'&&ev.w==='chef'){
+      const f=S.items.find(w=>it2(w).cat==='food');
+      if(f)return {clear:'route-chef', consume:f,
+        line:`「chef」―― 厨房の<b>頭</b>! 場の「${f}」を あっというまに ゆげの たつ ごちそうに。けものは まんぷくで みちを あけた。`};
+      return {line:'「chef」が あらわれたが、ざいりょうが ない。「材料なしでは つくれませんぞ」と かたを すくめた。'};
+    }
+    if(ev.k==='verb'&&(ev.v==='give'||ev.v==='throw')&&ev.it&&it2(ev.it).cat==='food')
+      return {clear:'route-food', consume:ev.it,
+        line:ev.v==='throw'
+         ?`「${ev.it}」を ぽーん! けものは ジャンプして ぱくり。まんぞくして みちを あけた。`
+         :`「${ev.it}」を そっと さしだす。けものは ぺろりと たいらげ、のっしのっしと みちを あけた。`};
+    if(ev.k==='verb'&&ev.v==='sing')
+      return {clear:'route-sing', line:'うたいだすと、けものの しっぽが ぱたぱた……そのうち おどりだして、みちが あいた!'};
+    if(ev.k==='verb'&&ev.v==='fly'&&S.mounted&&it2(S.mounted).fly)
+      return {clear:'route-fly', line:'けものの あたまの うえを ひとっとび! けものは ぽかんと 見あげていた。'};
+    if(ev.k==='verb'&&ev.v==='eat'&&ev.it&&it2(ev.it).cat==='food')
+      return {eat:1, consume:ev.it, line:`目のまえで「${ev.it}」を ぱくり。けものが <b>ものすごい 目</b>で 見ている……。`};
+  },
+  miss:['けものは フンと はなを ならした。','けものの おなかが グウウと なった。'],
+ },
+ {ttl:'ねむれない ちびっこ', goal:'ちいさな子が べそを かいている',
+  bg:'ground/T_BG_base_ground_tree.png', img:'chara/T_ch_gene_birth.png',
+  text:'たきびの そばで、ちいさな子が べそを かいている。「ねむれないよう……」',
+  kits:[['sing'],['fable','give'],['smartphone','sing']],
+  resolve(ev,S){
+    if(ev.k==='summon'&&ev.w==='fable')
+      return {line:'おはなしの 本が あらわれた。<b>わたす</b>と よんであげられそうだ。'};
+    if(ev.k==='verb'&&ev.v==='give'&&ev.it==='fable')
+      return {clear:'route-fable', consume:'fable',
+        line:'「fable」を ひらいて よみきかせ。「それで? それで?」……そのうち すやすや。おはなしは “<b>語られるもの</b>”だ。'};
+    if(ev.k==='verb'&&ev.v==='sing'&&S.items.some(w=>it2(w).cat==='voice'))
+      return {clear:'route-phone', line:'でんわごしに こもりうたを ながしてあげた。ざーざーまじりの うたに、ちいさな ねいきが かさなった。'};
+    if(ev.k==='verb'&&ev.v==='sing')
+      return {clear:'route-sing', line:'こもりうたを ちいさく うたうと、子は うとうと……すうすう ねいきを たてはじめた。'};
+    if(ev.k==='person'&&ev.w==='infant')
+      return {line:'「infant」―― もうひとり あかんぼが あらわれた!? ふたりそろって 泣きだした。たいへんだ。'};
+    if(ev.k==='verb'&&ev.v==='look')
+      return {line:'じっと 見つめたら、「ねむれないよ!」と おこられた。'};
+    if(ev.k==='verb'&&ev.v==='fly'&&S.mounted&&it2(S.mounted).fly)
+      return {line:'ごうおん! 子が びっくりして よけいに 目が さえてしまった……。'};
+  },
+  miss:['子は くすんと はなを すすった。','たきびが ぱちぱちと はぜた。'],
+ },
+ {ttl:'まっくらな ほらあな', goal:'よるを すごす あかりが ほしい',
+  bg:'ground/T_BG_base_expedition_night.png', night:true, img:'',
+  text:'よるに なった。ほらあなで やすみたいが、おくは まっくらで なにも 見えない。',
+  kits:[['wizard'],['video']],
+  resolve(ev,S){
+    if(ev.k==='person'&&ev.w==='wizard')
+      return {clear:'route-wizard', line:'「wizard」―― かしこすぎて 魔法使いに なった人。ゆびさきに ぽっ、と ひかりを ともしてくれた。あたたかい よるに なった。'};
+    if(ev.k==='summon'&&ev.w==='video')
+      return {clear:'route-video', line:'「video」の がめんの あかりが、ほらあなを ぼんやり てらした。げんだいの ちえだ。みんなで がめんを かこんで ねむった。'};
+    if(ev.k==='verb'&&ev.v==='sing')
+      return {line:'うたが ほらあなに こだました。……こだまだけが かえってくる。'};
+    if(ev.k==='verb'&&ev.v==='look')
+      return {line:'目を こらしても、やみは やみのままだ。<b>ひかる もの</b>か、<b>ふしぎな 人</b>が いれば……。'};
+  },
+  miss:['やみは ふかいままだ。','どこかで みずおとが ひびいた。'],
+ },
+ {ttl:'ちんもくの 門', goal:'まちの門が とざされている',
+  bg:'ground/T_BG_base_ruin.png', night:true, img:'enemy/T_ch_stage1_boss.png',
+  text:'あかりの まちの まえに、おおきな 門。もんばんは だんまりの ぬしだ。<b>こえを かけないと</b> あかないらしい。',
+  kits:[['sing'],['telephone','sing'],['prophet'],['jet','ride','fly']],
+  resolve(ev,S){
+    if(ev.k==='summon'&&it(ev).cat==='voice')
+      return {line:`「${ev.w}」が あらわれた。とおくへ <b>こえ</b>を とどける どうぐだ。`};
+    if(ev.k==='person'&&ev.w==='prophet')
+      return {clear:'route-prophet', line:'「prophet」―― <b>まえもって 語る人</b>。ぬしの まえに すすみでて、しずかに 語りはじめた。……ゴゴ、と 門が ひらいていく。'};
+    if(ev.k==='verb'&&ev.v==='sing'&&S.items.some(w=>it2(w).cat==='voice'))
+      return {clear:'route-phone', line:'でんわごしに こえを おくると、門の おくで りんと ひびいた。ぬしが 目を ひらく ―― ゴゴ……。'};
+    if(ev.k==='verb'&&ev.v==='sing')
+      return {clear:'route-voice', line:'こえが よるに ひびくと、ぬしは しずかに うなずいた。ゴゴ……と 門が ひらいていく。'};
+    if(ev.k==='verb'&&ev.v==='fly'&&S.mounted&&it2(S.mounted).fly)
+      return {clear:'route-fly', line:'門を ひとっとびで こえてしまった。ふりかえると、ぬしが ちょっと さみしそうだった……。'};
+    if(ev.k==='verb'&&ev.v==='give'&&ev.it)
+      return {line:`「${ev.it}」を さしだしたが、ぬしは うけとらない。<b>こえ</b>を まっているようだ。`};
+  },
+  miss:['ぬしは こたえない。よるの かぜが ふきぬけた。','門は びくとも しない。'],
+ },
+];
+function it(ev){return ITEMS[ev.w]||{cat:'misc',em:'❔'};}
+function it2(w){return ITEMS[w]||{cat:'misc',em:'❔'};}
+
+/* ===========================================================================
+   共通の物理。場面が拾わなかった組み合わせも、かならず何かが起きる
+   =========================================================================== */
+function globalResolve(ev,S){
+  if(ev.k==='person')
+    return {line:`「${ev.w}」が あらわれたが、ここでは やることが なさそうだ。かたを すくめて さっていった。`};
+  if(ev.k==='summon'){
+    const c=it(ev).cat;
+    if(c==='food')return {line:`「${ev.w}」が ころんと あらわれた。うまそうだ。`};
+    if(c==='ride')return {line:`「${ev.w}」が あらわれた。<b>のって みるか?</b>`};
+    if(c==='voice')return {line:`「${ev.w}」が あらわれた。とおくへ こえを とどける どうぐだ。`};
+    if(c==='book')return {line:`「${ev.w}」が あらわれた。だれかに <b>わたす</b>と よさそうだ。`};
+    if(c==='see')return {line:`「${ev.w}」が あらわれた。<b>みる</b>と くみあわせられそうだ。`};
+    if(c==='wear')return {line:`「${ev.w}」を ちょこんと かぶってみた。にあっている。`};
+    if(c==='stick')return {line:`「${ev.w}」が あらわれた。まっすぐで じょうぶそうだ。`};
+    return {line:`「${ev.w}」が あらわれた。……あらわれた だけだ。`};
+  }
+  const v=ev.v, tgt=ev.it, c=tgt?it2(tgt).cat:'';
+  if(v==='ride'){
+    if(c==='ride')return {mount:tgt, line:`「${tgt}」に またがった。${it2(tgt).fly?'<b>とべそうだ。</b>':'すすめそうだ。'}`};
+    if(tgt)return {line:`「${tgt}」に のろうとして、ずるっと すべった。のるものじゃない。`};
+    return {line:'のるものが ない。えいっと 空気に またがって みた。……むなしい。'};
+  }
+  if(v==='fly'){
+    if(S.mounted&&it2(S.mounted).fly)return {line:`${S.mounted}が とびあがった!`};
+    if(S.mounted)return {line:`「${S.mounted}」は とべない。ヒヒーンと ないた気がする。`};
+    return {line:'ぴょんと はねてみた。とべては いない。'};
+  }
+  if(v==='eat'){
+    if(c==='food')return {eat:1, consume:tgt, line:`「${tgt}」を もぐもぐ。……おいしい。`};
+    if(tgt)return {consume:0, line:`「${tgt}」を かじってみた。……かたい。やめよう。`};
+    return {line:'たべるものが ない。おなかが グウと なった。'};
+  }
+  if(v==='throw'){
+    if(tgt)return {consume:tgt, line:`「${tgt}」を ぽーんと なげた。……なげただけだった。`};
+    return {line:'なにも もっていないので、えいっと 空気を なげた。'};
+  }
+  if(v==='give'){
+    if(tgt)return {line:`「${tgt}」を さしだしたが、うけとる あいてが いない。`};
+    return {line:'わたすものが ない。'};
+  }
+  if(v==='look')return {line:'あたりを じっくり 見た。'};
+  if(v==='sing')return {line:'ふんふん〜と うたってみた。いい きぶんだ。'};
+  return {line:'なにも おこらなかった。'};
+}
+
+/* ===========================================================================
+   データ
+   =========================================================================== */
+let ROOTS=dict(), WBY=dict();
+const rec=w=>WBY[String(w||'').toLowerCase()]||dict();
+const rootJa=k=>(ROOTS[k]&&ROOTS[k].ja)||k;
+const jaOf=w=>ITEMS[w]&&ITEMS[w].jaFix?ITEMS[w].jaFix:(rec(w).ja||'');
+const ancOf=w=>{
+  if(ITEMS[w]&&ITEMS[w].anc)return ITEMS[w].anc;
+  return ((rec(w).p||[]).find(k=>CLAN.has(k)))||'';
+};
+async function load(){
+  const [rt,words]=await Promise.all([
+    fetch('data/pie/roots.json').then(r=>r.json()),
+    fetch('data/pie/words.json').then(r=>r.json()),
+  ]);
+  rt.forEach(r=>{ROOTS[r.key]=r;});
+  const seen=new Set();
+  for(const x of words){
+    const k=x.w.toLowerCase();
+    if(seen.has(k))continue; seen.add(k); WBY[k]=x;
+  }
+}
+
+/* ===========================================================================
+   手札。その場面の解き筋(kit)を1つ選んで必ず入れ、のこりは いろいろ。
+   =========================================================================== */
+function buildHand(sc){
+  const kit=sc.kits[ri(sc.kits.length)].slice();
+  const inHand=new Set(kit);
+  const nouns=shuffle(Object.keys(ITEMS).filter(w=>!inHand.has(w))).slice(0,3);
+  const verbs=shuffle(Object.keys(VERBS).filter(v=>!inHand.has(v))).slice(0,2);
+  return shuffle([...kit,...nouns,...verbs]).slice(0,8);
+}
+
+/* ===========================================================================
+   状態
+   =========================================================================== */
+const POW=6, PACKS=3;
+let S=null;
+function newRun(){
+  S={si:0, sc:SCENES[0], hand:[], items:[], mounted:'', party:[], recap:[], over:0, mi:0, log:[],
+     pow:POW, packs:PACKS, stars:[]};
+  $('#over').classList.remove('on');
+  enterScene(0);
+}
+function enterScene(i){
+  const sc=SCENES[i];
+  clearTimers(); clearInterval(typeTimer); typeTimer=null; pending=null; pendingPanel='msg';
+  $('#bubble').className=''; $('#btxt').innerHTML='';
+  S.si=i; S.sc=sc; S.mi=0; S.log=[]; S.items=[]; S.mounted='';
+  S.pow=POW;
+  S.hand=buildHand(sc);
+  say(`【${esc(sc.ttl)}】 ${esc(sc.goal)}。`);
+  bubble(sc.text);
+  render();
+}
+/* ===== メッセージ ===== */
+let typeTimer=null, pendingPanel='msg', pending=null, busy=false, timers=[];
+function later(fn,ms){const id=setTimeout(fn,ms);timers.push(id);return id;}
+function clearTimers(){timers.forEach(clearTimeout);timers=[];}
+function say(h,cls){S.log.push({h,cls:cls||''});paintMsg();}
+function newTurn(){S.log=[];paintMsg();}
+function paintMsg(){
+  const el=$('#msg'); if(!el)return;
+  el.innerHTML='<div class="wrap">'+S.log.map(l=>`<div class="ln ${l.cls||''}">${l.h}</div>`).join('')+'</div>'
+    +(pending&&pendingPanel==='msg'?'<span class="nx">▼</span>':'');
+  requestAnimationFrame(()=>{el.scrollTop=el.scrollHeight;});
+}
+function sayType(text,cls,done){
+  const raw=String(text||'');
+  const bub=$('#bubble'), tx=$('#btxt');
+  bub.className=cls||'';
+  clearInterval(typeTimer);
+  const parts=raw.split(/(<[^>]+>)/g);
+  const plain=parts.filter(p=>!p.startsWith('<')).join('');
+  let n=0;
+  const paint=()=>{
+    let left=n,out='';
+    for(const p of parts){
+      if(p.startsWith('<')){out+=p;continue;}
+      if(left<=0)continue;
+      out+=p.slice(0,left); left-=p.length;
+    }
+    tx.innerHTML=out+(n<plain.length?'<span class="cur">▌</span>':'')
+      +(n>=plain.length&&pending&&pendingPanel==='bubble'?'<span class="nx">▼</span>':'');
+  };
+  paint();
+  typeTimer=setInterval(()=>{
+    n++; paint();
+    if(n>=plain.length){clearInterval(typeTimer);typeTimer=null;if(done)setTimeout(done,180);}
+  },26);
+}
+const bubble=(t,c)=>sayType(t,c);
+function bubbleThen(text,cls,done){
+  sayType(text,cls,()=>{pending=done;pendingPanel='bubble';
+    const tx=$('#btxt'); if(tx&&!tx.querySelector('.nx'))tx.insertAdjacentHTML('beforeend','<span class="nx">▼</span>');});
+}
+
+/* ===========================================================================
+   1手
+   =========================================================================== */
+function pickTarget(v){
+  // 動詞の対象は場のものから自動で選ぶ。のる=のりもの優先/たべる・わたす=たべもの優先
+  const pref=v==='ride'?'ride':v==='eat'?'food':v==='give'?'food':'';
+  if(pref){const m=[...S.items].reverse().find(w=>it2(w).cat===pref); if(m)return m;}
+  return S.items[S.items.length-1]||'';
+}
+function useCard(idx){
+  if(!S||S.over||busy)return;
+  const w=S.hand[idx]; if(!w)return;
+  const sc=S.sc;
+  S.hand.splice(idx,1);
+  newTurn(); busy=true;
+  S.pow--;
+  let ev;
+  if(VERBS[w]){
+    const tgt=pickTarget(w);
+    ev={k:'verb', v:w, it:tgt};
+    say(`<b>${esc(VERBS[w].ja)}</b>${tgt?`（「${esc(tgt)}」に）`:''}!`);
+    // ワイルドの演者。動詞に一族がいれば 顔を出す
+    const ck=VERBS[w].clan;
+    if(ck)joinParty(ck,`${rootJa(ck)}`);
+  }else if(ITEMS[w]&&ITEMS[w].person){
+    ev={k:'person', w};
+    say(`<b>${esc(w)}</b>（${esc(jaOf(w))}）を よんだ。`);
+    if(ITEMS[w].memo)say(`📖 ${esc(ITEMS[w].memo)}`);
+    const ck=ancOf(w);
+    if(ck)joinParty(ck,`${rootJa(ck)}`);
+  }else{
+    ev={k:'summon', w};
+    say(`<b>${esc(w)}</b>（${esc(jaOf(w))}）を となえた。`);
+    if(ITEMS[w]&&ITEMS[w].memo)say(`📖 ${esc(ITEMS[w].memo)}`);
+    if(!S.items.includes(w))S.items.push(w);
+    if(S.items.length>3)S.items.shift();
+    const ck=ancOf(w);
+    if(ck)joinParty(ck,`${rootJa(ck)}`);
+  }
+  const r=sc.resolve(ev,S)||globalResolve(ev,S);
+  if(r.mount)S.mounted=r.mount;
+  if(r.consume)S.items=S.items.filter(x=>x!==r.consume);
+  if(ev.k==='summon'&&S.sc.img){const fb=$('#foeBox');
+    fb.classList.remove('hop','wiggle'); void fb.offsetWidth; fb.classList.add('wiggle');}
+  if(r.clear){
+    const st=S.pow>=4?3:S.pow>=2?2:1;
+    S.stars.push(st);
+    S.recap.push({scene:sc.ttl, how:r.line.replace(/<[^>]+>/g,''), st});
+    say(`のこりの力 ✨${S.pow} → <b>${'★'.repeat(st)}</b>`,'crit');
+    sparkle();
+    say('<b>みちが ひらけた!</b>','crit');
+    bubbleThen(r.line,'calm',()=>{
+      busy=false;
+      if(S.si>=SCENES.length-1){S.over=1;showEnd();return;}
+      enterScene(S.si+1);
+    });
+    render(); return;
+  }
+  bubble(r.line||sc.miss[S.mi++%sc.miss.length]);
+  later(()=>{busy=false;
+    if(S.pow<=0){packDrop();return;}
+    if(S.hand.length<4)S.hand.push(...buildHand(S.sc).slice(0,4-S.hand.length+2));
+    render();},900);
+  render();
+}
+/* ことばの力が尽きた。にもつを ひとつ落として 力を くみなおす */
+function packDrop(){
+  S.packs--;
+  if(S.packs<=0){
+    S.over=2; render();
+    say('<b>にもつを ぜんぶ 落としてしまった……。</b>','bad');
+    later(()=>showFail(),900);
+    return;
+  }
+  S.pow=POW;
+  say(`<b>ことばの力が つきた!</b> あわてて にもつを ひとつ 落としてしまった（のこり🎒${S.packs}）。ひとやすみして 力を くみなおす。`,'bad');
+  toast('🎒 にもつを ひとつ 落とした…');
+  S.hand=buildHand(S.sc);
+  render();
+}
+function toast(t){
+  const d=document.createElement('div');
+  d.textContent=t;
+  d.style.cssText='position:fixed;left:50%;bottom:30%;transform:translateX(-50%);z-index:9500;'+
+    'background:rgba(30,22,38,.92);color:#fff;font-weight:bold;font-size:14px;padding:8px 16px;border-radius:12px';
+  document.body.appendChild(d); setTimeout(()=>d.remove(),1600);
+}
+function showFail(){
+  $('#ovT').textContent='🎒 にもつが つきた…';
+  $('#ovP').innerHTML=`ことばの力（✨）は 1回 となえるたびに へる。<br>
+    ためすのは 楽しい。でも <b>どの くみあわせで 決めにいくか</b>を きめてから 動くと、力は もつ。<br>
+    じぶんの 最短の 解きかたを さがそう。`;
+  $('#ovDex').innerHTML='';
+  $('#over .box').className='box dead';
+  $('#ovBtn').textContent='もういちど 旅に出る';
+  $('#ovBtn').onclick=()=>newRun();
+  $('#over').classList.add('on');
+}
+function joinParty(k,label){
+  if(!k||S.party.includes(k))return;
+  S.party.push(k);
+}
+function reload(){
+  if(!S||S.over||busy)return;
+  newTurn();
+  S.hand=buildHand(S.sc);
+  say('ことばぶくろを あさりなおした。');
+  render();
+}
+function showEnd(){
+  const rows=S.recap.map(u=>`<div class="dw"><b>${'★'.repeat(u.st||1).padEnd(3,'☆')} ${esc(u.scene)}</b><span>${esc(u.how)}</span></div>`).join('');
+  const total=S.stars.reduce((a,b)=>a+b,0);
+  const party=S.party.map(k=>{const r=ROOTS[k]||{};
+    return `<span style="display:inline-flex;align-items:center;gap:6px;margin-right:14px;font-weight:900">
+      <span style="width:52px;height:52px;border-radius:50%;overflow:hidden;background:#fffdf6;border:3px solid ${esc(r.color||'#8a7c96')};display:inline-flex;align-items:center;justify-content:center">
+      ${r.img?`<img src="${A}${esc(r.img)}" style="width:90%;height:90%;object-fit:contain">`:''}</span>${esc(rootJa(k))}</span>`;}).join('');
+  $('#ovT').textContent=`🏮 あかりの まちに ついた!　★${total} / ${SCENES.length*3}`;
+  $('#ovP').innerHTML=`ものと 根源どうしの くみあわせが みちを ひらいた。<br>
+    ${total===SCENES.length*3?'<b>ぜんぶ ★★★! むだのない 美しい旅だった。</b>':'力を 余して 解くほど ★が ふえる。もっと 短い くみあわせも あるはず。'}<br><br>`
+    +(party?`<b>旅で ちからを かした 一族</b><br>${party}<br><br>`:'')
+    +`<b>こんかいの 解きかた</b>（べつの くみあわせでも 解ける）`;
+  $('#ovDex').innerHTML=rows;
+  $('#over .box').className='box clear';
+  $('#ovBtn').textContent='もういちど（べつの くみあわせで）';
+  $('#ovBtn').onclick=()=>newRun();
+  $('#over').classList.add('on');
+}
+
+/* ===========================================================================
+   カード
+   =========================================================================== */
+function cardHTML(w){
+  if(VERBS[w]){
+    const v=VERBS[w], r=v.clan?ROOTS[v.clan]:null;
+    return `<div class="verbCard">
+      <span class="face">${r&&r.img?`<img src="${A}${esc(r.img)}">`:`<i>${v.em}</i>`}</span>
+      <span class="vj">${esc(v.ja)}</span>
+      ${r?`<span style="margin-top:8px;font-size:17px;font-weight:900;color:#5b4aa8">「${esc(rootJa(v.clan))}」の一族が 演じる</span>`:''}
+      <span class="eff">${esc(v.hint)}</span>
+    </div>`;
+  }
+  const t=ITEMS[w]||{em:'❔'};
+  const art=`<img src="${A}word/${encodeURIComponent(w)}.png" alt="" style="width:170px;height:170px;object-fit:contain;margin-top:auto"
+    onerror="this.replaceWith(Object.assign(document.createElement('span'),{className:'em',textContent:'${t.em}'}))">`;
+  return `<div class="wordCard2 thingCard" style="--cc:${t.person?'#b49ad7':'#c9a86a'}">
+    ${t.person?'<span style="position:absolute;left:12px;top:10px;background:#7a6bd8;color:#fff;font-size:16px;font-weight:900;border-radius:99px;padding:2px 12px">ひと</span>':''}
+    ${art}
+    <span class="wEn"${w.length>=11?' style="font-size:34px"':''}>${esc(w)}</span>
+    <span class="wJa" style="font-size:26px">${esc(jaOf(w))}</span>
+    <span class="eff" style="margin-top:auto;font-size:18px;opacity:.75">${t.person?'よぶと 自分の意思で うごく':'となえると 場に あらわれる'}</span>
+  </div>`;
+}
+
+/* ===========================================================================
+   描画
+   =========================================================================== */
+function trailHTML(){
+  return SCENES.map((sc,i)=>{
+    const cls=i<S.si||(i===S.si&&S.over)?'done':i===S.si?'cur':'';
+    return `<span class="nd ${cls}">${i+1}</span>`;
+  }).join('')+`<span class="nd ${S.over?'done':''}">🏮</span>`;
+}
+function render(){
+  if(!S)return;
+  const sc=S.sc;
+  $('#trail').innerHTML=trailHTML();
+  $('#mood').innerHTML=(S.party.length?'<span class="plabel">であった一族</span>':'')
+    +S.party.map(k=>{const r=ROOTS[k]||{};
+      return `<span class="pf" title="${esc(rootJa(k))}">${r.img?`<img src="${A}${esc(r.img)}">`:''}</span>`;}).join('');
+  $('#foeTag').innerHTML=`【${esc(sc.ttl)}】<br><span style="opacity:.9;font-weight:800;font-size:12px">${esc(sc.goal)}</span>`;
+  const img=$('#foeImg');
+  if(sc.img){img.style.display='';
+    const src=A+sc.img;
+    if(img.getAttribute('src')!==src){img.src=src;
+      img.onerror=function(){this.onerror=null;this.style.display='none';};}
+  }else img.style.display='none';
+  $('#bg').style.backgroundImage=`url(${A}${sc.bg})`;
+  $('#field').classList.toggle('night',!!sc.night);
+  const hi=$('#heroImg');
+  if(hi.getAttribute('src')!==A+'player/wordopia-player.png'){
+    hi.src=A+'player/wordopia-player.png';
+    hi.onerror=function(){this.onerror=null;this.src=A+'chara/T_ch_kaput_head.png';};}
+  $('#fieldItems').innerHTML=S.items.map(w=>{const t=it2(w);
+    return `<span class="fitem"><img src="${A}word/${encodeURIComponent(w)}.png" alt=""
+      style="width:76px;height:76px;object-fit:contain"
+      onerror="this.replaceWith(Object.assign(document.createElement('i'),{textContent:'${t.em}'}))">
+      <b>${esc(w)}</b><em>${esc(jaOf(w))}</em></span>`;}).join('');
+  const mt=$('#mount');
+  if(S.mounted){mt.style.display='block';mt.textContent=`${it2(S.mounted).em} ${S.mounted}に のっている`;}
+  else mt.style.display='none';
+  paintMsg();
+  $('#btnReload').textContent='🔄 ことばぶくろを あさる（力は へらない）';
+  $('#deckN').innerHTML=`ばめん ${S.si+1}/${SCENES.length}　<b style="color:#ffe98a">${'✨'.repeat(Math.max(0,S.pow))}${'・'.repeat(Math.max(0,POW-S.pow))}</b>　${'🎒'.repeat(S.packs)}`;
+  $('#hand').innerHTML=S.hand.map((w,i)=>
+    `<div class="handCard" data-i="${i}"><div class="hcInner">${cardHTML(w)}</div></div>`).join('');
+  fanHand();
+}
+function sparkle(){
+  const f=$('#field');
+  for(let i=0;i<7;i++){
+    const s=document.createElement('div'); s.className='sparkle'; s.textContent='✧';
+    s.style.left=(f.clientWidth*0.55+(i-3)*40)+'px'; s.style.top=(f.clientHeight*0.45)+'px';
+    s.style.setProperty('--dx',((i-3)*22)+'px');
+    s.style.animationDelay=(i*60)+'ms';
+    f.appendChild(s); setTimeout(()=>s.remove(),1800+i*60);
+  }
+}
+
+/* ===== 手札とドラッグ ===== */
+let fanSc=.66;
+function fitHand(){
+  const n=S?S.hand.length:0;
+  const w=Math.min(286,Math.floor(1700/Math.max(1,n)));
+  document.querySelectorAll('#hand .handCard').forEach(c=>{
+    c.style.flex=`0 0 ${w}px`; c.style.width=w+'px'; c.style.height='330px';
+  });
+}
+function fanT(i,c){const d=i-c;
+  return `translateY(${-Math.abs(d)*13}px) rotate(${d*4.5}deg) scale(${fanSc})`;}
+function fanHand(){
+  fitHand();
+  const cs=[...document.querySelectorAll('#hand .handCard')];
+  const c=(cs.length-1)/2;
+  cs.forEach((el,i)=>{
+    const inner=el.querySelector('.hcInner');
+    inner.style.transform=fanT(i,c);
+    el.onpointerenter=()=>{inner.style.transform=`translateY(-96px) rotate(0deg) scale(.82)`;};
+    el.onpointerleave=()=>{inner.style.transform=fanT(i,c);};
+    el.addEventListener('pointerdown',ev=>startDrag(ev,el));
+  });
+}
+function zoneAt(x,y){
+  const b=$('#field').getBoundingClientRect();
+  return (x>=b.left&&x<=b.right&&y>=b.top&&y<=b.bottom);
+}
+function startDrag(e,card){
+  if(e.button!==undefined&&e.button!==0)return;
+  const i=+card.dataset.i;
+  if(!S||S.over||busy||!S.hand[i])return;
+  e.preventDefault();
+  card.classList.add('dragging');
+  const ghost=document.createElement('div');
+  ghost.className='dragGhost';
+  ghost.innerHTML=cardHTML(S.hand[i]);
+  document.body.appendChild(ghost);
+  const start={x:e.clientX,y:e.clientY};
+  const toLocal=(cx,cy)=>{const r=$('#app').getBoundingClientRect();
+    const k=r.width/1920; return {x:(cx-r.left)/k,y:(cy-r.top)/k};};
+  const aim=$('#aim'), path=$('#aimPath');
+  const a0=toLocal(start.x,start.y);
+  aim.classList.add('on');
+  const move=ev=>{
+    ghost.style.transform=`translate(${ev.clientX}px,${ev.clientY}px) translate(-50%,-56%) scale(.42)`;
+    const z=zoneAt(ev.clientX,ev.clientY);
+    const a1=toLocal(ev.clientX,ev.clientY);
+    const cx=(a0.x+a1.x)/2, cy=Math.min(a0.y,a1.y)-Math.abs(a1.x-a0.x)*.28-90;
+    path.setAttribute('d',`M${a0.x.toFixed(0)},${a0.y.toFixed(0)} Q${cx.toFixed(0)},${cy.toFixed(0)} ${a1.x.toFixed(0)},${a1.y.toFixed(0)}`);
+    aim.classList.toggle('hit',!!z);
+  };
+  const cleanup=()=>{
+    card.classList.remove('dragging'); ghost.remove();
+    aim.classList.remove('on','hit'); path.removeAttribute('d');
+    window.removeEventListener('pointermove',move);
+    window.removeEventListener('pointerup',up);
+    window.removeEventListener('pointercancel',cleanup);
+  };
+  const up=ev=>{
+    const z=zoneAt(ev.clientX,ev.clientY);
+    cleanup();
+    if(z)useCard(i);
+  };
+  move(e);
+  window.addEventListener('pointermove',move);
+  window.addEventListener('pointerup',up,{once:true});
+  window.addEventListener('pointercancel',cleanup,{once:true});
+}
+
+/* ===== 起動 ===== */
+const fitStage=()=>{
+  const vw=(window.visualViewport&&visualViewport.width)||innerWidth;
+  const vh=(window.visualViewport&&visualViewport.height)||innerHeight;
+  $('#app').style.transform=`translate(-50%,-50%) scale(${Math.min(vw/1920,vh/1080)})`;
+};
+addEventListener('resize',fitStage);
+addEventListener('orientationchange',fitStage);
+if(window.visualViewport)visualViewport.addEventListener('resize',fitStage);
+
+async function boot(){
+  fitStage();
+  try{ await load(); }
+  catch(e){
+    $('#msg').innerHTML='<div class="wrap"><div class="ln bad">データが読めない。http経由で開くこと'+
+      '（python3 -m http.server 8000 → localhost:8000/app/etymon-rogue.html）</div></div>';
+    return;
+  }
+  $('#btnReload').onclick=reload;
+  $('#btnRetry').onclick=()=>newRun();
+  const go=ev=>{if(!pending)return;
+    const fn=pending;pending=null;fn();};
+  addEventListener('pointerdown',ev=>{
+    if(ev.target.closest('.handCard,#btnReload,#btnRetry,#over'))return;
+    go(ev);
+  });
+  newRun();
+}
+window.G={get S(){return S;},SCENES,ITEMS,VERBS,useCard,newRun,enterScene,
+  get waiting(){return !!pending;}, get busy(){return busy;},
+  set busyOff(v){busy=false;}};
+boot();
+</script>
+</body>
+</html>

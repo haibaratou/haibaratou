@@ -1,0 +1,583 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>エティモリンゴ:なぞりバトル</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+:root{
+  --bg:#141019; --panel:#1e1826; --line:#332b40; --ink:#f2eef7; --dim:#9c92ab;
+  --hot:#ffd166; --bad:#ff5d73; --good:#5ddba1;
+}
+html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--ink);
+  font-family:"Hiragino Sans","Noto Sans JP",system-ui,sans-serif;
+  user-select:none;touch-action:none}
+#app{height:100%;display:flex;flex-direction:column}
+
+/* ---- 敵 ---- */
+#top{flex:0 0 auto;position:relative;display:flex;align-items:center;justify-content:center;
+  min-height:clamp(120px,21vh,190px);padding:6px 12px;
+  background:radial-gradient(120% 100% at 50% 0%,#241c2e 0%,#141019 72%)}
+#foes{display:flex;justify-content:center;align-items:center;gap:clamp(8px,2.6vw,46px)}
+.foe{display:flex;flex-direction:column;align-items:center;gap:2px;cursor:pointer;
+  padding:5px 10px;border-radius:13px;border:2px solid transparent;min-width:106px}
+.foe.on{border-color:var(--hot);background:#ffd1660f}
+.foe.dead{opacity:.16;pointer-events:none;filter:grayscale(1)}
+.foe .body{font-size:clamp(30px,7vh,62px);line-height:1;position:relative;
+  filter:drop-shadow(0 5px 10px #0009)}
+.foe.hurt{animation:shake .28s}
+@keyframes shake{25%{transform:translateX(-7px)}75%{transform:translateX(7px)}}
+.foe .nm{font-size:10px;color:var(--dim)}
+.foe .st{font-size:10px;padding:1px 7px;border-radius:99px;background:#3a2f47;
+  border:1px solid var(--line);white-space:nowrap}
+.foe.on .st{background:var(--hot);color:#241c2e;font-weight:700;border-color:var(--hot)}
+.foe .ct{position:absolute;right:-5px;top:-3px;min-width:22px;height:22px;border-radius:99px;
+  background:var(--bad);color:#fff;font-size:12px;font-weight:800;display:flex;
+  align-items:center;justify-content:center;border:2px solid #141019}
+.foe .ct.soon{background:#fff;color:var(--bad)}
+.hp{width:100%;height:6px;border-radius:99px;background:#3a2f47;overflow:hidden}
+.hp i{display:block;height:100%;background:linear-gradient(90deg,#ff8a5c,#ff5d73);
+  transition:width .3s}
+.foe .num{font-size:9px;color:var(--dim);font-variant-numeric:tabular-nums}
+
+/* ---- パーティー ---- */
+#mid{flex:0 0 auto;display:flex;align-items:center;justify-content:center;gap:12px;
+  padding:5px 14px;background:linear-gradient(180deg,#1b1524,#181321);
+  border-top:1px solid var(--line);border-bottom:1px solid var(--line)}
+#party{display:flex;gap:6px}
+.mem{width:clamp(30px,5vh,44px);aspect-ratio:1;border-radius:10px;overflow:hidden;
+  border:2px solid var(--line);background:#2a2334}
+.mem img{width:100%;height:100%;object-fit:cover}
+.mem.fire{animation:pop .34s}
+@keyframes pop{40%{transform:translateY(-9px) scale(1.16)}}
+#hpwrap{flex:1 1 auto;max-width:520px}
+#hpwrap .bar{height:12px;border-radius:99px;background:#3a2f47;overflow:hidden}
+#hpwrap .bar i{display:block;height:100%;
+  background:linear-gradient(90deg,#5ddba1,#39b98a);transition:width .3s}
+#hpwrap .n{font-size:10px;color:var(--dim);font-variant-numeric:tabular-nums;margin-top:1px}
+#bonusbox{font-size:11px;color:var(--dim);text-align:right;min-width:96px}
+#bonusbox b{color:var(--hot);font-size:14px}
+
+#cutin{position:absolute;left:12px;top:8px;z-index:5;display:flex;align-items:center;
+  gap:8px;padding:4px 10px 4px 4px;border-radius:14px;background:#141019e8;
+  border:1px solid var(--line);opacity:0;transform:translateX(-20px);
+  pointer-events:none;transition:.16s}
+#cutin.on{opacity:1;transform:none}
+#cutin img{width:clamp(46px,9vh,76px);height:clamp(46px,9vh,76px);object-fit:cover;
+  border-radius:11px;border:2px solid var(--hot);background:#2a2334}
+#cutin .tx b{display:block;font-size:clamp(14px,2.2vh,19px);letter-spacing:.05em}
+#cutin .tx s{display:block;font-size:11px;color:var(--dim);text-decoration:none}
+#pop{position:absolute;inset:0;pointer-events:none;overflow:hidden}
+.dmg{position:absolute;font-weight:800;font-size:clamp(18px,3.2vh,30px);
+  text-shadow:0 2px 6px #000;animation:rise .85s forwards}
+.dmg.w{color:var(--hot)} .dmg.b{color:var(--good);font-size:17px}
+@keyframes rise{to{transform:translateY(-54px);opacity:0}}
+#log{position:absolute;right:12px;top:6px;z-index:4;width:min(46vw,320px);font-size:11px;
+  line-height:1.4;color:var(--dim);text-align:right;pointer-events:none;
+  text-shadow:0 1px 3px #000,0 0 6px #000}
+#log b{color:var(--ink)}
+
+/* ---- お題 ---- */
+#quest{flex:1 1 auto;min-height:0;display:flex;flex-wrap:wrap;gap:clamp(5px,.9vw,12px);
+  justify-content:center;align-items:stretch;align-content:center;
+  padding:8px 12px 2px;background:#181321;overflow:auto}
+.q{flex:0 1 clamp(96px,12vw,168px);min-width:96px;border-radius:13px;background:var(--panel);
+  border:2px solid var(--line);padding:6px 6px 5px;display:flex;flex-direction:column;
+  align-items:center;gap:3px;position:relative;overflow:hidden;transition:.15s}
+.q.done{border-color:var(--good);background:#5ddba114}
+.q img{flex:1 1 auto;min-height:34px;width:100%;object-fit:contain;
+  filter:drop-shadow(0 2px 4px #0007)}
+.q .ja{flex:0 0 auto;font-size:clamp(10px,1.6vh,13px);line-height:1.2;text-align:center}
+.q .sl{flex:0 0 auto;font-family:ui-monospace,monospace;font-weight:800;
+  font-size:clamp(14px,2.5vh,22px);letter-spacing:.2em;color:#a99ec2;white-space:nowrap;
+  padding:2px 0}
+.q.done .sl{color:var(--good)}
+.q .ety{flex:0 0 auto;font-size:9px;line-height:1.3;color:var(--dim);text-align:center;
+  display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.q .fam{position:absolute;right:3px;top:3px;width:22px;height:22px;border-radius:99px;
+  border:2px solid var(--line);overflow:hidden;background:#2a2334}
+.q .fam img{width:100%;height:100%;object-fit:cover;min-height:0}
+.q .tag{position:absolute;left:3px;top:3px;font-size:11px}
+.q .hb{flex:0 0 auto;font-size:9px;padding:1px 7px;border-radius:99px;
+  border:1px solid var(--line);background:#241d2f;color:var(--dim);cursor:pointer}
+.q .hb:hover{border-color:var(--hot);color:var(--ink)}
+.q.weak{box-shadow:0 0 0 2px #ffd16655}
+
+/* ---- 輪 ---- */
+#wheelwrap{flex:0 0 auto;display:flex;flex-direction:column;align-items:center;gap:2px;
+  padding:0 12px 8px;background:#181321;position:relative}
+#cur{height:26px;font-family:ui-monospace,monospace;font-weight:800;
+  font-size:clamp(15px,2.6vh,24px);letter-spacing:.22em;text-transform:uppercase;
+  color:var(--hot);display:flex;align-items:center}
+#cur.ok{color:var(--good)} #cur.bad{color:var(--bad)}
+#wheel{position:relative;width:clamp(170px,27vh,240px);aspect-ratio:1;touch-action:none}
+#wheel svg{position:absolute;inset:0;pointer-events:none}
+#wheel .disc{position:absolute;inset:0;border-radius:50%;background:#241d2f;
+  border:1px solid var(--line)}
+.tile{position:absolute;width:clamp(34px,6.4vh,50px);aspect-ratio:1;border-radius:50%;
+  background:var(--panel);border:2px solid var(--line);display:flex;align-items:center;
+  justify-content:center;font-weight:800;font-size:clamp(15px,2.6vh,23px);
+  transform:translate(-50%,-50%);transition:background .1s,border-color .1s}
+.tile.on{background:var(--hot);color:#241c2e;border-color:var(--hot)}
+#wheelbtns{display:flex;gap:8px}
+button{font-family:inherit;font-weight:700;border:1px solid var(--line);background:var(--panel);
+  color:var(--ink);border-radius:10px;cursor:pointer;padding:6px 14px;font-size:12px}
+button:hover{background:#2a2334;border-color:var(--hot)}
+button:disabled{opacity:.35;cursor:default}
+button:focus-visible{outline:2px solid var(--hot);outline-offset:2px}
+
+/* ---- オーバーレイ ---- */
+#ov{position:absolute;inset:0;background:#100d15f5;display:flex;align-items:center;
+  justify-content:center;z-index:20;padding:16px;overflow:auto}
+#ov.off{display:none}
+.sheet{width:min(1000px,100%);text-align:center}
+.sheet h1{font-size:clamp(19px,3.4vh,29px);margin-bottom:4px}
+.sheet p{color:var(--dim);font-size:13px;line-height:1.7;margin-bottom:12px}
+#pick{display:flex;flex-wrap:wrap;gap:6px;justify-content:center;margin-bottom:12px;
+  max-height:40vh;overflow:auto;padding:2px}
+.pk{width:clamp(74px,8vw,100px);padding:6px;border-radius:11px;background:var(--panel);
+  border:2px solid var(--line);cursor:pointer}
+.pk.on{border-color:var(--hot);background:#ffd1660f}
+.pk img{width:100%;aspect-ratio:1;object-fit:cover;border-radius:8px;background:#2a2334}
+.pk b{display:block;font-size:12px;margin-top:4px}
+.pk s{display:block;font-size:10px;color:var(--dim);text-decoration:none}
+.row{display:flex;gap:8px;justify-content:center;align-items:center;margin-bottom:10px;
+  flex-wrap:wrap}
+.seg{display:flex;border:1px solid var(--line);border-radius:10px;overflow:hidden}
+.seg button{border:0;border-radius:0;padding:7px 16px}
+.seg button.on{background:var(--hot);color:#241c2e}
+#go{padding:11px 44px;font-size:15px;background:var(--hot);color:#241c2e;border-color:var(--hot)}
+#go:disabled{background:var(--panel);color:var(--dim)}
+.help{font-size:11px;color:#6b6079;line-height:1.8;max-width:680px;margin:10px auto 0;
+  text-align:left;border-top:1px solid var(--line);padding-top:9px}
+.help b{color:var(--dim)}
+#dexlist{display:flex;flex-wrap:wrap;gap:5px;justify-content:center;margin:10px 0;
+  max-height:42vh;overflow:auto}
+.dx{background:var(--panel);border:1px solid var(--line);border-radius:9px;padding:6px;
+  font-size:11px;text-align:left;width:200px;display:flex;gap:6px}
+.dx img{width:34px;height:34px;object-fit:contain;flex:0 0 auto}
+.dx b{font-size:12px;display:block;letter-spacing:.03em}
+.dx s{display:block;color:var(--dim);text-decoration:none;margin-top:1px;line-height:1.3}
+@media(max-width:720px){
+  #cutin{left:50%;top:4px;transform:translate(-50%,-8px)}
+  #cutin.on{transform:translateX(-50%)}
+  #log{width:52vw;font-size:10px}
+  #foes{gap:6px}
+  .foe{min-width:92px;padding:4px 5px}
+}
+@media(prefers-reduced-motion:reduce){*,*::before,*::after{
+  animation-duration:.01ms!important;transition-duration:.01ms!important}}
+</style>
+</head>
+<body>
+<div id="app">
+  <div id="top">
+    <div id="log"></div>
+    <div id="foes"></div>
+    <div id="cutin"><img alt=""><div class="tx"><b></b><s></s></div></div>
+    <div id="pop"></div>
+  </div>
+  <div id="mid">
+    <div id="party"></div>
+    <div id="hpwrap"><div class="bar"><i></i></div><div class="n"></div></div>
+    <div id="bonusbox"></div>
+  </div>
+  <div id="quest"></div>
+  <div id="wheelwrap">
+    <div id="cur"></div>
+    <div id="wheel"><div class="disc"></div><svg><polyline fill="none"
+      stroke="#ffd166" stroke-width="5" stroke-linecap="round"
+      stroke-linejoin="round" opacity=".8"/></svg></div>
+    <div id="wheelbtns">
+      <button id="shuffle">シャッフル</button>
+      <button id="newwheel">別の輪へ<small></small></button>
+    </div>
+  </div>
+  <div id="ov"><div class="sheet" id="ovc"></div></div>
+</div>
+
+<script>
+const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
+const CHDIR='../assets/chara/', WDIR='../assets/word/';
+const CH=n=>(self.__IMG&&self.__IMG[n])||CHDIR+n;
+const WI=n=>(self.__WIMG&&self.__WIMG[n])||WDIR+n;
+const SLOT=['#ff8a5c','#63c7ff','#ffd166','#8de08a'];
+const TAGICON={見:'👁',光:'✨',水:'💧',冷:'❄',音:'🔊',話:'💬',壊:'💥',切:'✂',
+  集:'🔗',結:'🪢',食:'🍽',生:'🌱',掴:'✊',引:'🪝',知:'📖',飛:'🪶',浮:'🎈',
+  打:'👊',押:'🫸',癒:'💗',守:'🛡',覆:'🧢',金:'🪙',動:'🏃',回:'🌀',運:'📦',
+  楽:'🎵',温:'🔥',火:'🔥',闇:'🌑',眠:'💤',乾:'🌵',終:'⌛',聞:'👂',落:'🪂'};
+// 伏せるのは綴りだけ。意味・語源・イラストは手がかりとして最初から出す
+const HINT=[{n:'',mul:1},{n:'頭文字',mul:.7},{n:'前半',mul:.45},{n:'全部',mul:.25}];
+const LV={
+  easy:{q:4,maxlen:6,label:'初級'},
+  mid :{q:5,maxlen:7,label:'中級'},
+  hard:{q:6,maxlen:9,label:'上級'},
+};
+let DATA=null, G=null;
+
+/* ================= 輪づくり ================= */
+const CC={};
+function cnt(s){ if(!CC[s]){const m={};for(const c of s)m[c]=(m[c]||0)+1;CC[s]=m} return CC[s] }
+function fits(a,b){ for(const k in a) if((b[k]||0)<a[k]) return false; return true }
+
+function makeWheel(){
+  const lv=G.lv, pool=G.pool;
+  // 輪 = ある語の綴りそのもの。そこから作れる同編成の語をお題にする
+  const bases=pool.filter(w=>w.w.length>=lv.maxlen-1&&w.w.length<=lv.maxlen
+    &&Object.keys(cnt(w.w)).length<=8);
+  const cand=[];
+  const order=shuffle(bases.slice(),G.rnd).sort((a,b)=>(b.g?1:0)-(a.g?1:0));
+  for(const b of order.slice(0,140)){
+    const wh=cnt(b.w);
+    const made=pool.filter(w=>fits(cnt(w.w),wh));
+    if(made.length>=Math.min(4,lv.q))cand.push({base:b,made});
+    if(cand.length>=24)break;
+  }
+  if(!cand.length){
+    const b=bases.length?bases[(G.rnd()*bases.length)|0]:pool[0];
+    cand.push({base:b,made:pool.filter(w=>fits(cnt(w.w),cnt(b.w)))});
+  }
+  // 輪を採点して選ぶ。ただ語数が多いだけの輪だと
+  // who / whom / whose / how のような機能語ばかりになり、イラストの手がかりが死ぬ
+  const score=c=>{
+    const top=c.made.slice().sort((a,b)=>(b.g?1:0)-(a.g?1:0)||b.w.length-a.w.length)
+                    .slice(0,lv.q);
+    const fresh=top.filter(w=>!G.seen.has(w.w)).length;
+    const draw =top.filter(w=>w.g).length;              // 絵で当てられる語
+    const fam  =new Set(top.map(w=>w.key)).size;        // 一族のばらけ
+    return draw*3+fam*2+fresh+Math.min(c.made.length,8);
+  };
+  cand.sort((x,y)=>score(y)-score(x));
+  const pickd=cand[0];
+  const made=pickd.made.slice().sort((a,b)=>
+    (b.g?1:0)-(a.g?1:0)||(G.seen.has(a.w)?1:0)-(G.seen.has(b.w)?1:0)
+    ||b.w.length-a.w.length);
+  const qs=made.slice(0,lv.q).map(w=>({...w,hint:0,reveal:0,done:false}));
+  qs.forEach(w=>G.seen.add(w.w));
+  // ボーナス候補(語源辞書にあって、お題でない語)
+  const wh=cnt(pickd.base.w);
+  const qset=new Set(qs.map(w=>w.w));
+  const bonus=new Set();
+  for(const w in DATA.dict)
+    if(w.length>=3&&!qset.has(w)&&fits(cnt(w),wh))bonus.add(w);
+  G.wheel=shuffle(pickd.base.w.split(''),G.rnd);
+  G.quest=qs; G.bonus=bonus; G.gotBonus=new Set();
+  drawWheel(); drawQuest();
+}
+function shuffle(a,rnd){for(let i=a.length-1;i>0;i--){const j=(rnd()*(i+1))|0;
+  [a[i],a[j]]=[a[j],a[i]]}return a}
+function mulberry(s){return function(){s|=0;s=s+0x6D2B79F5|0;let t=Math.imul(s^s>>>15,1|s);
+  t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296}}
+
+/* ================= 描画 ================= */
+function drawWheel(){
+  const el=$('#wheel'), n=G.wheel.length;
+  $$('#wheel .tile').forEach(e=>e.remove());
+  G.wheel.forEach((c,i)=>{
+    const a=-Math.PI/2+i/n*Math.PI*2;
+    const d=document.createElement('div');
+    d.className='tile'; d.dataset.i=i; d.textContent=c.toUpperCase();
+    d.style.left=(50+Math.cos(a)*36)+'%';
+    d.style.top =(50+Math.sin(a)*36)+'%';
+    el.appendChild(d);
+  });
+  $('#newwheel small').textContent='';
+}
+function drawQuest(){
+  const foe=G.foes[G.target];
+  $('#quest').innerHTML=G.quest.map((w,i)=>{
+    const weak=foe&&w.tk.some(x=>foe.wk.tags.includes(x));
+    const tag=w.tk.map(x=>TAGICON[x]).filter(Boolean)[0]||'';
+    const sl=w.done?w.w.toUpperCase().split('').join(' ')
+      :w.w.split('').map((c,j)=>j<w.reveal?c.toUpperCase():'_').join(' ');
+    return `<div class="q ${w.done?'done':''} ${weak&&!w.done?'weak':''}" data-i="${i}">
+      ${tag?`<span class="tag">${tag}</span>`:''}
+      <span class="fam" style="border-color:${w.slotcol}"><img src="${CH(w.cimg)}" alt=""></span>
+      <img src="${WI(w.img)}" alt="" draggable="false">
+      <span class="ja">${w.ja}</span>
+      <span class="sl">${sl}</span>
+      <span class="ety">${w.b||`語根「${w.jp}」から`}</span>
+      ${w.done?'':`<span class="hb">${w.hint<3
+        ?`ヒント ▸ ${HINT[w.hint+1].n} (${Math.round(HINT[w.hint+1].mul*100)}%)`
+        :`威力${Math.round(HINT[w.hint].mul*100)}%`}</span>`}
+    </div>`;
+  }).join('');
+  $$('#quest .hb').forEach((e,i)=>{
+    const qi=+e.closest('.q').dataset.i;
+    e.onclick=ev=>{ev.stopPropagation();hint(qi)};
+  });
+  $('#bonusbox').innerHTML=`ボーナス語<br><b>${G.gotBonus.size}</b> / ${G.bonus.size}`;
+  fitSlots();
+}
+// 長い語ほど文字が溢れてカードから切れるので、幅に収まるまで縮める
+function fitSlots(){
+  $$('#quest .sl').forEach(e=>{
+    e.style.fontSize=''; e.style.letterSpacing='';
+    const w=e.parentElement.clientWidth-10;
+    let fs=parseFloat(getComputedStyle(e).fontSize);
+    let ls=0.2;
+    while(e.scrollWidth>w&&fs>8){
+      if(ls>0.04){ls-=0.04;e.style.letterSpacing=ls+'em'}
+      else{fs-=1;e.style.fontSize=fs+'px'}
+    }
+  });
+}
+function drawFoes(){
+  $('#foes').innerHTML=G.foes.map((f,i)=>`
+    <div class="foe ${i===G.target?'on':''} ${f.hp<=0?'dead':''}" data-i="${i}">
+      <div class="body">${f.icon}<span class="ct ${f.ct<=1?'soon':''}">${f.ct}</span></div>
+      <div class="nm">${f.name}</div>
+      <div class="st">${f.wk.icon} ${f.wk.jp}</div>
+      <div class="hp"><i style="width:${Math.max(0,f.hp/f.max*100)}%"></i></div>
+      <div class="num">${Math.max(0,f.hp)} / ${f.max}</div>
+    </div>`).join('');
+  $$('#foes .foe').forEach(e=>e.onclick=()=>{G.target=+e.dataset.i;drawFoes();drawQuest()});
+}
+function drawParty(){
+  $('#party').innerHTML=G.party.map((p,i)=>
+    `<div class="mem" style="border-color:${SLOT[i]}">
+       <img src="${CH(p.img)}" alt="${p.jp}"></div>`).join('');
+}
+function drawHP(){
+  $('#hpwrap .bar i').style.width=Math.max(0,G.hp/G.maxhp*100)+'%';
+  $('#hpwrap .n').textContent=`味方HP ${Math.max(0,G.hp)} / ${G.maxhp}`
+    +(G.chain>1?`　${G.chain}連鎖`:'');
+}
+function log(html){const l=$('#log');const d=document.createElement('div');
+  d.innerHTML=html;l.prepend(d);while(l.children.length>5)l.lastChild.remove()}
+function popup(txt,cls){
+  const fe=$$('#foes .foe')[G.target]; if(!fe)return;
+  fe.classList.remove('hurt');void fe.offsetWidth;fe.classList.add('hurt');
+  const r=fe.getBoundingClientRect(), t=$('#top').getBoundingClientRect();
+  const p=document.createElement('div');
+  p.className='dmg '+(cls||''); p.textContent=txt;
+  p.style.left=(r.left-t.left+r.width/2-24)+'px';
+  p.style.top=(r.top-t.top+4)+'px';
+  $('#pop').appendChild(p); setTimeout(()=>p.remove(),850);
+}
+
+/* ================= ヒント ================= */
+function hint(i){
+  const w=G.quest[i];
+  if(!G.running||w.done||w.hint>=3)return;
+  w.hint++;
+  w.reveal=w.hint>=3?w.w.length:w.hint>=2?Math.ceil(w.w.length/2):1;
+  drawQuest();
+}
+
+/* ================= 攻撃 ================= */
+function solve(i){
+  const w=G.quest[i], foe=G.foes[G.target];
+  w.done=true; G.chain++; G.dex.set(w.w,w);
+  const lenK=1+(w.w.length-4)*0.18, rareK=1+Math.log(w.r+1)*0.15;
+  const weak=w.tk.some(t=>foe.wk.tags.includes(t));
+  const n=Math.max(1,Math.round(40*lenK*rareK*(weak?2:1)*HINT[w.hint].mul
+        *Math.pow(1.15,G.chain-1)));
+  foe.hp-=n;
+
+  const slot=G.party.findIndex(p=>p.key===w.key);
+  const ci=$('#cutin');
+  ci.querySelector('img').src=CH(w.cimg);
+  ci.querySelector('b').textContent=w.w.toUpperCase();
+  ci.querySelector('s').textContent=w.ja+' — '+w.jp;
+  ci.classList.add('on'); clearTimeout(G.ciT);
+  G.ciT=setTimeout(()=>ci.classList.remove('on'),1000);
+  const mem=$$('#party .mem')[slot];
+  if(mem){mem.classList.remove('fire');void mem.offsetWidth;mem.classList.add('fire')}
+  popup((weak?'特攻 ':'')+n,weak?'w':'');
+  log(`<b>${w.w}</b> ${w.ja}${weak?' <span style="color:#ffd166">特攻!</span>':''}`
+     +`${w.hint?` <span style="color:#9c92ab">ヒント${w.hint}</span>`:''}`);
+
+  if(foe.hp<=0){foe.hp=0;log(`<b>${foe.name}</b> をたおした`);
+    if(G.foes.every(f=>f.hp<=0))return finish(true);
+    if(G.foes[G.target].hp<=0)G.target=G.foes.findIndex(f=>f.hp>0);}
+  step();
+  if(G.running&&G.quest.every(q=>q.done)){
+    log('お題ぜんぶ達成 → 次の輪');
+    setTimeout(()=>{if(G.running){makeWheel();drawQuest()}},650);
+  }
+}
+function takeBonus(w){
+  G.gotBonus.add(w);
+  const e=DATA.dict[w];
+  const n=Math.max(1,Math.round(6*w.length));
+  const foe=G.foes[G.target]; foe.hp-=n;
+  G.dexb.set(w,e);
+  popup('+'+n,'b');
+  log(`<span style="color:#5ddba1">ボーナス</span> <b>${w}</b> ${e[0]}`);
+  if(foe.hp<=0){foe.hp=0;
+    if(G.foes.every(f=>f.hp<=0))return finish(true);
+    if(G.foes[G.target].hp<=0)G.target=G.foes.findIndex(f=>f.hp>0);}
+  drawFoes();drawQuest();
+}
+function step(){   // お題1語 = 1手。ボーナス語では手を消費しない
+  let dmg=0;
+  G.foes.filter(f=>f.hp>0).forEach(f=>{if(--f.ct<=0){f.ct=f.iv;dmg+=f.atk}});
+  if(dmg){
+    G.hp-=dmg; G.chain=0;
+    log(`<span style="color:#ff5d73">敵の攻撃 -${dmg}</span>`);
+    if(G.hp<=0){G.hp=0;drawHP();drawFoes();return finish(false)}
+  }
+  drawHP();drawFoes();drawQuest();
+}
+
+/* ================= なぞる ================= */
+let sel=[];
+function tileAt(x,y){
+  const el=document.elementFromPoint(x,y);
+  const t=el&&el.closest?el.closest('.tile'):null;
+  return t?+t.dataset.i:-1;
+}
+function curWord(){ return sel.map(i=>G.wheel[i]).join('') }
+function paint(){
+  $$('#wheel .tile').forEach((e,i)=>e.classList.toggle('on',sel.includes(i)));
+  const w=curWord();
+  const c=$('#cur'); c.textContent=w; c.className='';
+  if(w.length>=3){
+    if(G.quest.some(q=>!q.done&&q.w===w))c.className='ok';
+    else if(G.bonus.has(w)&&!G.gotBonus.has(w))c.className='ok';
+  }
+  // なぞった線
+  const svg=$('#wheel svg'), box=$('#wheel').getBoundingClientRect();
+  svg.setAttribute('viewBox',`0 0 ${box.width} ${box.height}`);
+  const pts=sel.map(i=>{
+    const t=$(`#wheel .tile[data-i="${i}"]`).getBoundingClientRect();
+    return (t.left-box.left+t.width/2)+','+(t.top-box.top+t.height/2);
+  }).join(' ');
+  svg.querySelector('polyline').setAttribute('points',pts);
+}
+function endSwipe(){
+  const w=curWord();
+  sel=[];
+  if(w.length>=3){
+    const qi=G.quest.findIndex(q=>!q.done&&q.w===w);
+    if(qi>=0){paint();solve(qi);return}
+    if(G.bonus.has(w)&&!G.gotBonus.has(w)){paint();takeBonus(w);return}
+    const c=$('#cur'); c.textContent=w; c.className='bad';
+    setTimeout(()=>{if($('#cur').textContent===w)paint()},420);
+    return;
+  }
+  paint();
+}
+function bindWheel(){
+  const el=$('#wheel');
+  el.addEventListener('pointerdown',e=>{
+    if(!G||!G.running)return;
+    el.setPointerCapture(e.pointerId);
+    sel=[]; const i=tileAt(e.clientX,e.clientY); if(i>=0)sel=[i]; paint();
+  });
+  el.addEventListener('pointermove',e=>{
+    if(!G||!G.running||!sel.length)return;
+    const i=tileAt(e.clientX,e.clientY);
+    if(i<0)return;
+    if(sel.length>1&&sel[sel.length-2]===i){sel.pop();paint();return}  // 戻る
+    if(!sel.includes(i)){sel.push(i);paint()}
+  });
+  el.addEventListener('pointerup',endSwipe);
+  el.addEventListener('pointercancel',()=>{sel=[];paint()});
+  addEventListener('resize',()=>{fitSlots();paint()});
+  $('#shuffle').onclick=()=>{if(!G||!G.running)return;
+    shuffle(G.wheel,G.rnd);drawWheel();paint()};
+  $('#newwheel').onclick=()=>{if(!G||!G.running)return;
+    log('別の輪へ');makeWheel();G.chain=0;step()};
+  document.addEventListener('keydown',e=>{
+    if(!G||!G.running)return;
+    if(e.key>='1'&&e.key<='9'){const i=+e.key-1;
+      if(G.foes[i]&&G.foes[i].hp>0){G.target=i;drawFoes();drawQuest()}}
+  });
+}
+
+/* ================= 開始 / 決着 ================= */
+function finish(win){
+  G.running=false;
+  const a=[...G.dex.values()].map(w=>
+    `<div class="dx"><img src="${WI(w.img)}" alt=""><div><b>${w.w}</b> ${w.ja}
+      <s>${w.b||w.jp+'の語根から'}</s></div></div>`).join('');
+  const b=[...G.dexb.entries()].slice(0,60).map(([w,e])=>
+    `<div class="dx"><div><b>${w}</b> ${e[0]}<s>${e[1]||''}</s></div></div>`).join('');
+  $('#ovc').innerHTML=`<h1>${win?'勝利':'敗北'}</h1>
+    <p>お題 ${G.dex.size} 語 / ボーナスで拾った語 ${G.dexb.size} 語</p>
+    <div id="dexlist">${a}${b}</div>
+    <div class="row"><button id="again">もう一度</button></div>`;
+  $('#ov').classList.remove('off');
+  $('#again').onclick=title;
+}
+
+let selKeys=[], selLv='mid';
+function title(){
+  $('#ov').classList.remove('off');
+  $('#ovc').innerHTML=`
+    <h1>エティモリンゴ:なぞりバトル</h1>
+    <p>下の輪の文字を指でなぞって、英単語を作る。<b>4体えらぶ</b></p>
+    <div id="pick"></div>
+    <div class="row"><div class="seg">${Object.entries(LV).map(([k,v])=>
+      `<button data-lv="${k}" class="${k===selLv?'on':''}">${v.label}</button>`).join('')}
+    </div></div>
+    <div class="row"><button id="go">はじめる</button></div>
+    <div class="help">
+      <b>あそびかた</b><br>
+      ・<b>輪の文字は ある英単語の綴りそのもの</b>。同じ語根の語は綴りを共有しているので、
+        1つの輪から その一族の語がいくつも出てくる<br>
+      　例: 輪[e e g i m n r t] → regime / reign / regiment / regimen<br>
+      ・上のお題には<b>イラスト・日本語の意味・語根・語源</b>が出ている。伏せてあるのは綴りだけ<br>
+      ・お題を当てると その語根のエティモンが攻撃する。<b>1語＝1手</b>、時間制限は無い<br>
+      ・お題以外でも、<b>語源辞書(13,432語)に載っている語</b>ならボーナスで拾える。
+        手は消費しない。輪1つあたり数十語ある<br>
+      ・敵の<b>状態</b>に噛み合う語は<b>特攻2倍</b>。お題ぜんぶ達成で次の輪へ<br>
+      ・綴りが出ないときはヒント(頭文字70% → 前半45% → 全部25%)
+    </div>`;
+  $('#pick').innerHTML=DATA.fams.map(f=>`
+    <div class="pk ${selKeys.includes(f.key)?'on':''}" data-k="${f.key}">
+      <img src="${CH(f.img)}" alt=""><b>${f.jp}</b><s>${f.words.length}語</s></div>`).join('');
+  $$('#pick .pk').forEach(e=>e.onclick=()=>{
+    const k=e.dataset.k,i=selKeys.indexOf(k);
+    if(i>=0)selKeys.splice(i,1);else if(selKeys.length<4)selKeys.push(k);
+    $$('#pick .pk').forEach(p=>p.classList.toggle('on',selKeys.includes(p.dataset.k)));
+    $('#go').disabled=selKeys.length!==4;
+  });
+  $$('.seg button').forEach(e=>e.onclick=()=>{selLv=e.dataset.lv;
+    $$('.seg button').forEach(b=>b.classList.toggle('on',b===e))});
+  $('#go').disabled=selKeys.length!==4;
+  $('#go').onclick=start;
+}
+const FOES=[
+  {name:'かげのぬし',icon:'👹',max:1100,atk:210,iv:4},
+  {name:'ささやき',  icon:'👻',max:900 ,atk:160,iv:3},
+  {name:'かたつむり',icon:'🐌',max:1600,atk:280,iv:6},
+  {name:'むれ',      icon:'🦇',max:1000,atk:190,iv:4},
+  {name:'いしあたま',icon:'🗿',max:1800,atk:240,iv:5},
+];
+function start(){
+  const lv=LV[selLv], rnd=mulberry(Date.now()&0xffffff);
+  const party=selKeys.map(k=>DATA.fams.find(x=>x.key===k));
+  const pool=[];
+  const seenw=new Set();
+  party.forEach((p,i)=>p.words.forEach(w=>{
+    if(w.w.length<3||w.w.length>lv.maxlen||seenw.has(w.w))return;
+    seenw.add(w.w);
+    pool.push({...w,key:p.key,jp:p.jp,cimg:p.img,slotcol:SLOT[i]});
+  }));
+  let wk=shuffle(DATA.weak.filter(k=>
+    pool.filter(w=>w.tk.some(t=>k.tags.includes(t))).length>=4),rnd);
+  while(wk.length<3)wk=wk.concat(shuffle(DATA.weak.slice(),rnd));
+  const foes=shuffle(FOES.slice(),rnd).slice(0,3).map((f,i)=>
+    ({...f,hp:f.max,wk:wk[i],ct:f.iv}));
+
+  G={lv,rnd,party,pool,foes,target:0,hp:3200,maxhp:3200,chain:0,
+     seen:new Set(),dex:new Map(),dexb:new Map(),running:true,
+     wheel:[],quest:[],bonus:new Set(),gotBonus:new Set()};
+  $('#log').innerHTML='';
+  drawParty();drawFoes();drawHP();makeWheel();
+  $('#ov').classList.add('off');
+  log(`プール ${pool.length}語`);
+}
+
+(async function(){
+  DATA=self.__DATA||await fetch('data/pie/swipe.json').then(r=>r.json());
+  selKeys=DATA.fams.slice(0,4).map(f=>f.key);
+  bindWheel();title();
+})();
+</script>
+</body>
+</html>

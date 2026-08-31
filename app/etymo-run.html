@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>エティモラン</title>
+<style>
+:root{
+  --bg:#141026; --bg2:#1e1836; --panel:#282046; --line:#443a6b;
+  --fg:#f4efff; --dim:#a99cc8; --gold:#f5b942; --pop:#ff7a59; --ok:#7cd98a;
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;height:100%;overflow:hidden}
+body{background:radial-gradient(120% 80% at 50% 0%,var(--bg2),var(--bg));color:var(--fg);
+  font-family:"Hiragino Maru Gothic ProN","Hiragino Sans","Noto Sans JP",system-ui,sans-serif;
+  font-size:15px;user-select:none;display:flex;flex-direction:column}
+.wrap{flex:1 1 auto;overflow-y:auto;overflow-x:hidden;padding:14px 12px 24px}
+h2{font-size:20px;margin:0 0 3px;text-wrap:balance}
+.sub{color:var(--dim);font-size:13px;margin:0 0 14px}
+.hide{display:none!important}
+
+/* ---- 語根えらび ---- */
+.roots{display:grid;grid-template-columns:repeat(auto-fill,minmax(104px,1fr));gap:10px}
+.rt{background:var(--panel);border:3px solid var(--rc);border-radius:18px;padding:8px 6px 9px;
+  text-align:center;cursor:pointer;transition:.14s}
+.rt:active{transform:scale(.96)}
+.rt img{width:100%;height:84px;object-fit:contain}
+.rt .jp{font-size:15px;font-weight:700;margin-top:2px}
+.rt .pie{font-size:10.5px;color:var(--dim);font-family:ui-monospace,monospace}
+.rt .st{font-size:11px;margin-top:4px;color:var(--rc);font-weight:700}
+
+/* ---- 冒険 ---- */
+.hud{display:flex;align-items:center;gap:9px;margin-bottom:12px}
+.hud img{width:46px;height:46px;object-fit:contain}
+.hud .who{font-size:15px;font-weight:700;line-height:1.25}
+.hud .who small{display:block;font-size:11px;color:var(--dim);font-weight:400}
+.steps{margin-left:auto;display:flex;gap:4px}
+.steps i{width:11px;height:11px;border-radius:50%;background:var(--line);display:block}
+.steps i.on{background:var(--gold)}
+
+.pick{display:grid;gap:10px;grid-template-columns:1fr 1fr 1fr}
+.af{background:var(--panel);border:3px solid var(--line);border-radius:18px;
+  padding:14px 6px;text-align:center;cursor:pointer;transition:.14s}
+.af:hover{border-color:var(--gold);transform:translateY(-4px)}
+.af:active{transform:translateY(0)}
+.af .n{font-size:20px;font-weight:700;font-family:ui-monospace,monospace;letter-spacing:-.5px}
+.af .j{font-size:12px;color:var(--dim);margin-top:3px;min-height:1.2em}
+.af .r{font-size:10.5px;color:#7c6fa0;margin-top:6px}
+@media(max-width:420px){ .pick{grid-template-columns:1fr} .af{padding:11px 8px;text-align:left;
+  display:flex;align-items:baseline;gap:10px} .af .r{margin-left:auto} }
+
+/* ---- 生まれた ---- */
+#birth{position:fixed;inset:0;z-index:40;display:none;align-items:center;justify-content:center;
+  background:rgba(10,6,20,.82);padding:18px}
+#birth.on{display:flex}
+.bcard{background:var(--panel);border:4px solid var(--gold);border-radius:24px;
+  padding:18px 20px 16px;text-align:center;max-width:400px;width:100%;
+  box-shadow:0 10px 0 rgba(0,0,0,.35);animation:rise .45s cubic-bezier(.2,1.5,.4,1)}
+@keyframes rise{0%{transform:translateY(40px) scale(.8);opacity:0}100%{transform:none;opacity:1}}
+.eq{display:flex;align-items:center;justify-content:center;gap:8px;font-size:15px;
+  color:var(--dim);font-family:ui-monospace,monospace;margin-bottom:8px;flex-wrap:wrap}
+.eq b{color:var(--fg);font-size:17px}
+.bcard img{width:120px;height:120px;object-fit:contain;
+  filter:drop-shadow(0 4px 6px rgba(0,0,0,.4))}
+.bw{font-size:30px;font-weight:700;letter-spacing:.5px;line-height:1.15}
+.bj{font-size:15px;color:var(--gold);margin-top:1px}
+.bk{display:flex;gap:5px;justify-content:center;flex-wrap:wrap;margin-top:9px}
+.bk span{font-size:11.5px;background:var(--bg2);border:1px solid var(--line);
+  border-radius:999px;padding:2px 10px}
+.bb{font-size:12px;color:var(--dim);margin-top:10px;line-height:1.55;text-align:left}
+.go{margin-top:14px;background:var(--gold);border:0;border-radius:16px;width:100%;
+  padding:13px;font:inherit;font-size:17px;font-weight:700;color:#3a2905;
+  box-shadow:0 5px 0 #b8871c;cursor:pointer}
+.go:active{transform:translateY(4px);box-shadow:0 1px 0 #b8871c}
+.go.ghost{background:transparent;color:var(--fg);border:2px solid var(--line);box-shadow:none}
+
+/* ---- もちもの ---- */
+.bag{display:flex;gap:7px;flex-wrap:wrap;margin-top:16px}
+.bg1{background:var(--panel);border:2px solid var(--line);border-radius:13px;
+  padding:5px 9px;font-size:12.5px;display:flex;align-items:center;gap:6px}
+.bg1 img{width:24px;height:24px;object-fit:contain}
+.bg1 b{font-weight:700}
+.bg1 i{font-style:normal;color:var(--dim);font-size:11px}
+
+/* ---- 結果 ---- */
+.res{background:var(--panel);border:3px solid var(--line);border-radius:20px;padding:14px;margin-bottom:14px}
+.res h3{margin:0 0 8px;font-size:15px}
+.cmp{width:100%;border-collapse:collapse;font-size:13px}
+.cmp th{text-align:left;color:var(--dim);font-weight:400;font-size:11.5px;padding:3px 6px}
+.cmp td{padding:5px 6px;border-top:1px solid var(--line)}
+.cmp td.a{font-family:ui-monospace,monospace;color:var(--dim);white-space:nowrap}
+.cmp td b{font-size:14px}
+.cmp td i{font-style:normal;color:var(--dim);font-size:11.5px;margin-left:4px}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<!-- ① 語根えらび -->
+<section id="sel">
+  <h2>どの ことばの もとから はじめる?</h2>
+  <p class="sub">えらんだ もとで、生まれる 英単語が まるごと 変わります。</p>
+  <div class="roots" id="rootList"></div>
+</section>
+
+<!-- ② 冒険 -->
+<section id="run" class="hide">
+  <div class="hud">
+    <img id="hudImg" alt="">
+    <div class="who"><span id="hudJp"></span><small id="hudPie"></small></div>
+    <div class="steps" id="steps"></div>
+  </div>
+  <h2 id="stepT">どの かけらを ひろう?</h2>
+  <p class="sub" id="stepS"></p>
+  <div class="pick" id="pick"></div>
+  <div class="bag" id="bag"></div>
+</section>
+
+<!-- ③ 結果 -->
+<section id="end" class="hide">
+  <h2 id="endT"></h2>
+  <p class="sub" id="endS"></p>
+  <div id="endBody"></div>
+  <button class="go" id="again">べつの もとで もういちど</button>
+</section>
+
+</div>
+
+<div id="birth"><div class="bcard">
+  <div class="eq" id="beq"></div>
+  <img id="bimg" alt="">
+  <div class="bw" id="bw"></div>
+  <div class="bj" id="bj"></div>
+  <div class="bk" id="bk"></div>
+  <div class="bb" id="bb"></div>
+  <button class="go" id="bgo">つぎへ</button>
+</div></div>
+
+<script id="rundata" type="application/json">{"classes":[],"affixes":[]}</script>
+<script>
+const A='../assets/', $=s=>document.querySelector(s);
+let D=JSON.parse(document.getElementById('rundata').textContent);
+let CL=D.classes||[], AF=D.affixes||[];
+const STEPS=6;
+let cls=null, step=0, bag=[], seen=[];          // seen = これまでの周回(接辞→単語)
+
+/* ---- 画像。無い語は語根のキャラで代用する ---- */
+const wimg = w => A+'word/'+w+'.png';
+function imgFallback(el){ el.onerror=()=>{ el.onerror=null; el.src=A+'chara/'+cls.img; }; }
+
+/* ---- ① 語根えらび ---- */
+function showSel(){
+  $('#sel').classList.remove('hide'); $('#run').classList.add('hide'); $('#end').classList.add('hide');
+  $('#rootList').innerHTML = CL.map((c,i)=>`
+    <div class="rt" data-i="${i}" style="--rc:${c.color}">
+      <img src="${A+'chara/'+c.img}" alt="">
+      <div class="jp">${c.jp}</div>
+      <div class="pie">*${c.key}</div>
+      <div class="st">${c.start?c.start.w:'—'}</div>
+    </div>`).join('');
+}
+$('#rootList').addEventListener('click',ev=>{
+  const el=ev.target.closest('.rt'); if(!el)return;
+  start(CL[+el.dataset.i]);
+});
+
+/* ---- ② 冒険 ---- */
+function start(c){
+  cls=c; step=0; bag=[];
+  if(c.start) bag.push({w:c.start.w, ja:c.start.ja, af:'(もとのすがた)', k:c.start.k||[], b:c.start.b||''});
+  $('#sel').classList.add('hide'); $('#end').classList.add('hide'); $('#run').classList.remove('hide');
+  $('#hudImg').src=A+'chara/'+c.img; $('#hudJp').textContent=c.jp; $('#hudPie').textContent='*'+c.key;
+  nextStep();
+}
+function nextStep(){
+  if(step>=STEPS){ showEnd(); return; }
+  $('#steps').innerHTML=Array.from({length:STEPS},(_,i)=>`<i class="${i<step?'on':''}"></i>`).join('');
+  // この語根で「まだ持っていない単語を生む」接辞から3つ
+  const used=new Set(bag.map(b=>b.af));
+  const can=AF.filter(a=>cls.gen[a.name] && !used.has(a.name)
+                      && !bag.some(b=>b.w===cls.gen[a.name].w));
+  if(!can.length){ step=STEPS; showEnd(); return; }
+  const three=[]; const p=[...can];
+  while(three.length<3 && p.length) three.push(p.splice(Math.floor(Math.random()*p.length),1)[0]);
+  $('#stepS').textContent=`${step+1} / ${STEPS} ── ${cls.jp} に くっつけると、ことばが 生まれます`;
+  $('#pick').innerHTML=three.map(a=>`
+    <div class="af" data-n="${a.name}">
+      <div class="n">${a.name}</div>
+      <div class="j">${a.ja||a.en||''}</div>
+      <div class="r">ほかの もとでも ${a.roots}とおり</div>
+    </div>`).join('');
+  renderBag();
+}
+$('#pick').addEventListener('click',ev=>{
+  const el=ev.target.closest('.af'); if(!el)return;
+  born(el.dataset.n);
+});
+function born(name){
+  const g=cls.gen[name];
+  bag.push({w:g.w, ja:g.ja, af:name, k:g.k||[], b:g.b||''});
+  step++;
+  $('#beq').innerHTML=`<b>*${cls.key}</b><span>${cls.jp}</span> ＋ <b>${name}</b> ＝`;
+  const im=$('#bimg'); imgFallback(im); im.src=wimg(g.w);
+  $('#bw').textContent=g.w; $('#bj').textContent=g.ja||'';
+  $('#bk').innerHTML=(g.k||[]).map(t=>`<span>${t}</span>`).join('');
+  $('#bb').textContent=g.b||'';
+  $('#birth').classList.add('on');
+}
+$('#bgo').addEventListener('click',()=>{ $('#birth').classList.remove('on'); nextStep(); });
+
+function renderBag(){
+  $('#bag').innerHTML=bag.map(b=>`
+    <span class="bg1"><img src="${wimg(b.w)}" onerror="this.style.display='none'" alt="">
+      <b>${b.w}</b><i>${b.ja||''}</i></span>`).join('');
+}
+
+/* ---- ③ 結果と、周回の見くらべ ---- */
+function showEnd(){
+  seen.push({key:cls.key, jp:cls.jp, color:cls.color, img:cls.img,
+             got:bag.filter(b=>b.af!=='(もとのすがた)').map(b=>({af:b.af,w:b.w,ja:b.ja}))});
+  $('#run').classList.add('hide'); $('#end').classList.remove('hide');
+  const me=seen[seen.length-1];
+  $('#endT').textContent=`${cls.jp} の 町が できた`;
+  $('#endS').textContent=`*${cls.key} から ${bag.length}この 英単語が 生まれました。`;
+
+  let html=`<div class="res"><h3>生まれた ことば</h3><table class="cmp">`
+    + bag.map(b=>`<tr><td class="a">${b.af}</td><td><b>${b.w}</b><i>${b.ja||''}</i></td>
+        <td style="color:var(--dim);font-size:11.5px">${(b.k||[]).join('・')}</td></tr>`).join('')
+    + `</table></div>`;
+
+  // 前の周回と同じ接辞を選んでいたら、そこを並べて見せる(ここが周回の見どころ)
+  const prev=seen.slice(0,-1);
+  const rows=[];
+  me.got.forEach(g=>{
+    prev.forEach(p=>{
+      const m=p.got.find(x=>x.af===g.af);
+      if(m && m.w!==g.w) rows.push([g.af, p.jp, m, me.jp, g]);
+    });
+  });
+  if(rows.length){
+    html+=`<div class="res" style="border-color:var(--gold)">
+      <h3 style="color:var(--gold)">おなじ かけら なのに ちがう ことば</h3><table class="cmp">`
+      + rows.slice(0,8).map(([af,pj,m,mj,g])=>`<tr>
+          <td class="a">${af}</td>
+          <td>${pj} → <b>${m.w}</b><i>${m.ja||''}</i></td>
+          <td>${mj} → <b style="color:var(--gold)">${g.w}</b><i>${g.ja||''}</i></td></tr>`).join('')
+      + `</table></div>`;
+  } else if(seen.length>1){
+    html+=`<div class="res"><h3>まだ おなじ かけらを ひろっていません</h3>
+      <div style="font-size:13px;color:var(--dim)">つぎの 周では、まえと おなじ かけら
+      (${prev[prev.length-1].got.slice(0,3).map(g=>g.af).join(' / ')})を ひろってみてください。
+      おなじ かけらでも、もとが ちがえば ちがう ことばが 生まれます。</div></div>`;
+  }
+  $('#endBody').innerHTML=html;
+}
+$('#again').addEventListener('click',showSel);
+
+(async()=>{
+  if(location.protocol!=='file:'){
+    try{ const r=await fetch('data/pie/run.json');
+      if(r.ok){ const j=await r.json(); if(j.classes&&j.classes.length){CL=j.classes;AF=j.affixes;} } }catch(e){}
+  }
+  if(!CL.length){ $('#sel').innerHTML='<h2>データがありません</h2>'
+    +'<p class="sub">python3 app/build_run_data.py を実行してください。</p>'; return; }
+  showSel();
+})();
+</script>
+</body>
+</html>

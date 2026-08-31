@@ -1,0 +1,2127 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<meta name="theme-color" content="#2b2740">
+<meta name="description" content="ワードドロップ / WORDROP - 降り積もった文字のボールを指でなぞってつなぎ、長い英単語へ育てる毎日1回のパズル。">
+<title>ワードドロップ WORDROP</title>
+<style>
+:root{--ink:#211d2c;--cream:#fffaf0;--yellow:#ffd34d;--shadow:rgba(20,17,30,.35)}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;height:100%;background:#14121d;color:#f2eef7;
+  font-family:"M PLUS Rounded 1c","Yu Gothic","Segoe UI",system-ui,sans-serif;overscroll-behavior:none;
+  -webkit-user-select:none;user-select:none}
+body{display:grid;place-items:center}
+.app{width:min(100vw,560px);height:100dvh;min-height:520px;background:#1d1a2b;
+  display:grid;grid-template-rows:auto minmax(0,1fr) auto;overflow:hidden;position:relative}
+
+.top{padding:max(6px,env(safe-area-inset-top)) 10px 8px;background:linear-gradient(180deg,#4b3f8f,#372f6b);
+  display:grid;grid-template-columns:1fr auto;gap:8px;align-items:center;border-bottom:3px solid #12101b}
+.brand{min-width:0;overflow:hidden}
+.brand h1{margin:0;font-size:clamp(15px,4.4vw,23px);font-weight:1000;line-height:1.05;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:#fff}
+.brand .meta{display:flex;gap:6px;align-items:center;margin-top:3px;font-size:10px;font-weight:900;
+  color:#c6bcf0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.chip{border:2px solid #12101b;border-radius:999px;padding:1px 7px;background:#fff;color:#211d2c;
+  font-size:10px;font-weight:900;white-space:nowrap;flex:none}
+.stats{display:flex;gap:5px}
+.stat{min-width:54px;text-align:center;background:#fff;border:3px solid #12101b;border-radius:12px;
+  padding:2px 6px;box-shadow:0 3px 0 var(--shadow);color:#211d2c}
+.stat small{display:block;font-size:8px;font-weight:900;color:#8e7f92;letter-spacing:.04em}
+.stat b{font-size:16px;line-height:1.1;font-variant-numeric:tabular-nums}
+.stat.warn b{color:#e0344f}
+@media(max-width:392px){.stat{min-width:46px;padding-inline:4px}.stat b{font-size:14px}#dictState{display:none}}
+
+.stage{position:relative;min-height:0;display:grid;place-items:center;padding:6px}
+.pit{position:relative;border-radius:16px;overflow:hidden;background:#3a3a3a;
+  box-shadow:inset 0 0 0 3px rgba(0,0,0,.4),inset 0 14px 26px rgba(0,0,0,.35)}
+canvas{display:block;width:100%;height:100%;touch-action:none}
+
+.read{position:absolute;left:50%;top:8px;transform:translateX(-50%);z-index:8;pointer-events:none;
+  display:none;align-items:center;gap:8px;background:rgba(255,255,255,.97);color:#211d2c;
+  border:4px solid #12101b;border-radius:16px;padding:5px 12px;box-shadow:0 5px 0 var(--shadow);max-width:94%}
+.read.on{display:flex}
+.read.ok{background:#c9f5c8}
+.read .art{width:38px;height:38px;border-radius:9px;background:#fff6e0;
+  box-shadow:inset 0 0 0 1px rgba(20,17,30,.12);display:grid;place-items:center;overflow:hidden;flex:none}
+.read .art img{width:100%;height:100%;object-fit:contain}
+.read .w{font-size:clamp(15px,5vw,21px);font-weight:1000;line-height:1;white-space:nowrap;letter-spacing:.04em}
+.read .m{font-size:11px;font-weight:800;color:#5b4f63;margin-top:3px;max-width:180px;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.read .alt{font-size:10px;font-weight:900;color:#8a7f92;margin-top:2px;max-width:180px;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.read .pt{font-size:15px;font-weight:1000;color:#1f8a3d;white-space:nowrap}
+
+.bottom{background:#2a2540;padding:8px 10px max(9px,env(safe-area-inset-bottom));
+  display:grid;gap:7px;border-top:3px solid #12101b}
+.logrow{display:flex;align-items:center;gap:9px;min-width:0}
+.log{min-width:0;flex:1}
+.dex{flex:none;text-align:center;background:#3b3459;border:2px solid #12101b;border-radius:11px;
+  padding:3px 9px;line-height:1.1;transition:transform .18s,background .18s}
+.dex b{display:block;font-size:15px;font-weight:1000;color:#fff;font-variant-numeric:tabular-nums}
+.dex small{display:block;font-size:8px;font-weight:900;color:#b7abe4;letter-spacing:.04em}
+.dex.pop{transform:scale(1.18);background:#f5c945}
+.dex.pop b{color:#211d2c}
+.dex.pop small{color:#6b5a12}
+.log b{display:block;font-size:13px;font-weight:900;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:#fff}
+.log span{display:block;font-size:10px;font-weight:800;color:#a99fd0;margin-top:2px;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.row{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+button{appearance:none;border:3px solid #12101b;border-radius:12px;background:#fff;color:#211d2c;
+  font:inherit;font-weight:1000;font-size:13px;padding:7px 11px;box-shadow:0 3px 0 var(--shadow);cursor:pointer;
+  white-space:nowrap;flex:none}
+button:active{transform:translateY(2px);box-shadow:0 1px 0 var(--shadow)}
+button:disabled{opacity:.45}
+button.primary{background:var(--yellow)}
+button.ghostbtn{font-size:11px;padding:6px 8px}
+button.find{background:#7de3a0;font-size:13px}
+
+.over{position:absolute;inset:0;z-index:20;display:none;place-items:center;background:rgba(15,13,24,.82);padding:16px}
+.over.on{display:grid}
+.card{width:min(440px,100%);max-height:92%;overflow:auto;background:var(--cream);color:var(--ink);
+  border:5px solid #12101b;border-radius:22px;padding:16px;box-shadow:0 10px 0 rgba(0,0,0,.35)}
+.card h2{margin:0 0 4px;font-size:24px;text-align:center}
+.card .lead{margin:0 0 12px;text-align:center;font-size:12px;font-weight:800;color:#6f6175}
+.hero{display:flex;align-items:center;gap:11px;background:#fff;border:3px solid var(--ink);border-radius:16px;
+  padding:9px;margin-bottom:11px}
+.hero .art{width:64px;height:64px;flex:none;border-radius:12px;background:#fff6e0;
+  box-shadow:inset 0 0 0 1px rgba(33,29,44,.12);display:grid;place-items:center;overflow:hidden}
+.hero .art img{width:100%;height:100%;object-fit:contain}
+.hero .w{font-size:clamp(19px,6vw,27px);font-weight:1000;line-height:1;word-break:break-all}
+.hero .m{font-size:12px;font-weight:800;color:#6b5d71;margin-top:5px}
+.hero .tag{display:inline-block;margin-top:6px;border:2px solid var(--ink);border-radius:999px;
+  padding:1px 8px;font-size:10px;font-weight:900;background:var(--yellow)}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-bottom:11px}
+.box{background:#fff;border:3px solid var(--ink);border-radius:13px;padding:6px;text-align:center}
+.box small{display:block;font-size:9px;font-weight:900;color:#8e7f92}
+.box b{font-size:19px}
+.words{display:flex;flex-wrap:wrap;gap:4px;margin-bottom:12px;max-height:118px;overflow:auto}
+.words i{font-style:normal;border:2px solid var(--ink);border-radius:999px;padding:2px 8px;
+  font-size:11px;font-weight:900;background:#fff}
+.share{white-space:pre-wrap;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:11px;
+  background:#fff;border:3px solid var(--ink);border-radius:13px;padding:9px;margin-bottom:10px;line-height:1.5}
+.card ol{margin:0 0 12px;padding-left:19px;font-size:12.5px;font-weight:750;line-height:1.75}
+.card ol b{background:linear-gradient(transparent 62%,var(--yellow) 62%)}
+.mini{font-size:11px;font-weight:800;color:#7a6b80;text-align:center;margin:8px 0 0}
+button.pick{display:flex;align-items:center;gap:11px;width:100%;text-align:left;padding:11px;
+  margin-bottom:9px;background:#fff;border-radius:16px}
+button.pick .tag{flex:none;min-width:58px;text-align:center;border:3px solid var(--ink);border-radius:12px;
+  padding:6px 4px;background:var(--yellow);font-size:14px;font-weight:1000}
+button.pick b{display:block;font-size:15px;font-weight:1000}
+button.pick i{display:block;font-style:normal;font-size:11px;font-weight:800;color:#6f6175;margin-top:3px;
+  white-space:normal;line-height:1.35}
+button.pick.on{background:#fff3c4}
+</style>
+</head>
+<body>
+<main class="app">
+  <header class="top">
+    <div class="brand">
+      <h1 id="title">ワードドロップ</h1>
+      <div class="meta"><span class="chip" id="modeChip">今日の一戦</span><span id="dictState">辞書を読み込み中…</span></div>
+    </div>
+    <div class="stats">
+      <div class="stat"><small id="lbLong">最長</small><b id="statLong">–</b></div>
+      <div class="stat"><small id="lbScore">スコア</small><b id="statScore">0</b></div>
+      <div class="stat" id="timeBox"><small id="lbTime">のこり</small><b id="statTime">3:00</b></div>
+    </div>
+  </header>
+
+  <section class="stage" id="stage">
+    <div class="pit" id="pit"><canvas id="cv"></canvas></div>
+    <div class="read" id="read">
+      <div class="art" id="readArt"></div>
+      <div><div class="w" id="readWord"></div><div class="m" id="readMean"></div><div class="alt" id="readAlt"></div></div>
+      <div class="pt" id="readPt"></div>
+    </div>
+  </section>
+
+  <footer class="bottom">
+    <div class="logrow">
+      <div class="log"><b id="logMain">ボールを指でなぞってつなぐ</b><span id="logSub"></span></div>
+      <div class="dex" id="dex"><b id="dexN">0</b><small id="dexL">ずかん</small></div>
+    </div>
+    <div class="row">
+      <button class="find" id="btnFind" type="button">ヒント</button>
+      <button id="btnSound" class="ghostbtn" type="button" aria-label="sound">🔊</button>
+      <button id="btnDict" class="ghostbtn" type="button">ABC</button>
+      <button id="btnHow" class="ghostbtn" type="button">遊びかた</button>
+      <button id="btnLang" class="ghostbtn" type="button">EN</button>
+      <button id="btnFree" class="ghostbtn" type="button">フリー</button>
+      <button id="btnRetry" class="ghostbtn" type="button" style="margin-left:auto">やりなおす</button>
+    </div>
+  </footer>
+
+  <div class="over" id="overResult"><div class="card">
+    <h2 id="resTitle">おしまい</h2>
+    <p class="lead" id="resLead"></p>
+    <div class="hero">
+      <div class="art" id="resArt"></div>
+      <div><div class="w" id="resWord">–</div><div class="m" id="resMean"></div><span class="tag" id="resTag"></span></div>
+    </div>
+    <div class="grid2">
+      <div class="box"><small id="lbResScore">スコア</small><b id="resScore">0</b></div>
+      <div class="box"><small id="lbResWords">つくった単語</small><b id="resWords">0</b></div>
+    </div>
+    <div class="words" id="resList"></div>
+    <div class="share" id="resShare"></div>
+    <div class="row">
+      <button class="primary" id="btnShare" type="button" style="flex:1">結果をコピー</button>
+      <button id="btnAgain" type="button">もう一度</button>
+    </div>
+    <p class="mini" id="resMini"></p>
+  </div></div>
+
+  <div class="over on" id="overStart"><div class="card">
+    <h2 id="startTitle">ワードドロップ</h2>
+    <p class="lead" id="startLead"></p>
+    <button class="pick" id="pickEn" type="button">
+      <span class="tag">ABC</span>
+      <span><b id="pickEnT">英語モード</b><i id="pickEnD">文字をつないで英単語をつくる</i></span>
+    </button>
+    <button class="pick" id="pickJa" type="button">
+      <span class="tag">あ→漢</span>
+      <span><b id="pickJaT">日本語モード</b><i id="pickJaD">ひらがなをつないで漢字の語をつくる</i></span>
+    </button>
+    <button id="startHow" type="button" style="width:100%;margin-top:4px">遊びかた</button>
+  </div></div>
+
+  <div class="over" id="overHow"><div class="card">
+    <h2 id="howTitle">遊びかた</h2>
+    <ol id="howList"></ol>
+    <button class="primary" id="btnHowClose" type="button" style="width:100%">はじめる</button>
+    <p class="mini">日本語の辞書は JMdict(EDRDG)/ CC BY-SA 4.0 を使っています。</p>
+  </div></div>
+</main>
+
+<script>
+"use strict";
+/* =======================================================================
+   ワードドロップ / WORDROP  ── 「1234 つなげるパズル」の英単語版
+   ・文字のボールが物理演算で降り積もり、山になる
+   ・その山の、触れあっているボールを指でなぞってつなぐ
+   ・つないだ文字がならべかえて英単語になれば(順不同=アナグラム)、
+     鎖はまるごと1個の「単語ボール」に潰れる
+   ・空いた穴に山が崩れ落ち、上から新しいボールが降ってくる
+   ・単語ボールも鎖に含められる。含めればもっと長い単語へ育つ
+     ── 1234 の「大きな数字をつくろう」がここでは「長い単語をつくろう」
+   ======================================================================= */
+
+const $ = s => document.querySelector(s);
+
+/* ---------- 定数 ---------- */
+const MINLEN = 2, MAXBALLS = 8;
+/* 2つの辞書を切り替える。英語は「文字→英単語」、日本語は「ひらがな→漢字の語」 */
+const DICTS = {
+  en: { file:"data/worddrop.json", max:10, speak:"en-US", chip:"ABC",  re:/^[a-z]{2,10}$/ },
+  ja: { file:"data/worddrop-ja.json", max:8, speak:"ja-JP", chip:"あ→漢", re:/^[ぁ-ゖ]{2,8}$/ }
+};
+let dictMode = "en";
+try { if (localStorage.getItem("wordrop.dict") === "ja") dictMode = "ja"; } catch (_) {}
+const D = () => DICTS[dictMode];
+const maxLen = () => D().max;
+/* ボールに描くもの。英語は 単語/和訳、日本語は 漢字/よみ */
+const upper  = x => dictMode === "ja" ? x : x.toUpperCase();
+/* 同じ読みに別の漢字があるので(かんじ = 幹事/感じ/漢字/監事)、
+   「読み」ではなく「語そのもの」を持ちまわる。ボールも自分がどの語かを覚える。 */
+const dispOf = e => !e ? "" : (dictMode === "ja" ? (e.s || e.w) : e.w.toUpperCase());
+const subOf  = e => !e ? "" : (dictMode === "ja" ? e.w : (lang === "ja" ? (e.ja || e.en || "") : (e.en || e.ja || "")));
+const artOf  = e => !e ? "" : (dictMode === "ja" ? (e.art || "") : (e.pic ? e.w : ""));
+const glossOf = e => !e ? "" : (dictMode === "ja" ? (e.g || "") : "");
+const DAILY_SEC = 180;
+const FILL = 0.76;                 // ボールで埋める面積のねらい(密だが枠からはみ出さない)
+const STARTER_RATE = 0.20;         // 最初の山に混ぜておく単語ボールの割合
+const EPOCH = Date.UTC(2026, 0, 1);
+const ART_BASE = "../assets/word/";
+const SHARE_URL = "https://haibaratou.github.io/haibaratou/app/word-drop.html";
+/* 文字ごとに色を固定する。同じ色は1つも無い。
+   ・文字ボール(1字)= 中間トーン。英26色は最小色差ΔE24.4、かな78色はΔE13.5
+   ・単語ボール(合体後)= 文字数で決まる淡い色。短い=淡く冷たい、長い=濃く熱い
+   ・両者は最小ΔE16.0 離してあるので、文字と単語を取りちがえない
+   (app/build_word_drop.py と同じ流儀で、生成の手順はコミットログに残してある) */
+const JA_KANA = "ぁあぃいうぇえおかがきぎくぐけげこごさざしじすずせぜそぞただちぢっつづてでとどなにぬねのはばぱひびぴふぶぷへべぺほぼぽまみむめもゃやゅゆょよらりるれろわをん";
+const EN_ALPHA = "abcdefghijklmnopqrstuvwxyz";
+const CHAR_COLOR = {
+  en: [
+  "#f7f7bb", "#d740e7", "#409fe7", "#e9534e", "#40e740", "#f292cf", "#40e7e7", "#dce740", "#b48574", "#63c576", "#8777ee", "#e3a945", "#cfcae7",
+  "#e740b0", "#947eb9", "#e55283", "#7eb99c", "#b1c563", "#63aec5", "#9eec69", "#dc7aeb", "#e77e40", "#f4cebe", "#bda76b", "#40e7bb", "#b47490",
+  ],
+  ja: [
+  "#f7f7bb", "#d740e7", "#409fe7", "#e9534e", "#40e740", "#f292cf", "#40e7e7", "#dce740", "#b48574", "#63c576", "#8777ee", "#e3a945", "#cfcae7",
+  "#e740b0", "#947eb9", "#e55283", "#7eb99c", "#b1c563", "#63aec5", "#9eec69", "#dc7aeb", "#e77e40", "#f4cebe", "#bda76b", "#40e7bb", "#b47490",
+  "#ee8777", "#40e778", "#f1b1c9", "#a2f1b4", "#adb4f5", "#4e87e9", "#bf95ef", "#748db4", "#edad87", "#8db474", "#bd6bba", "#cedfc3", "#8fd6d6",
+  "#f0d384", "#d95ea4", "#d95e6a", "#92c5f2", "#a5f292", "#40e799", "#b55fe7", "#caee77", "#d28356", "#e8a19c", "#e552d6", "#b0e740", "#e5ce9e",
+  "#8dc95e", "#63c594", "#45cee3", "#83e740", "#8f92e5", "#c4ab92", "#bea5cf", "#b8c492", "#40b5e7", "#d1668d", "#ee77d2", "#c17678", "#62ce5a",
+  "#aa6ed8", "#62d5be", "#9cb6c9", "#db694d", "#d4afb3", "#e995ef", "#d2b956", "#b474a9", "#6387c5", "#edc4ed", "#c19167", "#c9d651", "#c1c176",
+  ]
+};
+function charColor(ch) {
+  const list = dictMode === "ja" ? JA_KANA : EN_ALPHA, pal = CHAR_COLOR[dictMode];
+  const i = list.indexOf(ch);
+  return i >= 0 ? pal[i] : pal[ch.charCodeAt(0) % pal.length];
+}
+const COLOR_TOP = 10;
+const LEN_COLOR = { 2:"#ebf0f4", 3:"#c5e6f1", 4:"#aceccc", 5:"#c4e99b", 6:"#f8e777", 7:"#f5a966", 8:"#f28896", 9:"#daa6e7", 10:"#fdce3f" };
+const LEN_BLOCK = { 3:"⬜", 4:"🟫", 5:"🟦", 6:"🟩", 7:"🟨", 8:"🟧", 9:"🟥", 10:"🟪" };
+/* 文字数が増えるほどボールを大きく。10文字で半径2倍(直径は盤の3分の1)。
+   これ以上大きくすると盤面を1個で塞いでしまう */
+const radiusOf = len => R0 * Math.min(2.0, 1 + 0.118 * (len - 1));
+const MIN_LETTERS = 16;            // 文字ボールが減りすぎると手が無くなるので下限を置く
+
+/* ---------- 文言 ---------- */
+const T = {
+  ja: {
+    title:"ワードドロップ", daily:"今日の一戦", free:"フリープレイ",
+    long:"最長", score:"スコア", time:"のこり", made:"つくった単語",
+    trace:"ボールを指でなぞってつなぐ",
+    dictReady:n=>`${n.toLocaleString()}語`, dictLocal:n=>`内蔵辞書 ${n}語(http で開くと全語)`,
+    needTwo:"2個以上つなぐ", tooShort:n=>`${MINLEN}文字から。いまは${n}文字`,
+    notWord:l=>`${l} … ならべかえても単語にならない`,
+    grew:(a,b)=>`${a} → ${b} に育った`,
+    perfect:w=>`${w} は最長！ 消えた`,
+    findNone:"つながる語が見つからない", find:"ヒント",
+    hintPick:(i,n,len,w)=>`確認 ${i}/${n} ・ ${len}文字 ${w}`,
+    endTime:"時間切れ", resultLead:d=>`${d} ／ 今日の記録`, freeLead:"フリープレイの記録",
+    noWord:"単語なし", langBtn:"EN", how:"遊びかた", freeBtn:"フリー", retry:"やりなおす",
+    again:"もう一度", copy:"結果をコピー", copied:"コピーしました！",
+    tomorrow:"あすの一戦は 0:00 に更新されます", best:"自己ベスト", newBest:"自己ベスト更新！",
+    practice:"練習プレイ(今日の記録は最初の1回ぶん)",
+    stars:["まいにち語","よくみる語","ときどき語","レア語","げきレア語"], dex:"ずかん",
+    startLead:n=>`今日の一戦 #${n} ／ どちらで遊ぶ?`,
+    pickEnT:"英語モード", pickEnD:"文字をつないで英単語をつくる",
+    pickJaT:"日本語モード", pickJaD:"ひらがなをつないで漢字の語をつくる",
+    howList:[
+      "文字のボールが<b>降り積もって山になる</b>。",
+      "<b>触れあっているボールを指でなぞってつなぐ</b>。",
+      "つないだ文字を<b>ならべかえて英単語になれば成立</b>(順不同=アナグラム)。なぞる順番は問わない。<b>2文字の語(AN / OR / GO)からOK</b>。",
+      "成立すると鎖はまるごと<b>1個の単語ボール</b>に潰れ、空いた穴に山が崩れ落ちる。",
+      "その<b>単語ボールも鎖に含められる</b>。含めればもっと長い単語に育つ ── 1234 の「大きな数字をつくろう」と同じ。",
+      "<b>10文字</b>まで育てると最長。消えて大ボーナス。毎日おなじ文字が世界中に配られ、<b>その日いちばん長い単語</b>をつくった人が優勝。",
+      "<b>ABC / あ→漢</b> のボタンで日本語モードに切り替わる。日本語モードは<b>ひらがなをつないで漢字の語</b>をつくる(つないだ かな を並べかえて語の読みになれば成立)。",
+    "合体すると<b>その単語を読み上げる</b>。🔊 で切れる。<b>ヒント</b>は開発の確認用で、押すたびに、いま作れる語が<b>短いほうから長いほうへ</b>切り替わって光る。"
+    ]
+  },
+  en: {
+    title:"WORDROP", daily:"Today's run", free:"Free play",
+    long:"LONGEST", score:"SCORE", time:"TIME", made:"Words made",
+    trace:"Drag across touching balls to link them",
+    dictReady:n=>`${n.toLocaleString()} words`, dictLocal:n=>`Offline list · ${n} words`,
+    needTwo:"Link at least two balls", tooShort:n=>`${MINLEN} letters minimum — you have ${n}`,
+    notWord:l=>`${l} … no word from those letters`,
+    grew:(a,b)=>`${a} grew into ${b}`,
+    perfect:w=>`${w} is the longest! Cleared`,
+    findNone:"No link found", find:"Hint",
+    hintPick:(i,n,len,w)=>`check ${i}/${n} · ${len} ${w}`,
+    endTime:"Time!", resultLead:d=>`${d} · your run`, freeLead:"Free play result",
+    noWord:"no word", langBtn:"日本語", how:"How to play", freeBtn:"Free", retry:"Restart",
+    again:"Play again", copy:"Copy result", copied:"Copied!",
+    tomorrow:"A new run drops at midnight", best:"Personal best", newBest:"New personal best!",
+    practice:"Practice run — today’s record keeps your first attempt.",
+    stars:["everyday","common","occasional","rare","very rare"], dex:"collected",
+    startLead:n=>`Today's run #${n} — pick a mode`,
+    pickEnT:"English", pickEnD:"Link letters into English words",
+    pickJaT:"Japanese", pickJaD:"Link hiragana into kanji words",
+    howList:[
+      "Letter balls <b>rain down and pile up</b>.",
+      "<b>Drag across balls that are touching</b> to link them.",
+      "The linked letters count if they <b>spell an English word in any order</b> — an anagram, so the order you trace doesn't matter. <b>Two-letter words (AN / OR / GO) count.</b>",
+      "The whole chain <b>collapses into one word ball</b>, and the pile falls into the gap.",
+      "That <b>word ball can join a later chain</b> and grow into a longer word — the same loop as making a bigger number in 1234.",
+      "Reach <b>10 letters</b> for the longest possible. Everyone gets the same letters each day — <b>the longest word of the day wins</b>.",
+      "The <b>ABC / あ→漢</b> button switches to Japanese: link <b>hiragana into kanji words</b> (the kana you link, in any order, must spell a word's reading).",
+    "Each word you make is <b>read aloud</b> (🔊 to mute). <b>Hint</b> is a development check: each press steps through the words currently available, <b>shortest to longest</b>."
+    ]
+  }
+};
+let lang = (navigator.language || "en").toLowerCase().startsWith("ja") ? "ja" : "en";
+const t = () => T[lang];
+
+/* ---------- 辞書 ---------- */
+const FALLBACK_RAW = `about|〜について|regarding|1
+all|全ての|entire|1
+also|〜もまた|likewise|1
+an|一つの|one|1
+and|〜と|plus|1
+as|〜のように|like|1
+at|〜に|in|1
+be|である|exist|1
+been|〜であった|existed|1
+but|しかし|however|1
+by|〜のそばに|beside|1
+can|〜できる|be able|1
+could|できた|was able|1
+do|する|perform|1
+for|〜のために|intended|1
+from|〜から|out of|1
+have|持っている|possess|1
+he|彼は|that man|1
+her|彼女の|that woman|1
+him|彼を|that man|1
+his|彼の|that man's|1
+if|もし〜ならば|provided|1
+in|中に|amid|1
+is|〜である|exists|1
+it|それは|that thing|1
+like|〜を好む|prefer|1
+me|私を|myself|1
+more|もっと多くの|extra|1
+my|私の|speaker's|1
+no|いいえ|nay|1
+not|～でない|in no way|1
+of|〜の|belonging to|1
+on|〜の上に|atop|1
+one|一つ|single|1
+or|または|alternatively|1
+other|ほかの|different|1
+out|外へ|away|1
+she|彼女は|that woman|1
+so|そのように|thus|
+than|〜よりも|compared to|1
+that|それ|it|1
+the|その|that|1
+their|彼らの|those people's|1
+them|彼らを|those people|1
+there|そこに|that place|1
+they|彼らは|those people|1
+this|これ|nearby one|1
+time|時間|moment|1
+to|へ|toward|1
+up|上へ|aloft|1
+was|beの過去形|existed|
+we|私たちは|ourselves|1
+were|beの過去形|existed|
+what|何|which thing|1
+when|いつ|while|1
+which|どちら|what one|1
+who|誰|which person|1
+will|意志|intention|
+with|〜と一緒に|alongside|1
+would|〜だろう|might|
+you|あなた|listener|1
+your|あなたの|thy|1
+only|唯一の|solely|1
+some|いくつかの|several|1
+our|私たちの|belonging to us|1
+over|〜の上に|above|1
+two|二つ|pair|1
+see|見る|observe|1
+such|そのような|like that|
+these|これら|ones here|1
+then|そのとき|at that time|1
+back|後方へ|at or near|
+any|どんな〜でも|whatever|1
+how|どうやって|in what way|1
+first|第一の|primary|1
+just|馬上槍試合|tilt|1
+people|民族|persons forming|
+way|道|path|1
+know|知る|understand|1
+should|～すべきである|used to issue|
+where|どこに|in which place|1
+even|さえ|still|1
+us|私たちを|our group|1
+before|〜の前に|prior to|1
+most|最も|majority|
+now|今|currently|1
+after|〜のあとに|following|1
+down|下へ|below|1
+well|よく|adequately|1
+life|命|existence|1
+work|仕事|labor|1
+being|存在|existence|1
+get|得る|obtain|1
+very|とても|extremely|
+new|新しい|recent|1
+here|ここに|in this place|1
+make|作る|create|1
+many|多くの|numerous|1
+those|それら|ones there|1
+much|たくさんの|plenty|1
+use|使う|utilize|1
+right|正しい|correct|1
+both|両方の|two together|1
+same|同じ|identical|1
+good|良い|fine|1
+each|それぞれの|every|1
+man|男性|adult male|1
+own|自分の|personal|1
+long|長い|extended|1
+need|必要|require|1
+around|周りに|surrounding|1
+day|日|24 hours|1
+must|しなければならな|have to|1
+still|静かな|motionless|1
+while|〜する間に|during|1
+go|行く|proceed|1
+too|〜もまた|also|1
+take|取る|seize|1
+under|下に|beneath|1
+off|離れて|away|1
+think|考える|ponder|1
+world|世界|earth|1
+data|データ|facts|1
+might|力|power|1
+never|決して〜ない|at no time|1
+hand|手|part|
+want|欲しい|desire|1
+going|行くこと|departure|1
+little|小さい|small|1
+found|設立する|establish|1
+three|3|trio|1
+again|再び|once more|1
+part|部分|section|1
+place|場所|location|1
+come|来る|arrive|1
+away|離れて|afar|1
+system|体系|framework|1
+head|頭|top of body|1
+say|言う|speak|1
+high|高い|tall|1
+are|〜である|exist|1
+case|場合|instance|1
+during|の間に|throughout|1
+social|社会の|communal|1
+face|顔|front|1
+water|水|liquid|1
+few|少ない|not many|1
+within|以内で|inside|1
+every|あらゆる|each|1
+things||one's clothes|
+help|助ける|assist|1
+number|数|figure|1
+always|いつも|at all times|1
+state|状態|condition|1
+body|体|physical structure|
+power|力|strength|1
+find|見つける|discover|1
+look|目を向ける|as an intransitive v|
+set|置く|place|1
+last|最後の|final|1
+human|人間の|person|1
+small|小さい|tiny|1
+end|終わり|finish|1
+great|偉大な|grand|1
+home|家|residence|1
+old|古い|aged|1
+family|家族|group|
+often|しばしば|frequently|1
+room|部屋|space|1
+point|点|dot|1
+year|年|annum|1
+love|愛|affection|1
+order|順序|command|1
+until|〜まで|up to|1
+side|側|edge|1
+better|よりよい|superior|
+though|〜だけれども|however|1
+upon|〜の上に|atop|1
+went|行った|traveled|1
+change|変える|transform|1
+put|置く|physically place (st|
+since|以来|from then on|1
+am|である|be|1
+next|次の|following|1
+person|人|individual|
+study|勉強|research|1
+form|形|shape|1
+let|させる|allow|1
+large|大きな|of considerable or r|
+give|与える|provide|1
+others|他の人たち|rest|1
+best|最もよい|finest|1
+less|より少ない|fewer|1
+mind|心|intellect|1
+felt|フェルト|matted fabric|1
+house|家|home|1
+law|法律|regulation|1
+public|国民に関する|able|
+second|秒|moment|1
+level|水準|flat|1
+door|ドア|entrance|1
+enough|十分な|sufficient|1
+light|光|brightness|1
+model|模型|prototype|1
+book|本|volume|1
+name|名前|title|1
+feel|感じる|sense|1
+why|なぜ|reason|1
+group|集団|cluster|1
+fact|事実|reality|1
+far|遠い|distant|1
+night|夜|nighttime|1
+once|一度|one time|1
+become|〜になる|turn into|1
+course|進路|path|1
+value|価値|worth|1
+among|〜の間に|amidst|1
+means|手段|method|1
+tell|話す|narrate|1
+shall|〜だろう|ought to|
+ever|かつて|at any time|1
+across|～を横切って|to toward|
+open|開いた|accessible|1
+care|心配|concern|1
+rather|むしろ|quite|
+sure|確信している|certain|1
+heart|心臓|vital organ|1
+least|最小の|smallest|
+school|学校|academy|1
+able|できる|capable|1
+woman|女性|adult female|1
+early|早い|soon|
+along|〜に沿って|alongside|1
+self|自己|ego|1
+yet|まだ|still|
+above|〜の上に|over|1
+four|4|4|1
+whole|全体の|entire|
+health|健康|wellness|1
+mother|母親|mom|1
+moment|瞬間|instant|1
+father|父|dad|1
+keep|状態にしておく|continue|
+sense|感覚|perception|
+young|若い|juvenile|1
+behind|後ろに|rearward|1
+energy|エネルギー|vitality|1
+low|低い|short|1
+almost|ほとんど|nearly|
+full|いっぱいの|complete|1
+voice|声|vocal sound|1
+due|予定の|expected|1
+either|どちらか|one of two|1
+line|線|cord|1
+common|共通の|shared|1
+mean|平均|average|1
+area|区域|region|
+real|本物の|actual|1
+show|見せる|display|1
+kind|種類|type|1
+past|過去|previous|1
+hard|硬い|solid|1
+role|役割|function|1
+food|食物|nourishment|1
+death|死|demise|1
+idea|考え|concept|1
+free|自由な|independent|1
+white|白い|pale|1
+nature|自然|environment|1
+risk|危険|danger|1
+word|言葉|term|1
+child|子ども|person|
+local|ある地域の|from or in a|
+result|結果|outcome|1
+call|呼ぶ|summon|
+front|正面|face|1
+matter|問題|substance|1
+close|閉じる|shut|1
+effect|効果|result|1
+future|未来|time to come|1
+toward|〜の方へ|to|1
+true|真実の|genuine|1
+five|5|5|1
+half|半分|fifty percent|1
+air|空気|atmosphere|1
+view|眺め|scene|1
+space|合間|distance between obj|
+term|期間|period|1
+itself|それ自身|its own self|1
+money|お金|currency|1
+type|型|category|1
+action|行動|deed|1
+clear|澄んだ|transparent|1
+period|期間|interval|1
+reason|理由|rationale|1
+age|年齢|years|1
+blood|血|gore|1
+per|〜につき|each|1
+short|短い|brief|1
+single|たった一つの|sole|1
+turn|回る|rotate|1
+city|都市|town|1
+land|陸地|terrain|1
+inside|内部|interior|1
+living|生きている|alive|
+rate|割合|ratio|1
+story|物語|narrative|1
+field|野原|plain|1
+read|読む|peruse|1
+class|部類|category|1
+else|他に|otherwise|1
+table|テーブル|item|
+thus|このようにして|in this way|1
+black|黒い|dark|1
+myself|私自身|me personally|1
+method|方法|technique|
+quite|完全に|fully|
+soon|もうすぐ|short|
+war|戦争|conflict|
+leave|去る|depart|
+main|主な|primary|1
+rights|権利|entitlements|1
+ground|ひいて粉にした|milled|
+live|生きる|exist|
+top|頂|highest|
+deep|深い|profound|
+big|大きい|large|1
+lot|くじ引き|large quantity or nu|
+ask|尋ねる|inquire|
+likely|ありそうな|probable|
+play|劇|drama|
+move|動かす|shift|1
+alone|ひとりで|solitary|1
+design|設計|plan|1
+policy|政策|strategy|1
+rest|残り|remainder|1
+start|始める|begin|
+cause|原因|source|
+cell|細胞|unit|1
+market|市場|bazaar|
+strong|強い|powerful|
+talk|話す|speak|
+answer|答え|reply|1
+friend|友人|companion|
+key|小島|islet|
+party|パーティー|gathering|1
+hear|聞く|listen|
+force|力|power|1
+growth|成長|development|
+hair|毛|pigmented filament|
+test|実験|challenge trial|
+whose|だれの|of whom|1
+bed|ベッド|cot|
+lower|下げる|reduce|1
+return|戻る|come back|1
+car|自動車|automobile|1
+theory|学説|description|
+run|走る|sprint|
+late|遅い|delayed|
+near|近い|close|
+today|今日|now|1
+pain|痛み|agony|
+third|3番目|tertiary|1
+focus|焦点|point|
+major|主要な|main|1
+size|大きさ|dimension|1
+bring|持って来る|fetch|1
+job|仕事|task|
+step|一歩|stride|
+stop|止める|halt|
+impact|衝撃|influence|1
+lead|導く|guide|
+dark|暗い|dim|
+son|息子|male offspring|
+total|合計|complete|
+image|画像|picture|
+plan|計画|scheme|1
+act|行為|deed|1
+mouth|口|oral cavity|1
+cost|費用|expense|1
+girl|少女|female child|
+range|範囲|scope|1
+try|試す|attempt|
+access|接近|entry|1
+hope|希望|aspire|
+red|赤い|crimson|1
+beyond|〜の向こうに|past|1
+fire|火|flame|1
+sound|音|noise|
+truth|真実|reality|1
+bad|不十分な|of low quality|
+bit|小片|small piece|
+wife|妻|married woman|
+loss|損失|deprivation|1
+meet|会う|encounter|1
+simply|簡単に|easily|1
+amount|総計|total|1
+paper|紙|sheet material|
+team|チーム|group|1
+below|下に|underneath|1
+six|6|half dozen|
+create|創造する|generate|1
+ready|用意ができている|prepared|
+smile|微笑む|grin|
+legal|法律の|lawful|1
+office|事務所|workplace|1
+whom|だれを|which person|1
+text|本文|written word|
+media|マスメディア|mass communication|1
+wrong|間違った|incorrect|1
+dead|死んだ|deceased|
+stay|支柱|brace|1
+art|芸術|craftsmanship|1
+follow|続く|go after|
+source|源|origin|1
+simple|簡単な|straightforward|1
+anyone|誰も 誰でも|person|
+court|裁判所|tribunal|1
+phone|電話|handset|1
+poor|貧しい|impoverished|1
+stage|段階|phase|1
+town|町|small city|
+floor|床|ground|1
+share|分け前|portion|1
+issue|問題|topic|1
+nor|〜もまた〜ない|neither|1
+seem|〜のように見える|appear|1
+speak|話す|talk|
+wall|壁|barrier|
+fear|恐れ|dread|
+global|グローバル|concerning all parts|
+skin|皮膚|hide|1
+church|教会|chapel|1
+cut|切る|slice|1
+learn|学ぶ|acquire|
+report|報告|account|1
+entire|全体の|whole|1
+eye|目|optic|1
+modern|現代の|contemporary|1
+pay|支払う|remunerate|1
+week|週|seven days|
+wide|幅の広い|broad|
+ago|〜前に|before|
+arm|腕|upper limb|1
+easy|たやすい|comfortable|
+figure|姿|shape|
+final|最後の|last round|
+fine|平凡|of superior quality|
+middle|真ん中|central|
+happy|幸福な|joyful|
+normal|標準の|typical|1
+series|連続|sequence|
+allow|許す|permit|1
+hold|持つ|grip|1
+road|道路|route|1
+basis|基礎|foundation|1
+brain|脳|cerebrum|
+breath|息|respiration|1
+direct|導く|guide|1
+music|音楽|melody|1
+scale|規模|measure|
+fall|落ちる|drop|
+heat|熱|warmth|
+choice|選択|option|
+region|地域|area|1
+review|批評する|critique|1
+ten|10|10|1
+cold|寒い|chilly|
+earth|地球|globe|1
+flow|流れる|stream|
+trade|貿易|commerce|
+twenty|20|score|1
+walk|歩く|stroll|1
+deal|取引|trade|
+hour|時間|time|
+lack|不足|shortage|
+note|メモ|memo|1
+stand|立つ|be upright|1
+game|ゲーム|playful activity|
+object|物体|item|1
+oil|油|lubricant|
+rule|規則|regulation|1
+sleep|眠る|slumber|
+green|緑色|verdant|
+offer|提供する|provide|1
+onto|〜の上へ|upon|1
+status|地位|rank|1
+trust|信頼|confidence|
+weight|重さ|heaviness|1
+boy|少年|male child|
+recent|最近の|latest|1
+police|警察|law enforcement|
+author|著者|writer|
+blue|青い|azure|1
+memory|記憶|recollection|
+window|窓|aperture|1
+list|一覧表|catalog|
+cross|十字架|geometrical figure|
+degree|程度|level|1
+letter|文字|character|
+mental|あごの|genial|1
+stress|ストレス|tension|
+length|長さ|extent|
+moving|感動的な|touching|
+date|日付|day|1
+chance|機会|opportunity|
+event|出来事|occurrence|1
+reach|達する|attain|
+sea|海|large body of salt|
+income|収入|earnings|1
+price|価格|cost|
+safe|安全な|secure|1
+active|活発な|energetic|1
+faith|信頼|trust|1
+fell|切り倒す|cut down|
+mass|かたまり|bulk|
+phase|段階|stage|1
+fully|十分に|in a full manner|
+path|小道|track|
+round|丸い|circular|1
+volume|体積|bulk|1
+appear|現れる|come into view|1
+former|以前の|previous|1
+glass|ガラス|glazing material|1
+online|オンライン|of a generator|
+couple|一対|pair|1
+plant|植物|vegetation|1
+task|仕事|duty|1
+king|王|monarch|1
+manner|方法|style|1
+tree|木|woody plant|1
+chest|胸|box now|
+hot|熱い|fiery|
+basic|基本的な|fundamental|1
+sister|姉妹|female sibling|
+site|敷地|premises|
+born|生まれる|having from birth|
+indeed|実に|certainly|1
+remain|残る|stay|1
+sort|種類|type|
+factor|要因|element|1
+member|会員|participant|
+soul|魂|spirit or essence|
+except|除いて|excluding|1
+base|基礎|foundation|1
+break|壊す|shatter|1
+happen|起こる|occur|
+maybe|たぶん|perhaps|1
+peace|平和|harmony|1
+spoke|スポーク|wheel rod|
+write|書く|compose|
+avoid|避ける|evade|1
+desire|望む|crave|1
+claim|主張する|assert|
+fast|速い|swift|
+supply|供給する|provide|1
+wish|願う|hope|
+daily|毎日の|everyday|
+doubt|疑う|question|1
+heavy|重い|weighty|1`;
+/* file:// 用の内蔵日本語辞書(よみ|漢字|語義|挿絵キー)。http なら全語を読む */
+const FALLBACK_JA = `あき|秋|autumn|
+あし|足|foot|foot
+あと|後|behind|behind
+いう|言う|to say|say
+いじ|維持|maintenance|maintenance
+いみ|意味|meaning|
+おす|雄|male (animal, plan|
+かお|顔|face|face
+かこ|過去|the past|past
+きき|危機|crisis|crisis
+きじ|記事|article|
+きた|北|north|
+きぼ|規模|scale|
+ぎん|銀|silver (Ag)|
+くに|国|country|country
+こえ|声|voice|voice
+ごご|午後|afternoon|afternoon
+さん|三|three|three
+しじ|支持|support|support
+しち|七|seven|
+しん|信|honesty|
+じき|時期|time|time
+じこ|事故|accident|accident
+じじ|時事|events of the day|
+じむ|事務|office work|
+すじ|筋|muscle|
+せん|千|thousand|thousand
+そち|措置|measure|measure
+たみ|民|people|
+だい|台|stand|stand
+ちく|地区|district|district
+ちじ|知事|prefectural govern|
+ちち|父|father|father
+つま|妻|wife|
+とし|都市|town|
+とち|土地|plot of land|
+なつ|夏|summer|
+はち|八|eight|
+はつ|初|first|first
+はな|花|flower|
+はは|母|mother|mother
+はる|春|spring|
+ほご|保護|protection|protection
+みぎ|右|right|right
+みず|水|water (esp. cool o|water
+みち|道|road|road
+りじ|理事|director|director
+ろく|六|six|
+あいて|相手|companion|companion
+あらた|新た|new|new
+あんぽ|安保|security (e.g. nat|security
+いいん|委員|committee member|
+いけん|意見|opinion|
+いこう|意向|intention|intention
+いちじ|一時|one o'clock|
+いちば|市場|(town) market|
+いちぶ|一部|one part|
+いはん|違反|violation|
+いらい|以来|since|since
+いわば|言わば|so to speak|
+うごき|動き|movement|movement
+えいが|映画|movie|
+おおて|大手|major company|
+おっと|夫|husband|husband
+おとこ|男|man|man
+かいぎ|会議|meeting|
+かかく|価格|price|
+かぞく|家族|family|
+かたち|形|(physical) form|
+かだい|課題|subject|subject
+かてい|家庭|home|home
+かのう|可能|possible|possible
+かめい|加盟|joining (an associ|
+かんじ|幹事|executive secretar|
+かんぶ|幹部|management|management
+かんり|管理|control|control
+きかん|期間|period|period
+きかん|機関|engine|engine
+きこう|機構|mechanism|mechanism
+きしゃ|記者|reporter|
+きせい|規制|regulation|regulation
+きたい|期待|expectation|expectation
+きのう|機能|function|
+きほん|基本|basics|
+きもち|気持ち|feeling|
+きゃく|客|guest|
+きゅう|九|nine|
+きろく|記録|record|record
+きんり|金利|interest rate|
+ぎいん|議員|member of an assem|
+ぎかい|議会|congress|congress
+ぎょう|業|work|work
+くがつ|９月|September|
+くるま|車|car|car
+ぐんじ|軍事|military affairs|
+けいき|景気|business condition|
+けっか|結果|result|result
+けつぎ|決議|resolution|resolution
+げんち|現地|actual place|
+げんば|現場|actual spot|
+こうか|効果|effect|effect
+こうほ|候補|candidate|
+こじん|個人|individual|individual
+こっか|国家|state|state
+ことし|今年|this year|
+ことば|言葉|language|language
+こども|子供|child|
+こんご|今後|from now on|
+ごうい|合意|(coming to an) agr|
+ごがつ|５月|May|
+ごぜん|午前|morning|
+ごりん|五輪|Olympic Games|
+さいご|最後|end|end
+さんか|参加|participation|
+しあい|試合|match|
+しえん|支援|support|support
+しがつ|４月|April|
+しきん|資金|funds|
+しごと|仕事|work|work
+しせい|姿勢|posture|posture
+しせつ|施設|facility|facility
+しぜん|自然|nature|nature
+しどう|指導|guidance|guidance
+しない|市内|in the city|
+しみん|市民|citizen (of a coun|
+しゅう|州|state (of the US, |state
+しょき|書記|clerk|
+しらべ|調べ|investigation|
+しんぎ|審議|deliberation|
+じかん|時間|time|time
+じけん|事件|event|event
+じしん|自身|(one's) self|
+じじつ|事実|fact|fact
+じたい|事態|situation|
+じたく|自宅|one's home|
+じだい|時代|period|period
+じっし|実施|enforcement|enforcement
+じはん|時半|half past (the hou|
+じぶん|自分|myself|myself
+じみん|自民|Liberal Democratic|
+じもと|地元|home area|
+じゅう|十|ten|ten
+じゆう|自由|freedom|freedom
+じょし|女子|woman|woman
+すがた|姿|figure|
+すこし|少し|a little|little
+せいじ|政治|politics|
+せいど|制度|system|system
+せいふ|政府|government|
+せかい|世界|the world|world
+せんご|戦後|postwar period|
+そうぎ|葬儀|funeral|
+そうさ|捜査|search (esp. in cr|search
+そしき|組織|organization|organization
+たちば|立場|position|position
+だんし|男子|boy|
+ちいき|地域|area|
+ちほう|地方|district|district
+ていど|程度|degree|degree
+でんわ|電話|telephone call|
+とうし|投資|investment|investment
+とうじ|当時|at that time|
+とくに|特に|particularly|particularly
+とない|都内|within the (Tokyo)|
+どうし|同市|same city|
+どうじ|同時|same time|
+にがつ|２月|February|
+にんき|人気|popularity|
+はけん|派遣|dispatch|dispatch
+はなし|話|talk|
+ばしょ|場所|place|place
+ひかり|光|light|light
+ひがし|東|east|
+ひこく|被告|defendant|
+ひだり|左|left|
+ひとつ|一つ|one|one
+ひはん|批判|criticism|criticism
+ひゃく|百|hundred|hundred
+ふたり|二人|two persons|
+ぶたい|舞台|stage (of a theatr|stage
+ぶぶん|部分|portion|portion
+ぶもん|部門|division (of a lar|division
+ぶんか|文化|culture|culture
+ぶんや|分野|field|field
+へいわ|平和|peace|peace
+へんか|変化|change|change
+ぺきん|北京|Beijing (China)|
+ほんぶ|本部|headquarters|headquarters
+みかた|見方|viewpoint|viewpoint
+みなみ|南|south|
+もしゅ|喪主|chief mourner|
+やとう|野党|opposition party|
+ゆうし|融資|financing|
+よさん|予算|estimate (of costs|estimate
+よてい|予定|plans|
+よとう|与党|ruling party|
+りゆう|理由|reason|reason
+れきし|歴史|history|history
+ろんぎ|論議|discussion|
+わたし|私|I|
+わへい|和平|peace|peace
+あきらか|明らか|clear|clear
+あんぜん|安全|safety|
+いちがつ|１月|January|
+いちばん|一番|number one|
+いっぱん|一般|general|general
+いっぽう|一方|one (esp. of two)|one
+いりょう|医療|medical treatment|
+うたがい|疑い|doubt|doubt
+うんどう|運動|exercise|exercise
+えんじょ|援助|assistance|assistance
+おおはば|大幅|big|big
+おこなう|行う|to perform|perform
+おんがく|音楽|music|music
+かいいん|会員|member|
+かいかく|改革|reform|reform
+かいがい|海外|foreign|
+かいけつ|解決|settlement|settlement
+かいけん|会見|interview|interview
+かいしゃ|会社|company|company
+かいせい|改正|revision|revision
+かいだん|会談|talks (i.e. formal|
+かいはつ|開発|development|development
+かいふく|回復|restoration|restoration
+かくだい|拡大|expansion|expansion
+かつどう|活動|activity (of a per|activity
+かぶしき|株式|share (in a compan|share
+かんがえ|考え|thinking|
+かんけい|関係|relation|relation
+かんこく|韓国|South Korea|
+かんしん|関心|concern|concern
+かんじゃ|患者|patient|
+かんとく|監督|supervision|
+かんれん|関連|relation|relation
+がいこう|外交|diplomacy|diplomacy
+がいこく|外国|foreign country|
+がくせい|学生|student (esp. a un|student
+がっこう|学校|school|school
+きぎょう|企業|enterprise|enterprise
+きじゅん|基準|standard|standard
+きまって|決まって|always|always
+きょうか|強化|strengthening|
+きょうぎ|協議|conference|conference
+きょうと|京都|Kyoto (city, prefe|
+きんゆう|金融|finance|
+ぎじゅつ|技術|technology|technology
+ぎちょう|議長|chair|chair
+ぎんこう|銀行|bank|
+くうこう|空港|airport|airport
+けいえい|経営|management|management
+けいかく|計画|plan|plan
+けいさつ|警察|police|
+けいざい|経済|economy|
+けいやく|契約|contract|contract
+けってい|決定|decision|decision
+けんきん|献金|donation|donation
+けんせつ|建設|construction|construction
+けんぽう|憲法|constitution|constitution
+げんいん|原因|cause|
+げんざい|現在|the present|present
+げんじつ|現実|reality|
+げんそく|原則|principle|principle
+こうげき|攻撃|attack|
+こうこう|高校|senior high school|
+こうぞう|構造|structure|structure
+こうどう|行動|action|action
+こくさい|国際|international|
+こくない|国内|within the country|
+こくべつ|告別|farewell|
+こくみん|国民|people (of a count|
+こくれん|国連|United Nations|
+こっかい|国会|National Diet|
+こんかい|今回|this time|
+こんげつ|今月|this month|
+ごじゅう|五十|fifty|fifty
+さいきん|最近|recently|
+さいこう|最高|best|best
+さいしょ|最初|beginning|
+さいだい|最大|biggest|
+さいばん|裁判|trial|
+さぎょう|作業|work|work
+さくげん|削減|cut|cut
+さくねん|昨年|last year|
+さくひん|作品|work (e.g. book, f|work
+さんいん|参院|House of Councillo|
+さんがつ|３月|March|
+さんにん|三人|three people|
+ざいせい|財政|public finance|
+しじょう|市場|market (financial,|
+しちがつ|７月|July|
+しつもん|質問|question|
+しゃかい|社会|society|society
+しゃしん|写真|photograph|photograph
+しゅのう|首脳|head|head
+しんとう|新党|new (political) pa|new
+しんぶん|新聞|newspaper|
+じぎょう|事業|business|
+じじょう|事情|circumstances|
+じむしょ|事務所|office|office
+じゅうご|十五|fifteen|fifteen
+じゅうし|十四|fourteen|fourteen
+じゅうに|十二|twelve|twelve
+じょせい|女性|woman|woman
+じんこう|人口|population|
+すいしん|推進|propulsion|
+せいかい|政界|(world of) politic|
+せいかつ|生活|life|life
+せいけん|政権|(political) admini|
+せいさく|政策|political measures|
+せいさん|生産|production|production
+せいじか|政治家|politician|
+せいとう|政党|political party|
+せきにん|責任|duty|duty
+せんきょ|選挙|election|election
+せんげん|宣言|declaration|declaration
+せんしゅ|選手|player (of a sport|
+せんそう|戦争|war|
+ぜんこく|全国|the whole country|
+ぜんたい|全体|whole|
+ぜんねん|前年|the preceding year|
+そうかい|総会|general meeting|
+そうごう|総合|synthesis|synthesis
+そうさい|総裁|president (of an o|president
+たいおう|対応|correspondence (to|
+たいかい|大会|mass meeting|
+たいさく|対策|measure|measure
+たいせい|体制|order|order
+たいわん|台湾|Taiwan|
+だいがく|大学|university|
+だんかい|段階|stage|stage
+だんせい|男性|man|man
+だんたい|団体|group|group
+ちきゅう|地球|Earth|earth
+ちょうさ|調査|investigation|
+つうしん|通信|correspondence|
+とういつ|統一|unity|unity
+とうしゅ|投手|pitcher|
+とうしょ|当初|beginning|
+とくべつ|特別|special|special
+とりひき|取引|transactions|
+どうしゃ|同社|the same company|
+どうじつ|同日|the same day|
+どりょく|努力|effort|effort
+ないかく|内閣|cabinet (of a gove|
+ないよう|内容|contents|
+にちべい|日米|Japan and the Unit|
+にんげん|人間|human being|
+ねんかん|年間|(period of) a year|
+はいけい|背景|background|
+はちがつ|８月|August|
+はつげん|発言|statement|statement
+はんけつ|判決|judicial decision|
+はんたい|反対|opposition|
+はんだん|判断|judgment|judgment
+はんばい|販売|sale|
+ばんぐみ|番組|program (e.g. TV)|program
+ひつよう|必要|necessary|necessary
+ひとびと|人々|people|
+ふきょう|不況|(economic) depress|
+ぶちょう|部長|head (chief, direc|head
+へいきん|平均|average|
+べいこく|米国|(United States of)|
+ほうあん|法案|bill (law)|
+ほうこう|方向|direction|direction
+ほうこく|報告|report|report
+ほうしん|方針|policy|policy
+ほうそう|放送|broadcasting|
+ほうどう|報道|report (of news)|report
+ほうほう|方法|method|
+ほうもん|訪問|call|
+ほんしゃ|本社|head office|
+ぼうえい|防衛|defense|defense
+ぼうえき|貿易|(foreign) trade|
+まいにち|毎日|every day|
+みずから|自ら|oneself|
+みとおし|見通し|unobstructed view|
+みなおし|見直し|review|review
+みんかん|民間|private|private
+みんしゅ|民主|democracy|democracy
+みんぞく|民族|people|
+もくてき|目的|purpose|purpose
+もっとも|最も|most|
+もんだい|問題|question (e.g. on |
+やきゅう|野球|baseball|baseball
+やくわり|役割|part|part
+ゆしゅつ|輸出|export|export
+ゆにゅう|輸入|import|import
+らいねん|来年|next year|
+りょうど|領土|territory|territory
+れんごう|連合|union|union
+れんぞく|連続|continuation|continuation
+れんぽう|連邦|federation (of sta|
+れんりつ|連立|coalition|coalition
+ろうどう|労働|labor|
+ろくがつ|６月|June|
+わんがん|湾岸|gulf coast|
+いいんかい|委員会|committee|committee
+えいきょう|影響|influence|influence
+おうしゅう|欧州|Europe|
+かいちょう|会長|president (of a so|president
+かくりょう|閣僚|cabinet ministers|
+かのうせい|可能性|possibility|
+かんきょう|環境|environment|environment
+がいしょう|外相|Foreign Minister|
+きょういく|教育|education|education
+きょうかい|協会|association|
+きょうじゅ|教授|professor|professor
+きょうてい|協定|arrangement|arrangement
+きょうどう|共同|cooperation|cooperation
+ぎょうかい|業界|business world|
+ぎょうしゃ|業者|trader|
+ぎょうせい|行政|executive|executive
+ぐたいてき|具体的|concrete|concrete
+けんきゅう|研究|research|research
+こうしょう|交渉|negotiations|
+こうじょう|工場|factory|factory
+こうりゅう|交流|exchange (e.g. cul|exchange
+さいしゅう|最終|last|last
+さんぎょう|産業|industry|industry
+さんじゅう|三十|thirty|thirty
+しゃちょう|社長|company president|
+しゅういん|衆院|House of Represent|
+しゅうへん|周辺|circumference|
+しゅしょう|首相|prime minister|
+しゅっしん|出身|one's origin (e.g.|
+しょうけん|証券|bond|
+しょうひん|商品|commodity|commodity
+しょうらい|将来|future|future
+しょくいん|職員|staff member|
+じえいたい|自衛隊|Japan Self-Defense|
+じどうしゃ|自動車|car|car
+じみんとう|自民党|Liberal Democratic|
+じむきょく|事務局|secretariat|
+じゅういち|十一|eleven|eleven
+じゅうがつ|１０月|October|
+じゅうさん|十三|thirteen|thirteen
+じゅうたく|住宅|residence|residence
+じゅうなな|十七|seventeen|seventeen
+じゅうはち|十八|eighteen|eighteen
+じゅうみん|住民|inhabitant|
+じゅうよう|重要|important|important
+じゅうらい|従来|up to now|
+じょうけん|条件|condition|condition
+じょうせい|情勢|state of things|
+じょうたい|状態|state|state
+じょうほう|情報|information|information
+じょうやく|条約|treaty|
+せいちょう|成長|growth|
+せいりょく|勢力|influence|influence
+たいしょう|対象|target|
+だいひょう|代表|representation|
+ちゅうおう|中央|centre|
+ちゅうごく|中国|China|
+ちゅうしん|中心|center|
+ちょうかん|長官|secretary (governm|secretary
+ちょうせい|調整|adjustment|adjustment
+ちょうなん|長男|eldest son (may be|
+といあわせ|問い合わせ|inquiry|inquiry
+とうきょう|東京|Tokyo|
+とうきょく|当局|authorities|
+とうひょう|投票|voting|
+にほんじん|日本人|Japanese person|
+のうぎょう|農業|agriculture|agriculture
+びょういん|病院|hospital|
+もくひょう|目標|goal|
+ゆうしょう|優勝|overall victory|
+ようきゅう|要求|demand|demand
+ようぎしゃ|容疑者|suspect|suspect
+よんじゅう|四十|forty|
+りょうこく|両国|both countries|
+あい|愛|love|love
+あめ|雨|rain|
+いし|意思|intention|intention
+いし|医師|doctor|
+いろ|色|colour|
+うた|歌|song|
+うま|馬|horse|horse
+うみ|海|sea|
+おと|音|sound|
+おや|親|parent|parent
+かく|核|stone (of a fruit)|
+かず|数|number|number
+かべ|壁|wall|
+きそ|基礎|foundation|
+きち|基地|base (military, ex|base
+くち|口|mouth|mouth
+ぐん|軍|army|
+しま|島|island|island
+しる|知る|to know|know
+じこ|自己|self|self
+じち|自治|self-government|
+せき|関|barrier|
+そと|外|outside|outside
+つら|面|face|face
+てら|寺|temple (Buddhist)|temple
+とう|党|party (political)|party
+とう|問う|to ask|
+とし|年|year|year
+なに|何|what|what
+にし|西|west|
+はく|博|doctor|
+はば|幅|width|
+ぶき|武器|weapon|
+へや|部屋|room|room
+まち|町|town|
+むね|胸|chest|
+もり|森|forest|
+やま|山|mountain|mountain
+ゆう|夕|evening|evening
+ゆめ|夢|dream|
+よぶ|呼ぶ|to call out (to)|
+よる|夜|night|night
+れい|例|example|example
+あかじ|赤字|(being in) the red|
+いがく|医学|medicine|medicine
+いしき|意識|consciousness|
+いない|以内|within|within
+いよく|意欲|will|
+えいご|英語|English (language)|
+えらぶ|選ぶ|to choose|`;
+let DICT = [], INFO = new Map(), BYSIG = new Map(), POOL = [], STARTER = [], dictFull = false, playable = 0;
+const sortSig = s => [...s].sort().join("");
+function setDict(rows, full) {
+  DICT = rows; INFO = new Map(); BYSIG = new Map(); POOL = []; STARTER = []; playable = 0;
+  rows.forEach((e, i) => {
+    e.rank = i;
+    if (!INFO.has(e.w)) INFO.set(e.w, e);      // 読みの代表。文字を配るときに使う
+    /* 辞書にある語はぜんぶ答えの候補。同じ文字の組に複数あるときは身近な順に並べる。
+       読みが同じで漢字がちがう語(幹事/感じ/漢字/監事)も、別々の候補として入れる */
+    const sig = sortSig(e.w);
+    const alt = BYSIG.get(sig);
+    if (alt) alt.push(e); else BYSIG.set(sig, [e]);
+    playable++;
+    if (e.w.length >= 3 && e.w.length <= (dictMode === "ja" ? 5 : 7) && i < 3200) POOL.push(e.w);
+    /* 最初から盤に置いておく単語ボールの種。挿絵のある語を2回入れて出やすくする */
+    if (e.w.length >= 2 && e.w.length <= 4 && i < 2200) { STARTER.push(e); if (artOf(e)) STARTER.push(e); }
+  });
+  if (!POOL.length) POOL = rows.map(e => e.w).slice(0, 200);
+  if (!STARTER.length) STARTER = rows.filter(e => e.w.length >= 2 && e.w.length <= 4).slice(0, 120);
+  dictFull = full;
+  paintDictState();
+}
+function rowFrom(p, mode) {
+  return mode === "ja"
+    ? { w: p[0], s: p[1] || p[0], g: p[2] || "", art: p[3] || "" }   // よみ / 漢字 / 語義 / 挿絵キー
+    : { w: p[0], ja: p[1] || "", en: p[2] || "", pic: p[3] === "1" };
+}
+function parseRows(text, sep, mode) {
+  const out = [];
+  for (const line of text.split("\n")) {
+    if (!line) continue;
+    const p = line.split(sep);
+    if (!DICTS[mode].re.test((p[0] || "").trim())) continue;
+    out.push(rowFrom(p, mode));
+  }
+  return out;
+}
+const FALLBACK = { en: FALLBACK_RAW, ja: FALLBACK_JA };
+const cache = {};
+function loadDict(next, then) {
+  dictMode = next;
+  try { localStorage.setItem("wordrop.dict", next); } catch (_) {}
+  if (cache[next]) { setDict(cache[next], true); then && then(); return; }
+  setDict(parseRows(FALLBACK[next], "|", next), false);   // まず内蔵ぶんで遊べるようにする
+  then && then();
+  fetch(DICTS[next].file).then(r => r.ok ? r.json() : Promise.reject(new Error("x")))
+    .then(j => {
+      const rows = j.w.map(l => rowFrom(l.split("\t"), next)).filter(e => DICTS[next].re.test(e.w));
+      if (!rows.length || dictMode !== next) return;
+      cache[next] = rows;
+      setDict(rows, true);
+      startGame(mode);
+    }).catch(() => {});
+}
+function paintDictState() {
+  $("#dictState").textContent = (dictFull ? t().dictReady(playable) : t().dictLocal(playable));
+}
+
+/* ---------- 乱数(日替わりシード) ---------- */
+function mulberry32(a) {
+  return function () {
+    a |= 0; a = a + 0x6D2B79F5 | 0;
+    let x = Math.imul(a ^ a >>> 15, 1 | a);
+    x = x + Math.imul(x ^ x >>> 7, 61 | x) ^ x;
+    return ((x ^ x >>> 14) >>> 0) / 4294967296;
+  };
+}
+function hashSeed(str) {
+  let h = 2166136261;
+  for (let i = 0; i < str.length; i++) { h ^= str.charCodeAt(i); h = Math.imul(h, 16777619); }
+  return h >>> 0;
+}
+const dateKey = (d = new Date()) =>
+  `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+const puzzleNo = (d = new Date()) =>
+  Math.round((Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()) - EPOCH) / 86400000);
+let rng = Math.random, spill = [];
+function nextLetter() {
+  if (!spill.length) {
+    const src = POOL[Math.floor(rng() * POOL.length)] || "word", cs = [...src];
+    for (let i = cs.length - 1; i > 0; i--) { const j = Math.floor(rng() * (i + 1)); [cs[i], cs[j]] = [cs[j], cs[i]]; }
+    spill = cs;
+    if (rng() < 0.3) {
+      const bag = dictMode === "ja" ? "うんいしくきかょこじつりゅちせるたとさけ" : "aeiouaeioustrnl";
+      spill.push(bag[Math.floor(rng() * bag.length)]);
+    }
+  }
+  return spill.shift();
+}
+
+/* ---------- 物理演算の山 ---------- */
+const pit = $("#pit"), stage = $("#stage"), cv = $("#cv"), ctx = cv.getContext("2d");
+let W = 320, H = 480, dpr = 1, R0 = 26;
+let bodies = [], bodyId = 1, sparks = [];
+let mode = "daily", score = 0, madeWords = [], running = false;
+let chain = [], timeLeft = DAILY_SEC, timer = 0, started = false;
+let glow = new Set(), glowUntil = 0, hintList = [], hintIdx = -1, hintKey = "";
+let marks = [], newCount = 0;
+let lastT = performance.now();
+
+function fitStage() {
+  const r = stage.getBoundingClientRect();
+  W = Math.max(200, Math.floor(Math.min(r.width - 12, (r.height - 12) * 0.72)));
+  H = Math.max(260, Math.floor(Math.min(r.height - 12, W / 0.72)));
+  pit.style.width = W + "px"; pit.style.height = H + "px";
+  dpr = Math.min(2, devicePixelRatio || 1);
+  cv.width = Math.round(W * dpr); cv.height = Math.round(H * dpr);
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  R0 = W / 12.4;                        // 横におよそ6個
+}
+new ResizeObserver(() => { fitStage(); }).observe(stage);
+
+const imgCache = new Map();
+function artImg(ent) {
+  const key = artOf(ent);
+  if (!key) return null;
+  if (imgCache.has(key)) return imgCache.get(key);
+  const im = new Image(); im.src = ART_BASE + key + ".png";
+  imgCache.set(key, im); return im;
+}
+function addBall(letters, isWord, x, y, ent) {
+  const b = {
+    id: bodyId++, letters, isWord, ent: ent || null, len: letters.length, r: isWord ? radiusOf(letters.length) : R0,
+    x, y, vx: (rng() - .5) * 40, vy: 0, born: performance.now(), pop: isWord ? performance.now() : 0,
+    color: isWord ? (LEN_COLOR[Math.min(letters.length, COLOR_TOP)] || "#fff")
+                  : charColor(letters)
+  };
+  bodies.push(b); return b;
+}
+const areaOf = () => bodies.reduce((s, b) => s + Math.PI * b.r * b.r, 0);
+let refillAt = 0;
+function refill(now) {
+  if (!running) return;
+  const letters = bodies.reduce((n, b) => n + (b.isWord ? 0 : 1), 0);
+  const hungry = letters < MIN_LETTERS && areaOf() < W * H * 0.88;
+  if (areaOf() >= W * H * FILL && !hungry) return;
+  if (now - refillAt < 80) return;             // 1秒あたり12個ほど降らせる
+  /* 落ちてくる途中のボールは数えない。積み上がった山が天井に迫っていたら止める */
+  let restTop = Infinity;
+  for (const b of bodies) if (Math.abs(b.vy) < 30) restTop = Math.min(restTop, b.y - b.r);
+  if (restTop < R0 * 1.5) return;
+  refillAt = now;
+  const r = R0;
+  addBall(nextLetter(), false, r + 4 + rng() * (W - 2 * r - 8), -r - rng() * r);
+}
+
+/* 位置ベース(PBD)。位置を直したあとに速度を位置差から作り直すので、
+   積み上がったボールに重力がたまり続けて山が煮えるのを防げる。 */
+function physics(dt) {
+  const s = Math.max(.004, Math.min(.032, dt / 1000)), floor = H - 2;
+  for (const b of bodies) {
+    b.px = b.x; b.py = b.y;
+    b.vy += 2400 * s;
+    b.x += b.vx * s; b.y += b.vy * s;
+  }
+  for (let pass = 0; pass < 9; pass++) {
+    for (let i = 0; i < bodies.length; i++) {
+      const a = bodies[i];
+      for (let j = i + 1; j < bodies.length; j++) {
+        const b = bodies[j], min = a.r + b.r;
+        let dx = b.x - a.x, dy = b.y - a.y;
+        if (dx > min || dx < -min || dy > min || dy < -min) continue;
+        let d = Math.hypot(dx, dy);
+        if (d >= min) continue;
+        if (d < .01) { dx = .01; dy = -.01; d = Math.hypot(dx, dy); }
+        const nx = dx / d, ny = dy / d, ov = (min - d) * .82;
+        const ma = a.r * a.r, mb = b.r * b.r, tt = ma + mb;
+        a.x -= nx * ov * mb / tt; a.y -= ny * ov * mb / tt;
+        b.x += nx * ov * ma / tt; b.y += ny * ov * ma / tt;
+      }
+    }
+    for (const b of bodies) {
+      if (b.x < b.r + 2) b.x = b.r + 2;
+      if (b.x > W - b.r - 2) b.x = W - b.r - 2;
+      if (b.y > floor - b.r) b.y = floor - b.r;
+    }
+  }
+  for (const b of bodies) {
+    b.vx = (b.x - b.px) / s * .84;      // 摩擦。横は強めに殺して山を落ち着かせる
+    b.vy = (b.y - b.py) / s * .95;
+    /* ごく遅い動きは切り捨てる。大きい単語ボールが混ざると山がいつまでも
+       じりじり動きつづけるので、そこで止める */
+    if (b.vx < 5 && b.vx > -5) b.vx = 0;
+    if (b.vy < 5 && b.vy > -5) b.vy = 0;
+  }
+  for (const p of sparks) { p.vy += 900 * s; p.x += p.vx * s; p.y += p.vy * s; p.life -= s * 1.7; }
+  sparks = sparks.filter(p => p.life > 0);
+}
+
+/* ---------- 描画 ---------- */
+function fitText(text, maxW, cap, weight) {
+  ctx.font = `${weight} 100px "M PLUS Rounded 1c","Yu Gothic",system-ui,sans-serif`;
+  const per = ctx.measureText(text).width / 100;
+  return Math.max(5, Math.min(cap, maxW / per));
+}
+function drawBall(b) {
+  const picked = chain.includes(b);
+  let k = 1;
+  if (b.pop) { const e = (performance.now() - b.pop) / 280; k = e < 1 ? 0.5 + 0.5 * Math.sin(Math.min(1, e) * Math.PI / 2) * (1 + 0.24 * (1 - e)) : 1; if (e >= 1) b.pop = 0; }
+  const r = b.r * k;
+  ctx.save(); ctx.translate(b.x, b.y);
+  ctx.beginPath(); ctx.arc(2, 4, r, 0, 6.2832); ctx.fillStyle = "rgba(0,0,0,.3)"; ctx.fill();
+  ctx.beginPath(); ctx.arc(0, 0, r, 0, 6.2832); ctx.fillStyle = b.color; ctx.fill();
+  const g = ctx.createRadialGradient(-r * .3, -r * .4, r * .1, 0, 0, r);
+  g.addColorStop(0, "rgba(255,255,255,.55)"); g.addColorStop(1, "rgba(255,255,255,0)");
+  ctx.fillStyle = g; ctx.fill();
+  ctx.lineWidth = Math.max(2, r * .1); ctx.strokeStyle = b.isWord ? "rgba(20,17,30,.85)" : "rgba(20,17,30,.5)"; ctx.stroke();
+  if (picked) { ctx.lineWidth = Math.max(3, r * .17); ctx.strokeStyle = "#fff"; ctx.stroke(); }
+  else if (glow.has(b) && performance.now() < glowUntil) {
+    const ph = Math.abs(1 - (performance.now() / 320) % 2);
+    ctx.lineWidth = Math.max(4, r * .2);
+    ctx.strokeStyle = `rgba(255,236,110,${(.5 + .5 * ph).toFixed(2)})`;
+    ctx.stroke();
+  }
+  ctx.textAlign = "center"; ctx.textBaseline = "middle"; ctx.fillStyle = "#211d2c";
+  if (!b.isWord) {
+    const one = upper(b.letters);
+    const fs = fitText(one, r * 1.2, r * 1.25, 1000);
+    ctx.font = `1000 ${fs}px "M PLUS Rounded 1c","Yu Gothic",system-ui,sans-serif`;
+    ctx.fillText(one, 0, r * .04);
+  } else {
+    const box = r * .82, by = -r * .30;
+    ctx.save();
+    ctx.beginPath(); ctx.roundRect(-box / 2, by - box / 2, box, box, box * .18);
+    ctx.fillStyle = "rgba(255,255,255,.8)"; ctx.fill(); ctx.clip();
+    const im = artImg(b.ent);              // 挿絵が無い語も枠はそのまま空きスペースとして残す
+    if (im && im.complete && im.naturalWidth) {
+      const sc = Math.min(box / im.naturalWidth, box / im.naturalHeight) * .98;
+      ctx.drawImage(im, -im.naturalWidth * sc / 2, by - im.naturalHeight * sc / 2, im.naturalWidth * sc, im.naturalHeight * sc);
+    }
+    ctx.restore();
+    const label = dispOf(b.ent);
+    const fs = fitText(label, r * 1.5, r * .40, 1000);
+    ctx.font = `1000 ${fs}px "M PLUS Rounded 1c","Yu Gothic",system-ui,sans-serif`;
+    ctx.fillText(label, 0, r * .35);
+    const mean = subOf(b.ent);
+    if (mean && r > 22) {
+      const ms = Math.min(fs * .58, fitText(mean, r * 1.28, fs * .58, 800));
+      ctx.font = `800 ${ms}px "M PLUS Rounded 1c","Yu Gothic",system-ui,sans-serif`;
+      ctx.fillStyle = "#5b5164"; ctx.fillText(mean, 0, r * .70);
+    }
+  }
+  ctx.restore();
+}
+function draw() {
+  ctx.clearRect(0, 0, W, H);
+  for (const b of bodies) drawBall(b);
+  /* なぞり線は引かない。選んだボールは白い輪だけで示す */
+  for (const p of sparks) {
+    ctx.globalAlpha = Math.max(0, p.life); ctx.fillStyle = p.color;
+    ctx.beginPath(); ctx.arc(p.x, p.y, R0 * .13, 0, 6.2832); ctx.fill();
+  }
+  ctx.globalAlpha = 1;
+  /* はじめて作った語の札。小さく、1.1秒で消える。盤面をふさがない */
+  const now = performance.now();
+  marks = marks.filter(m => now - m.t < 1100);
+  for (const m of marks) {
+    const a = (now - m.t) / 1100;
+    ctx.save();
+    ctx.globalAlpha = Math.max(0, 1 - a * a);
+    ctx.translate(m.x, m.y - R0 * (.9 + a * 1.5));
+    ctx.font = `1000 ${Math.round(R0 * .52)}px "M PLUS Rounded 1c",system-ui,sans-serif`;
+    ctx.textAlign = "center"; ctx.textBaseline = "middle";
+    ctx.lineWidth = Math.max(3, R0 * .16); ctx.strokeStyle = "#12101b"; ctx.lineJoin = "round";
+    ctx.strokeText("NEW!", 0, 0);
+    ctx.fillStyle = "#ffd34d"; ctx.fillText("NEW!", 0, 0);
+    ctx.restore();
+  }
+}
+function loop(now) {
+  const dt = now - lastT; lastT = now;
+  physics(dt); refill(now); draw();
+  requestAnimationFrame(loop);
+}
+
+/* ---------- なぞる ---------- */
+/* 指がなぞったボールは、離れていてもつなぐ。物理の山はすきまだらけで、
+   接触判定にすると「見た目は隣なのにつながらない」が必ず起きるため。
+   途中のボールは指が通れば必ず拾われるので、飛び越しはできない。 */
+const reachable = (a, b) => Math.hypot(a.x - b.x, a.y - b.y) <= a.r + b.r + R0 * 1.7;
+/* ヒントが出す経路は、指をまっすぐ滑らせても途中のボールを巻き込まない
+   ── すぐ隣どうし ── に限る。プレイヤー自身にはこの縛りはない。 */
+const sideBySide = (a, b) => Math.hypot(a.x - b.x, a.y - b.y) <= a.r + b.r + R0 * 0.5;
+const chainLetters = () => chain.map(b => b.letters).join("");
+function chainHit() {
+  if (chain.length < 2) return null;
+  const l = chainLetters();
+  if (l.length < MINLEN || l.length > maxLen()) return null;
+  return BYSIG.get(sortSig(l)) || null;      // 身近な順の配列
+}
+/* 同じ文字の組に複数の語があるとき、どれを出すかを確率で決める。
+   身近な語ほど出やすく(重み 1/(順位+1))、レアな語もときどき出る。
+   いちばん身近な語だけを出す作りだと、cat / on / form / 漢字 のように
+   「絶対に出てこない語」ができてしまう(英5.8% 日24.9%)。
+   1回の遊びのあいだは同じ組に同じ答えを返す(なぞっている最中に揺れないため)。 */
+const sigPick = new Map();
+function pickFrom(arr) {
+  if (!arr || !arr.length) return null;
+  if (arr.length === 1) return arr[0];
+  const key = arr[0];
+  const had = sigPick.get(key);
+  if (had) return had;
+  let total = 0;
+  for (let i = 0; i < arr.length; i++) total += 1 / (i + 1);
+  let x = Math.random() * total, hit = arr[0];
+  for (let i = 0; i < arr.length; i++) { x -= 1 / (i + 1); if (x <= 0) { hit = arr[i]; break; } }
+  sigPick.set(key, hit);
+  return hit;
+}
+const chainWord = () => pickFrom(chainHit());
+
+/* レア度。辞書の順位を5段階にする(このプロジェクトの★5段階と同じ言いかた) */
+function starOf(e) {
+  if (!e || e.rank == null || !DICT.length) return 0;
+  const f = e.rank / DICT.length;
+  return f < .06 ? 1 : f < .18 ? 2 : f < .36 ? 3 : f < .60 ? 4 : 5;
+}
+const starText = e => { const n = starOf(e); return n ? "★".repeat(n) + "☆".repeat(5 - n) + " " + t().stars[n - 1] : ""; };
+function ballAt(x, y) {
+  let best = null, bd = Infinity;
+  for (const b of bodies) {
+    const d = Math.hypot(x - b.x, y - b.y);
+    if (d <= b.r * .92 && d < bd) { bd = d; best = b; }
+  }
+  return best;
+}
+function paintRead() {
+  const read = $("#read");
+  if (!chain.length) { read.classList.remove("on", "ok"); return; }
+  const letters = chainLetters(), w = chainWord();
+  read.classList.add("on"); read.classList.toggle("ok", !!w);
+  const art = $("#readArt"); art.innerHTML = "";
+  const reveal = w;
+  $("#readWord").textContent = reveal ? dispOf(reveal) : upper(letters).split("").join(" ");
+  $("#readMean").textContent = reveal ? [subOf(reveal), glossOf(reveal)].filter(Boolean).join(" ／ ") : "";
+  if (reveal && artOf(reveal)) {
+    const im = new Image(); im.src = ART_BASE + artOf(reveal) + ".png"; im.onerror = () => im.remove(); art.appendChild(im);
+  }
+  const others = reveal ? (chainHit() || []).filter(x => x !== reveal).slice(0, 2) : [];
+  $("#readAlt").textContent = reveal
+    ? [starText(reveal), others.length ? (lang === "ja" ? "ほかに " : "also ") + others.map(dispOf).join(" ") : ""]
+        .filter(Boolean).join(" ・ ")
+    : "";
+  $("#readPt").textContent = reveal ? "+" + (reveal.w.length * reveal.w.length * 10).toLocaleString() : "";
+}
+function extend(b) {
+  if (!b || !running) return;
+  const at = chain.indexOf(b);
+  if (at >= 0) { if (at === chain.length - 2) { chain.pop(); paintRead(); } return; }
+  const last = chain[chain.length - 1];
+  if (last) {
+    if (chain.length >= MAXBALLS) return;
+    if (chainLetters().length + b.len > maxLen()) return;
+  }
+  chain.push(b); paintRead();
+}
+function pointIn(ev) { const r = cv.getBoundingClientRect(); return { x: (ev.clientX - r.left) * W / r.width, y: (ev.clientY - r.top) * H / r.height }; }
+let lastPt = null;
+cv.addEventListener("pointerdown", ev => {
+  if (!running) return;
+  ev.preventDefault(); cv.setPointerCapture(ev.pointerId); startClock();
+  chain = []; lastPt = pointIn(ev); extend(ballAt(lastPt.x, lastPt.y));
+});
+cv.addEventListener("pointermove", ev => {
+  if (!chain.length || !lastPt) return;
+  const p = pointIn(ev), dx = p.x - lastPt.x, dy = p.y - lastPt.y;
+  const steps = Math.max(1, Math.ceil(Math.hypot(dx, dy) / (R0 * .35)));
+  for (let k = 1; k <= steps; k++) extend(ballAt(lastPt.x + dx * k / steps, lastPt.y + dy * k / steps));
+  lastPt = p;
+});
+function endTrace() {
+  lastPt = null;
+  if (!chain.length) return;
+  const picked = chain.slice(), letters = chainLetters(), w = chainWord();
+  chain = []; paintRead();
+  if (!w) {
+    if (picked.length < 2) setLog(t().needTwo);
+    else if (letters.length < MINLEN) setLog(t().tooShort(letters.length));
+    else setLog(t().notWord(upper(letters)));
+    return;
+  }
+  collapse(picked, w);
+}
+cv.addEventListener("pointerup", endTrace);
+cv.addEventListener("pointercancel", () => { chain = []; lastPt = null; paintRead(); });
+
+/* ---------- 潰す ---------- */
+function collapse(picked, ent) {
+  const word = ent.w;
+  const dst = picked[picked.length - 1];
+  const grew = picked.reduce((a, b) => b.len > a.len ? b : a, picked[0]);
+  const set = new Set(picked);
+  for (const b of picked) for (let i = 0; i < 5; i++)
+    sparks.push({ x: b.x, y: b.y, vx: (Math.random() - .5) * 260, vy: (Math.random() - .8) * 220, life: 1, color: b.color });
+  bodies = bodies.filter(b => !set.has(b));
+  glow = new Set(); glowUntil = 0; hintList = []; hintIdx = -1; hintKey = "";
+
+  speak(word);
+  const id = idOf(ent), isNew = !collected.has(id);
+  if (isNew) { collected.add(id); newCount++; saveDex(); paintDex(true); marks.push({ x: dst.x, y: dst.y, t: performance.now() }); }
+  const pts = word.length * word.length * 10;
+  score += pts; madeWords.push(ent);
+  setLog((isNew ? "NEW! " : "") + (grew.isWord ? t().grew(dispOf(grew.ent), dispOf(ent)) : `${dispOf(ent)} +${pts.toLocaleString()}`),
+         [subOf(ent), glossOf(ent), starText(ent)].filter(Boolean).join(" ／ "));
+  if (word.length >= maxLen()) {
+    score += word.length * word.length * 50;
+    setLog((isNew ? "NEW! " : "") + t().perfect(dispOf(ent)));
+  } else {
+    const nb = addBall(word, true, dst.x, dst.y, ent);
+    nb.vy = -80; nb.vx = dst.vx * .3;
+  }
+  paintStats();
+}
+
+/* ---------- ずかん(いちど作った語をおぼえておく) ----------
+   はじめて作った語には NEW! を出す。演出は画面の邪魔にならないところ ──
+   フッタの「ずかん」カウンタと、玉のすぐ上に1秒だけ浮かぶ小さな札 ── で行う。 */
+let collected = new Set(), dexTimer = 0, saveTimer = 0;
+const dexKey = () => "wordrop.dex." + dictMode;
+const idOf = e => dictMode === "ja" ? e.w + "|" + e.s : e.w;
+function loadDex() {
+  collected = new Set();
+  try {
+    const raw = localStorage.getItem(dexKey());
+    if (raw) for (const x of raw.split("\n")) if (x) collected.add(x);
+  } catch (_) {}
+  paintDex(false);
+}
+function saveDex() {
+  clearTimeout(saveTimer);
+  saveTimer = setTimeout(() => {
+    try { localStorage.setItem(dexKey(), [...collected].join("\n")); } catch (_) {}
+  }, 1200);
+}
+function paintDex(flash) {
+  $("#dexN").textContent = collected.size.toLocaleString();
+  if (!flash) return;
+  const el = $("#dex");
+  el.classList.add("pop");
+  clearTimeout(dexTimer);
+  dexTimer = setTimeout(() => el.classList.remove("pop"), 420);
+}
+
+/* ---------- 読み上げ ----------
+   合体して単語ができたら、その語を英語で読み上げる。綴りと音を結びつける
+   ところがこのゲームの学習価値なので、既定で入。🔊 ボタンで切れる。 */
+let speakOn = true, enVoice = null;
+try { speakOn = localStorage.getItem("wordrop.mute") !== "1"; } catch (_) {}
+function pickVoice() {
+  if (!window.speechSynthesis) return;
+  const vs = speechSynthesis.getVoices() || [];
+  const pick = pre => vs.find(v => pre.test(v.lang) && /google|natural|samantha|siri|kyoko/i.test(v.name))
+                   || vs.find(v => pre.test(v.lang)) || null;
+  enVoice = { en: pick(/^en[-_]?/i), ja: pick(/^ja/i) };
+}
+if (window.speechSynthesis) {
+  pickVoice();
+  try { speechSynthesis.addEventListener("voiceschanged", pickVoice); } catch (_) {}
+}
+function speak(word) {
+  if (!speakOn || !window.speechSynthesis) return;
+  try {
+    speechSynthesis.cancel();               // 連鎖で読み上げが溜まらないように
+    /* 日本語は漢字ではなく「よみ」を読ませる。漢字だと読みが揺れるため */
+    const u = new SpeechSynthesisUtterance(word);
+    u.lang = D().speak; u.rate = .9; u.pitch = 1; u.volume = 1;
+    /* 声の指定だけは別に囲う。ここで転ぶと読み上げごと黙って死ぬので、
+       声が使えなければ既定の声のまま読ませる */
+    const v = enVoice && enVoice[dictMode];
+    if (v) { try { u.voice = v; } catch (_) {} }
+    speechSynthesis.speak(u);
+  } catch (_) {}
+}
+function paintSound() { $("#btnSound").textContent = speakOn ? "🔊" : "🔇"; }
+$("#btnSound").onclick = () => {
+  speakOn = !speakOn;
+  try { localStorage.setItem("wordrop.mute", speakOn ? "0" : "1"); } catch (_) {}
+  if (!speakOn && window.speechSynthesis) { try { speechSynthesis.cancel(); } catch (_) {} }
+  paintSound();
+};
+
+/* ---------- 確認用のヒント ----------
+   開発の確認用。いま盤面でつながる組を、長さごとに1件ずつ集める。
+   タップするたびに 短い語 → 長い語 へ切り替わり、その組が光る。
+   どの長さの語まで作れる盤面なのかを一目で確かめられる。            */
+function collectChains() {
+  const list = bodies.slice();
+  for (let i = list.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [list[i], list[j]] = [list[j], list[i]]; }
+  const nbr = new Map();
+  for (const a of list) nbr.set(a, list.filter(b => b !== a && sideBySide(a, b)));
+  const byLen = new Map();
+  let nodes = 0;
+  const path = [], seen = new Set();
+  const walk = (letters) => {
+    if (nodes++ > 400000) return true;
+    if (path.length >= 2 && letters.length >= MINLEN) {
+      const e = pickFrom(BYSIG.get(sortSig(letters)));
+      if (e && !byLen.has(e.w.length)) byLen.set(e.w.length, { balls: path.slice(), ent: e });
+    }
+    if (path.length >= MAXBALLS) return false;
+    const around = (nbr.get(path[path.length - 1]) || []).slice();
+    for (let i = around.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [around[i], around[j]] = [around[j], around[i]]; }
+    for (const b of around) {
+      if (seen.has(b) || letters.length + b.len > maxLen()) continue;
+      path.push(b); seen.add(b);
+      const stop = walk(letters + b.letters);
+      path.pop(); seen.delete(b);
+      if (stop) return true;
+    }
+    return false;
+  };
+  for (const st of list) {
+    path.length = 0; seen.clear(); path.push(st); seen.add(st);
+    if (walk(st.letters)) break;
+  }
+  return [...byLen.values()].sort((a, b) => a.ent.w.length - b.ent.w.length);
+}
+const findChain = () => { const a = collectChains(); return a.length ? a[a.length - 1] : null; };
+
+function doFind() {
+  if (!running) return;
+  /* 集め直すのは合体したときだけ。補充でボールが増えるたびに集め直すと
+     番号が毎回1に戻ってしまう。持っている組のボールが盤から消えていたときも集め直す */
+  const key = String(madeWords.length);
+  const alive = hintList.length && hintList.every(h => h.balls.every(b => bodies.includes(b)));
+  if (key !== hintKey || !alive) { hintKey = key; hintList = collectChains(); hintIdx = -1; }
+  if (!hintList.length) { setLog(t().findNone); return; }
+  hintIdx = (hintIdx + 1) % hintList.length;       // 短い語から順に、押すたび長い語へ
+  const hit = hintList[hintIdx];
+  glow = new Set(hit.balls);
+  glowUntil = performance.now() + 4000;
+  setLog(t().hintPick(hintIdx + 1, hintList.length, hit.ent.w.length, dispOf(hit.ent)),
+         hit.balls.map(b => b.isWord ? dispOf(b.ent) : upper(b.letters)).join(" ＋ "));
+}
+function paintFind() { $("#btnFind").textContent = t().find; $("#btnFind").disabled = false; }
+
+/* ---------- 表示 / 進行 ---------- */
+function paintStats() {
+  const longest = madeWords.reduce((a, b) => (!a || b.w.length > a.w.length) ? b : a, null);
+  $("#statLong").textContent = longest ? String(longest.w.length) : "–";
+  $("#statScore").textContent = score.toLocaleString();
+  if (mode === "daily") {
+    $("#statTime").textContent = `${Math.floor(timeLeft / 60)}:${String(timeLeft % 60).padStart(2, "0")}`;
+    $("#timeBox").classList.toggle("warn", timeLeft <= 30);
+  } else { $("#statTime").textContent = "∞"; $("#timeBox").classList.remove("warn"); }
+}
+function setLog(main, sub) { $("#logMain").textContent = main; if (sub !== undefined) $("#logSub").textContent = sub; }
+function startClock() {
+  if (started) return;
+  started = true;
+  if (mode !== "daily") return;
+  timer = setInterval(() => {
+    timeLeft--; paintStats();
+    if (timeLeft <= 0) { clearInterval(timer); endGame(t().endTime); }
+  }, 1000);
+}
+function startGame(m) {
+  mode = m; clearInterval(timer);
+  if (window.speechSynthesis) { try { speechSynthesis.cancel(); } catch (_) {} }
+  running = true; started = false;
+  score = 0; madeWords = []; chain = []; timeLeft = DAILY_SEC; glow = new Set(); glowUntil = 0; hintList = []; hintIdx = -1; hintKey = ""; sigPick.clear();
+  marks = []; newCount = 0; loadDex();
+  bodies = []; sparks = [];
+  rng = mode === "daily" ? mulberry32(hashSeed("wordrop-" + dictMode + "-" + dateKey())) : mulberry32((Math.random() * 4294967296) >>> 0);
+  spill = [];
+  fitStage();
+  /* 最初の山は、上から降らせずに積んだ状態から始める。
+     文字ボールだけでなく、すでに合体ずみの単語ボールもいくつか混ぜておく */
+  let y = H - R0 * 1.15;
+  while (areaOf() < W * H * FILL && y > R0 * 0.7) {   // 枠の外から積み始めない
+    let x = 4, rowMax = R0;
+    while (x < W - 10) {
+      const asWord = STARTER.length && rng() < STARTER_RATE;
+      const ent = asWord ? STARTER[Math.floor(rng() * STARTER.length)] : null;
+      const letters = ent ? ent.w : nextLetter();
+      const r = ent ? radiusOf(letters.length) : R0;
+      if (x + r * 2 > W - 4) break;
+      const b = addBall(letters, !!ent, x + r + (rng() - .5) * R0 * .18, y - (r - R0), ent);
+      b.pop = 0;                       // 開始時はふくらむ演出をしない
+      x += r * 2 + 2;
+      if (r > rowMax) rowMax = r;
+      if (areaOf() >= W * H * FILL) break;
+    }
+    y -= rowMax * 1.9;
+  }
+  $("#modeChip").textContent = mode === "daily" ? `${t().daily} #${puzzleNo()}` : t().free;
+  $("#overResult").classList.remove("on");
+  paintFind(); paintRead(); paintStats(); setLog(t().trace, "");
+}
+function endGame(reason) {
+  if (!running) return;
+  running = false; clearInterval(timer); chain = []; paintRead();
+  if (window.speechSynthesis) { try { speechSynthesis.cancel(); } catch (_) {} }
+  const longest = madeWords.reduce((a, b) => (!a || b.w.length > a.w.length) ? b : a, null);
+  $("#resTitle").textContent = reason;
+  $("#resLead").textContent = mode === "daily" ? t().resultLead(dateKey()) : t().freeLead;
+  const art = $("#resArt"); art.innerHTML = "";
+  if (longest && artOf(longest)) { const im = new Image(); im.src = ART_BASE + artOf(longest) + ".png"; im.onerror = () => im.remove(); art.appendChild(im); }
+  $("#resWord").textContent = longest ? dispOf(longest) : t().noWord;
+  $("#resMean").textContent = longest ? [subOf(longest), glossOf(longest), starText(longest)].filter(Boolean).join(" ／ ") : "";
+  $("#resTag").textContent = longest ? `${longest.w.length}${lang === "ja" ? "文字" : " letters"}` : "";
+  $("#resScore").textContent = score.toLocaleString();
+  $("#resWords").textContent = madeWords.length + (newCount ? ` (NEW ${newCount})` : "");
+  try { localStorage.setItem(dexKey(), [...collected].join("\n")); } catch (_) {}
+  $("#resList").innerHTML = [...madeWords].sort((a, b) => b.w.length - a.w.length || a.w.localeCompare(b.w))
+    .map(e => `<i>${dispOf(e)}</i>`).join("");
+  const rec = saveRecord(longest);
+  $("#resMini").textContent = mode !== "daily" ? `${t().best}: ${rec.best || "–"}`
+    : rec.replay ? t().practice : (rec.isBest ? t().newBest + " · " + t().tomorrow : t().tomorrow);
+  $("#resShare").textContent = shareText();
+  $("#overResult").classList.add("on");
+}
+function saveRecord(longest) {
+  let store = {};
+  try { store = JSON.parse(localStorage.getItem("wordrop") || "{}"); } catch (_) {}
+  const len = longest ? longest.w.length : 0;
+  const isBest = len > Number(store.bestLen || 0);
+  if (isBest) { store.bestLen = len; store.bestWord = dispOf(longest); }
+  let replay = false;
+  if (mode === "daily") {
+    store.days = store.days || {};
+    const dk = dictMode + ":" + dateKey();
+    if (store.days[dk]) replay = true;
+    else store.days[dk] = { s: score, w: dispOf(longest), n: madeWords.length };
+  }
+  try { localStorage.setItem("wordrop", JSON.stringify(store)); } catch (_) {}
+  return { isBest, replay, best: store.bestWord || "" };
+}
+function shareText() {
+  const top = [...madeWords].sort((a, b) => b.w.length - a.w.length).slice(0, 3);
+  const bars = top.map(e => (LEN_BLOCK[e.w.length] || "⬜").repeat(e.w.length) + " " + e.w.length);
+  const head = (mode === "daily" ? `WORDROP #${puzzleNo()}` : "WORDROP · free") + (dictMode === "ja" ? " 🇯🇵" : "");
+  const tail = lang === "ja" ? `${madeWords.length}語 / ${score.toLocaleString()}点`
+                             : `${madeWords.length} words / ${score.toLocaleString()} pts`;
+  return [head, ...bars, tail, SHARE_URL].join("\n");
+}
+async function doShare() {
+  const text = shareText();
+  try {
+    if (navigator.share) { await navigator.share({ text }); return; }
+    await navigator.clipboard.writeText(text);
+    $("#btnShare").textContent = t().copied;
+    setTimeout(() => { $("#btnShare").textContent = t().copy; }, 1400);
+  } catch (_) {}
+}
+function paintLang() {
+  document.documentElement.lang = lang;
+  const L = t();
+  $("#title").textContent = L.title;
+  $("#lbLong").textContent = L.long; $("#lbScore").textContent = L.score; $("#lbTime").textContent = L.time;
+  $("#lbResScore").textContent = L.score; $("#lbResWords").textContent = L.made;
+  $("#btnLang").textContent = L.langBtn; $("#btnHow").textContent = L.how;
+  $("#btnFree").textContent = L.freeBtn; $("#btnRetry").textContent = L.retry;
+  $("#btnAgain").textContent = L.again; $("#btnShare").textContent = L.copy;
+  $("#howTitle").textContent = L.how;
+  $("#howList").innerHTML = L.howList.map(s => `<li>${s}</li>`).join("");
+  $("#btnHowClose").textContent = lang === "ja" ? "はじめる" : "Start";
+  $("#modeChip").textContent = mode === "daily" ? `${L.daily} #${puzzleNo()}` : L.free;
+  paintDictState(); paintFind(); paintSound(); paintDict(); paintStats(); setLog(L.trace);
+  $("#startTitle").textContent = L.title;
+  $("#startLead").textContent = L.startLead(puzzleNo());
+  $("#pickEnT").textContent = L.pickEnT; $("#pickEnD").textContent = L.pickEnD;
+  $("#pickJaT").textContent = L.pickJaT; $("#pickJaD").textContent = L.pickJaD;
+  $("#startHow").textContent = L.how;
+  $("#dexL").textContent = L.dex;
+}
+$("#btnLang").onclick = () => { lang = lang === "ja" ? "en" : "ja"; paintLang(); };
+$("#btnHow").onclick = () => $("#overHow").classList.add("on");
+$("#btnHowClose").onclick = () => $("#overHow").classList.remove("on");
+$("#btnFree").onclick = () => startGame(mode === "daily" ? "free" : "daily");
+$("#btnRetry").onclick = () => startGame(mode);
+$("#btnAgain").onclick = () => startGame("free");
+$("#btnShare").onclick = doShare;
+$("#btnFind").onclick = doFind;
+function paintDict() {
+  $("#btnDict").textContent = D().chip;
+  $("#pickEn").classList.toggle("on", dictMode === "en");
+  $("#pickJa").classList.toggle("on", dictMode === "ja");
+}
+/* 開始前にどちらで遊ぶかを選ぶ */
+function startWith(next) {
+  $("#overStart").classList.remove("on");
+  const go = () => { startGame("daily"); paintLang(); firstTimeHow(); };
+  if (next === dictMode) go(); else loadDict(next, go);
+}
+function firstTimeHow() {
+  try {
+    if (!localStorage.getItem("wordrop.seen3")) {
+      $("#overHow").classList.add("on");
+      localStorage.setItem("wordrop.seen3", "1");
+    }
+  } catch (_) {}
+}
+$("#pickEn").onclick = () => startWith("en");
+$("#pickJa").onclick = () => startWith("ja");
+$("#startHow").onclick = () => $("#overHow").classList.add("on");
+$("#btnDict").onclick = () => {
+  loadDict(dictMode === "en" ? "ja" : "en", () => { startGame(mode); paintLang(); });
+};
+
+paintLang();
+loadDict(dictMode, () => { startGame("daily"); paintLang(); });
+requestAnimationFrame(n => { lastT = n; loop(n); });
+</script>
+</body>
+</html>

@@ -1,0 +1,6 @@
+﻿key,value,memo
+wild_base_h,140,箱庭キャラ画像1000pxあたりの表示高さpx(実寸比を維持)
+walk_speed,70,箱庭の歩行速度
+exp_capacity,8,遠征のもちこみ容量(固定)
+exp_wild_h,150,遠征中キャラの身長px
+battle_url,https://stalwart-bonbon-cc2871.netlify.app/,ボス戦プロトタイプURL

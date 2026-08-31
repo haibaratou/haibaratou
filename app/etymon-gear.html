@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>ことばを つけかえる</title>
+<style>
+:root{
+  --bg:#171f33; --bg2:#22304f; --panel:#2a3856; --panel2:#334365; --line:#48597f;
+  --fg:#f1f5ff; --dim:#a4b3d2; --gold:#f5c542; --up:#7cd98a; --down:#ef7f8f;
+  --c1:#ff8a5c; --c2:#5ab0e8; --c3:#7cd98a; --c4:#f2a444; --c5:#a88ee8; --c6:#ef7fbf;
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;height:100%;overflow:hidden}
+body{background:radial-gradient(130% 90% at 50% 0%,var(--bg2),var(--bg));color:var(--fg);
+  font-family:"Hiragino Maru Gothic ProN","Hiragino Sans","Noto Sans JP",system-ui,sans-serif;
+  font-size:15px;user-select:none;display:flex;flex-direction:column}
+.top{flex:0 0 auto;display:flex;align-items:center;gap:9px;padding:8px 12px;
+  background:rgba(255,255,255,.06);border-bottom:2px solid var(--line)}
+.top h1{font-size:15px;margin:0}
+.top .r{margin-left:auto;font-size:12.5px;color:var(--dim)}
+.wrap{flex:1 1 auto;overflow-y:auto;padding:12px 11px 30px}
+.hide{display:none!important}
+h2{font-size:18px;margin:0 0 3px}.sub{color:var(--dim);font-size:12.5px;margin:0 0 12px}
+.big{background:var(--gold);border:0;border-radius:16px;padding:14px;width:100%;
+  font:inherit;font-size:17px;font-weight:700;color:#3a2b05;box-shadow:0 5px 0 #b8901c;cursor:pointer}
+.big:active{transform:translateY(4px);box-shadow:0 1px 0 #b8901c}
+.big.ghost{background:transparent;color:var(--fg);border:2px solid var(--line);box-shadow:none}
+
+/* えらぶ */
+.pool{display:grid;grid-template-columns:repeat(auto-fill,minmax(80px,1fr));gap:7px}
+.pk{background:var(--panel);border:3px solid var(--line);border-radius:14px;padding:5px 3px 6px;
+  text-align:center;cursor:pointer}
+.pk:active{transform:scale(.95)}
+.pk img{width:100%;height:58px;object-fit:contain}
+.pk .jp{font-size:11.5px;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+
+/* キャラ + そうび */
+.hero{display:flex;gap:11px;align-items:center;background:var(--panel);border:3px solid var(--hc);
+  border-radius:18px;padding:10px 12px;margin-bottom:12px}
+.hero img{width:74px;height:74px;object-fit:contain}
+.hero .nm{font-size:17px;font-weight:700}
+.hero .pie{font-size:11px;color:var(--dim);font-family:ui-monospace,monospace}
+.hero .tot{margin-left:auto;text-align:right}
+.hero .tot b{font-size:27px;color:var(--gold);line-height:1}
+.hero .tot span{font-size:11px;color:var(--dim);display:block}
+
+.bars{margin-bottom:12px}
+.bar{display:flex;align-items:center;gap:8px;margin-bottom:4px;font-size:12.5px}
+.bar i{font-style:normal;width:54px;color:var(--dim)}
+.bar u{text-decoration:none;height:12px;border-radius:6px;display:block;transition:.3s}
+.bar b{font-size:12.5px;width:26px;text-align:right;font-variant-numeric:tabular-nums}
+.bar em{font-style:normal;font-size:11.5px;width:34px}
+.bar em.up{color:var(--up)} .bar em.down{color:var(--down)}
+
+.slots{display:grid;grid-template-columns:1fr 1fr 1fr;gap:7px;margin-bottom:14px}
+.sl{background:var(--panel);border:2px dashed var(--line);border-radius:14px;padding:8px 5px;
+  text-align:center;min-height:78px;display:flex;flex-direction:column;justify-content:center}
+.sl.on{border-style:solid;border-color:var(--sc)}
+.sl .w{font-size:13.5px;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.sl .j{font-size:10.5px;color:var(--dim);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.sl .c{font-size:10px;color:var(--sc);margin-top:2px}
+.sl .e{font-size:11px;color:var(--dim)}
+
+/* ドロップ */
+.drop{background:var(--panel2);border:3px solid var(--gold);border-radius:18px;padding:13px;margin-bottom:12px}
+.drop .hd{font-size:12px;color:var(--gold);margin-bottom:6px}
+.dw{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap}
+.dw b{font-size:23px}.dw i{font-style:normal;font-size:13px;color:var(--dim)}
+.dw .cat{font-size:11px;border:1px solid var(--line);border-radius:999px;padding:1px 9px}
+.dw .rare{font-size:11px;color:var(--gold);margin-left:auto}
+.dnote{font-size:11.5px;color:var(--dim);margin-top:6px;line-height:1.5}
+.cmp{display:grid;grid-template-columns:1fr 1fr 1fr;gap:7px;margin-top:10px}
+.cmp button{font:inherit;font-size:12.5px;padding:9px 4px;border-radius:12px;border:2px solid var(--line);
+  background:var(--panel);color:var(--fg);cursor:pointer;line-height:1.3}
+.cmp button.better{border-color:var(--up);color:var(--up)}
+.cmp button.worse{opacity:.55}
+.cmp button small{display:block;font-size:10.5px;color:var(--dim)}
+
+.log{font-size:12.5px;color:var(--dim);margin-top:10px}
+.log div{padding:3px 0;border-top:1px solid var(--line)}
+.log b{color:var(--fg)}
+</style>
+</head>
+<body>
+<div class="top"><h1>ことばを つけかえる</h1><div class="r" id="rn"></div></div>
+<div class="wrap">
+
+<section id="sel">
+  <h2>だれに ことばを もたせる?</h2>
+  <p class="sub">えらんだ子の一族の ことばは、そうびすると つよさが 1.5ばいに なります。</p>
+  <div class="pool" id="pool"></div>
+</section>
+
+<section id="main" class="hide">
+  <div class="hero" id="hero"></div>
+  <div class="bars" id="bars"></div>
+  <div class="slots" id="slots"></div>
+  <div id="dropBox"></div>
+  <button class="big" id="find">ことばを さがす</button>
+  <div class="log" id="log"></div>
+  <button class="big ghost" id="back" style="margin-top:14px">べつの子にする</button>
+</section>
+
+</div>
+
+<script id="statdata" type="application/json">{"words":[],"etymons":{},"stats":[]}</script>
+<script>
+const A='../assets/', $=s=>document.querySelector(s);
+let D=JSON.parse(document.getElementById('statdata').textContent);
+let WORDS=D.words||[], ETY=D.etymons||{}, ST=D.stats||[];
+const COL=['var(--c1)','var(--c2)','var(--c3)','var(--c4)','var(--c5)','var(--c6)'];
+let hero=null, slots=[null,null,null], drop=null, found=0, log=[];
+
+/* 一族が合っていれば1.5ばい。ポケモンのタイプ一致と同じ */
+const eff = w => w.st.map(v=>Math.round(v*(hero&&w.root===hero.key?1.5:1)));
+function total(){
+  const s=ST.map(()=>0);
+  slots.forEach(w=>{ if(w) eff(w).forEach((v,i)=>s[i]+=v); });
+  return s;
+}
+
+function showSel(){
+  $('#sel').classList.remove('hide'); $('#main').classList.add('hide');
+  const ks=Object.keys(ETY);
+  $('#pool').innerHTML=ks.map(k=>`<div class="pk" data-k="${k}">
+    <img src="${A+'chara/'+ETY[k].img}" alt=""><div class="jp">${ETY[k].jp}</div></div>`).join('');
+}
+$('#pool').addEventListener('click',ev=>{
+  const el=ev.target.closest('.pk'); if(!el)return;
+  const k=el.dataset.k;
+  hero={key:k,...ETY[k]}; slots=[null,null,null]; drop=null; found=0; log=[];
+  $('#sel').classList.add('hide'); $('#main').classList.remove('hide');
+  render();
+});
+$('#back').addEventListener('click',showSel);
+
+function render(){
+  const t=total(), sum=t.reduce((a,b)=>a+b,0);
+  $('#hero').style.setProperty('--hc',hero.color);
+  $('#hero').innerHTML=`<img src="${A+'chara/'+hero.img}" alt="">
+    <div><div class="nm">${hero.jp}</div><div class="pie">*${hero.key}</div></div>
+    <div class="tot"><b>${sum}</b><span>そうび計</span></div>`;
+  const mx=Math.max(12,...t);
+  $('#bars').innerHTML=ST.map((s,i)=>{
+    const nv=drop?preview(i):null;
+    const d=nv==null?null:nv-t[i];
+    return `<div class="bar"><i>${s}</i>
+      <u style="width:${Math.round(t[i]/mx*100)}%;background:${COL[i]}"></u>
+      <b>${t[i]}</b>
+      <em class="${d>0?'up':d<0?'down':''}">${d?(d>0?'+'+d:d):''}</em></div>`;
+  }).join('');
+  $('#slots').innerHTML=slots.map((w,i)=>w
+    ? `<div class="sl on" style="--sc:${ETY[w.root]?ETY[w.root].color:'var(--line)'}">
+        <div class="w">${w.w}</div><div class="j">${w.ja||''}</div>
+        <div class="c">${w.cat}</div>
+        <div class="e">計${eff(w).reduce((a,b)=>a+b,0)}${w.root===hero.key?' ★':''}</div></div>`
+    : `<div class="sl"><div class="e">あき</div></div>`).join('');
+  $('#dropBox').innerHTML = drop ? dropHTML() : '';
+  $('#rn').textContent=`みつけた ${found}`;
+  $('#log').innerHTML=log.slice(0,6).map(x=>`<div>${x}</div>`).join('');
+}
+/* この枠に入れ替えたら i番目の数値がいくつになるか(いま選んでいる枠は最良の枠) */
+let aimSlot=0;
+function preview(i){
+  const s=total()[i];
+  const old=slots[aimSlot]?eff(slots[aimSlot])[i]:0;
+  return s-old+eff(drop)[i];
+}
+function dropHTML(){
+  const de=eff(drop), dsum=de.reduce((a,b)=>a+b,0);
+  return `<div class="drop">
+    <div class="hd">みつけた ことば</div>
+    <div class="dw"><b>${drop.w}</b><i>${drop.ja||''}</i>
+      <span class="cat">${drop.cat}</span>
+      <span class="rare">めずらしさ ${'★'.repeat(Math.max(1,Math.round(drop.rare/2)))}</span></div>
+    <div class="dnote">${ST.map((s,i)=>de[i]?`${s}${de[i]}`:'').filter(Boolean).join(' ／ ')}
+      ${drop.root===hero.key?`<br><span style="color:var(--gold)">${hero.jp}の子 ── 1.5ばい</span>`:''}
+      ${drop.b?`<br>${drop.b}`:''}</div>
+    <div class="cmp">${[0,1,2].map(i=>{
+      const cur=slots[i], cs=cur?eff(cur).reduce((a,b)=>a+b,0):0;
+      const cls=dsum>cs?'better':dsum<cs?'worse':'';
+      return `<button data-s="${i}" class="${cls}">${cur?cur.w:'あき'}
+        <small>${cur?`計${cs} → ${dsum}`:`→ 計${dsum}`}</small></button>`;
+    }).join('')}</div></div>`;
+}
+$('#dropBox').addEventListener('click',ev=>{
+  const b=ev.target.closest('button[data-s]'); if(!b)return;
+  const i=+b.dataset.s, old=slots[i];
+  slots[i]=drop;
+  log.unshift(`<b>${drop.w}</b>(${drop.ja}) を ${old?`<b>${old.w}</b> と入れかえた`:'そうびした'}`);
+  drop=null; render();
+});
+/* めずらしさ別の引き出し。データは珍語のほうが圧倒的に多いので、
+   ただ乱数で選ぶと知らない語ばかり出る。先に「めずらしさ」を決めてから引く */
+let BYRARE={};
+function buildRare(){
+  BYRARE={};
+  WORDS.forEach(w=>(BYRARE[w.rare]??=[]).push(w));
+}
+$('#find').addEventListener('click',()=>{
+  const ks=Object.keys(BYRARE).map(Number).sort((a,b)=>a-b);
+  for(let n=0;n<60;n++){
+    // 小さい めずらしさ ほど出やすい(2.4乗で手前に寄せる)
+    const t=ks[Math.min(ks.length-1,Math.floor(Math.pow(Math.random(),2.4)*ks.length))];
+    const pool=BYRARE[t]; if(!pool||!pool.length) continue;
+    const w=pool[Math.floor(Math.random()*pool.length)];
+    if(slots.some(s=>s&&s.w===w.w&&s.ja===w.ja)) continue;
+    drop=w; found++;
+    // いちばん弱い枠を狙い先にしておく
+    let lo=0,lv=1e9;
+    slots.forEach((s,i)=>{const v=s?eff(s).reduce((a,b)=>a+b,0):0; if(v<lv){lv=v;lo=i;}});
+    aimSlot=lo;
+    render(); return;
+  }
+});
+
+(async()=>{
+  if(location.protocol!=='file:'){
+    try{ const r=await fetch('data/pie/word_stats.json');
+      if(r.ok){ const j=await r.json(); if(j.words&&j.words.length){WORDS=j.words;ETY=j.etymons;ST=j.stats;} } }catch(e){}
+  }
+  if(!WORDS.length){ $('#sel').innerHTML='<h2>データがありません</h2>'
+    +'<p class="sub">python3 app/build_word_stats.py を実行してください。</p>'; return; }
+  buildRare(); showSel();
+})();
+</script>
+</body>
+</html>

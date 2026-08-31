@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>エティモン ずかん</title>
+<style>
+:root{
+  --bg:#1a2438; --bg2:#243252; --panel:#2c3a5c; --line:#46577f;
+  --fg:#f2f6ff; --dim:#a3b2d1; --gold:#f5c542; --pop:#ff8a5c;
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;height:100%;overflow:hidden}
+body{background:radial-gradient(130% 90% at 50% 0%,var(--bg2),var(--bg));color:var(--fg);
+  font-family:"Hiragino Maru Gothic ProN","Hiragino Sans","Noto Sans JP",system-ui,sans-serif;
+  font-size:15px;user-select:none;display:flex;flex-direction:column}
+
+.top{flex:0 0 auto;display:flex;align-items:center;gap:10px;padding:9px 13px;
+  background:rgba(255,255,255,.06);border-bottom:2px solid var(--line)}
+.top h1{font-size:16px;margin:0;letter-spacing:1px}
+.top .n{margin-left:auto;font-size:14px;font-weight:700}
+.top .n b{font-size:21px;color:var(--gold)}
+.tab{border:2px solid var(--line);background:transparent;color:var(--fg);border-radius:12px;
+  padding:5px 13px;font:inherit;font-size:13px;cursor:pointer}
+.tab.on{background:var(--gold);color:#3a2b05;border-color:var(--gold);font-weight:700}
+
+.wrap{flex:1 1 auto;overflow-y:auto;padding:14px 12px 90px}
+.hide{display:none!important}
+
+/* ---- さがす ---- */
+#find{text-align:center}
+.stage{min-height:46vh;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px}
+.stage img{width:min(66vw,300px);filter:drop-shadow(0 8px 14px rgba(0,0,0,.5))}
+.stage img.pop{animation:jump .55s cubic-bezier(.2,1.5,.4,1)}
+@keyframes jump{0%{transform:translateY(60px) scale(.6);opacity:0}100%{transform:none;opacity:1}}
+.stage .jp{font-size:27px;font-weight:700;line-height:1.15;text-wrap:balance}
+.stage .pie{font-size:13px;color:var(--dim);font-family:ui-monospace,monospace}
+.stage .empty{color:var(--dim);font-size:14px;line-height:2}
+.big{background:var(--gold);border:0;border-radius:20px;padding:16px 34px;
+  font:inherit;font-size:19px;font-weight:700;color:#3a2b05;box-shadow:0 6px 0 #b8901c;
+  cursor:pointer;margin-top:10px}
+.big:active{transform:translateY(5px);box-shadow:0 1px 0 #b8901c}
+.big.ghost{background:transparent;color:var(--fg);border:2px solid var(--line);box-shadow:none}
+
+/* ---- その子たち ---- */
+.kids{display:grid;grid-template-columns:repeat(auto-fill,minmax(84px,1fr));gap:8px;margin-top:14px}
+.kid{background:var(--panel);border:2px solid var(--kc,var(--line));border-radius:14px;
+  padding:6px 4px 5px;text-align:center}
+.kid img{width:100%;height:52px;object-fit:contain}
+.kid .w{font-size:12.5px;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.kid .j{font-size:10.5px;color:var(--dim);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+
+/* ---- ずかん ---- */
+.dex{display:grid;grid-template-columns:repeat(auto-fill,minmax(96px,1fr));gap:9px}
+.dx{background:var(--panel);border:3px solid var(--line);border-radius:16px;padding:7px 4px 8px;
+  text-align:center;cursor:pointer;transition:.13s}
+.dx:active{transform:scale(.95)}
+.dx.got{border-color:var(--dc)}
+.dx img{width:100%;height:74px;object-fit:contain}
+.dx.no img{filter:brightness(0) opacity(.42)}
+.dx .jp{font-size:12.5px;font-weight:700;margin-top:3px;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.dx.no .jp{color:var(--dim)}
+.dx .num{font-size:10px;color:var(--dim);font-family:ui-monospace,monospace}
+
+/* ---- 1体の詳細 ---- */
+#one{position:fixed;inset:0;z-index:40;background:rgba(10,16,30,.9);display:none;
+  overflow-y:auto;padding:18px 14px 30px}
+#one.on{display:block}
+#one .card{max-width:520px;margin:0 auto;text-align:center}
+#one .card>img{width:min(60vw,260px);filter:drop-shadow(0 8px 14px rgba(0,0,0,.5))}
+#one .jp{font-size:26px;font-weight:700;margin-top:4px}
+#one .pie{font-size:13px;color:var(--dim);font-family:ui-monospace,monospace}
+#one .note{font-size:13.5px;color:var(--dim);line-height:1.75;margin:10px 0 2px;text-align:left}
+#one .cnt{font-size:12.5px;color:var(--gold);margin-top:10px}
+</style>
+</head>
+<body>
+
+<div class="top">
+  <h1>エティモン ずかん</h1>
+  <button class="tab on" id="tFind">さがす</button>
+  <button class="tab" id="tDex">ずかん</button>
+  <div class="n"><b id="nGot">0</b>/<span id="nAll">0</span></div>
+</div>
+
+<div class="wrap">
+  <section id="find">
+    <div class="stage" id="stage">
+      <div class="empty">ボタンを おすと<br>ことばの もとの子が やってくる</div>
+    </div>
+    <button class="big" id="go">さがしにいく</button>
+    <div class="kids" id="kids"></div>
+  </section>
+
+  <section id="dex" class="hide"><div class="dex" id="dexList"></div></section>
+</div>
+
+<div id="one"><div class="card">
+  <img id="oImg" alt="">
+  <div class="jp" id="oJp"></div>
+  <div class="pie" id="oPie"></div>
+  <div class="note" id="oNote"></div>
+  <div class="cnt" id="oCnt"></div>
+  <div class="kids" id="oKids"></div>
+  <button class="big ghost" id="oClose" style="margin-top:18px">とじる</button>
+</div></div>
+
+<script id="etydata" type="application/json">{"etymons":[]}</script>
+<script>
+const A='../assets/', $=s=>document.querySelector(s);
+let E=(JSON.parse(document.getElementById('etydata').textContent).etymons)||[];
+let got=new Set(), cur=null;
+
+const chImg = c => A+'chara/'+c.img;
+const wImg  = w => A+'word/'+w+'.png';
+
+function kidsHTML(c){
+  return c.kids.map(k=>`<div class="kid" style="--kc:${c.color}">
+      <img src="${wImg(k.w)}" onerror="this.style.visibility='hidden'" alt="">
+      <div class="w">${k.w}</div><div class="j">${k.ja||'　'}</div></div>`).join('');
+}
+
+/* ---- さがす ---- */
+$('#go').addEventListener('click',()=>{
+  const yet=E.filter(c=>!got.has(c.key));
+  if(!yet.length){
+    $('#stage').innerHTML='<div class="empty">ぜんぶ そろいました!</div>';
+    $('#kids').innerHTML=''; return;
+  }
+  cur=yet[Math.floor(Math.random()*yet.length)];
+  got.add(cur.key);
+  $('#stage').innerHTML=`<img class="pop" src="${chImg(cur)}" alt="">
+    <div class="jp">${cur.jp}</div><div class="pie">*${cur.key}</div>`;
+  $('#kids').innerHTML=`<div style="grid-column:1/-1;color:var(--dim);font-size:13px;
+      text-align:left;margin-top:4px">この子から 生まれた 英単語 (ぜんぶで ${cur.all}こ)</div>`
+    + kidsHTML(cur);
+  $('#go').textContent='つぎを さがす';
+  $('#nGot').textContent=got.size;
+  renderDex();
+});
+
+/* ---- ずかん ---- */
+function renderDex(){
+  $('#dexList').innerHTML=E.map((c,i)=>{
+    const g=got.has(c.key);
+    return `<div class="dx ${g?'got':'no'}" data-i="${i}" style="--dc:${c.color}">
+      <img src="${chImg(c)}" alt="">
+      <div class="jp">${g?c.jp:'？？？'}</div>
+      <div class="num">No.${String(i+1).padStart(2,'0')}</div></div>`;
+  }).join('');
+}
+$('#dexList').addEventListener('click',ev=>{
+  const el=ev.target.closest('.dx'); if(!el||el.classList.contains('no'))return;
+  const c=E[+el.dataset.i];
+  $('#oImg').src=chImg(c); $('#oJp').textContent=c.jp; $('#oPie').textContent='*'+c.key;
+  $('#oNote').textContent=c.note||'';
+  $('#oCnt').textContent=`この子から 生まれた 英単語 ${c.all}こ`;
+  $('#oKids').innerHTML=kidsHTML(c);
+  $('#one').classList.add('on');
+});
+$('#oClose').addEventListener('click',()=>$('#one').classList.remove('on'));
+
+$('#tFind').addEventListener('click',()=>tab('find'));
+$('#tDex').addEventListener('click',()=>tab('dex'));
+function tab(w){
+  $('#find').classList.toggle('hide',w!=='find');
+  $('#dex').classList.toggle('hide',w!=='dex');
+  $('#tFind').classList.toggle('on',w==='find');
+  $('#tDex').classList.toggle('on',w==='dex');
+}
+
+(async()=>{
+  if(location.protocol!=='file:'){
+    try{ const r=await fetch('data/pie/etymon.json');
+      if(r.ok){ const j=await r.json(); if(j.etymons&&j.etymons.length)E=j.etymons; } }catch(e){}
+  }
+  if(!E.length){ $('#stage').innerHTML='<div class="empty">データがありません。<br>'
+    +'python3 app/build_etymon_data.py を実行してください。</div>'; return; }
+  $('#nAll').textContent=E.length;
+  renderDex();
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>エティモリンゴ 古代ことば図鑑</title>
+<style>
+:root{
+  --ink:#241f26;
+  --muted:#6f6673;
+  --paper:#fffdf8;
+  --card:#ffffff;
+  --accent:#ff5470;
+  --gold:#ffd23e;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{
+  min-height:100vh;
+  font-family:-apple-system,BlinkMacSystemFont,"Hiragino Sans","Yu Gothic",sans-serif;
+  color:var(--ink);
+  background:
+    radial-gradient(circle at 18% 12%, #ffd23e55 0 18%, transparent 19%),
+    radial-gradient(circle at 88% 8%, #ff547044 0 14%, transparent 15%),
+    linear-gradient(180deg,#fffdf8 0%,#fff3e2 100%);
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  padding:28px 18px;
+}
+main{
+  width:min(100%,520px);
+  background:var(--paper);
+  border:3px solid var(--ink);
+  border-radius:28px;
+  box-shadow:8px 8px 0 var(--ink);
+  padding:28px 20px 24px;
+}
+.badge{
+  display:inline-block;
+  background:var(--ink);
+  color:#fff;
+  font-weight:900;
+  font-size:13px;
+  letter-spacing:.06em;
+  border-radius:999px;
+  padding:6px 12px;
+  margin-bottom:16px;
+}
+h1{
+  font-size:clamp(30px,8vw,44px);
+  line-height:1.15;
+  letter-spacing:.02em;
+  margin-bottom:10px;
+}
+p{
+  color:var(--muted);
+  font-weight:700;
+  line-height:1.8;
+  margin-bottom:22px;
+}
+.links{display:grid;gap:14px}
+a{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:14px;
+  min-height:82px;
+  padding:18px 18px;
+  color:var(--ink);
+  text-decoration:none;
+  background:var(--card);
+  border:3px solid var(--ink);
+  border-radius:20px;
+  box-shadow:4px 4px 0 var(--ink);
+  transition:transform .12s,box-shadow .12s,background .12s;
+}
+a:active{
+  transform:translate(3px,3px);
+  box-shadow:1px 1px 0 var(--ink);
+}
+a:hover{background:#fff8d8}
+.title{font-size:20px;font-weight:900;line-height:1.25}
+.desc{display:block;margin-top:4px;color:var(--muted);font-size:13px;font-weight:700;line-height:1.45}
+.arrow{
+  flex:0 0 auto;
+  width:38px;height:38px;
+  border-radius:50%;
+  background:var(--gold);
+  border:2px solid var(--ink);
+  display:flex;align-items:center;justify-content:center;
+  font-weight:900;
+}
+@media (min-width:700px){
+  main{padding:34px 30px 30px}
+}
+</style>
+</head>
+<body>
+<main>
+  <span class="badge">ETYMO-LINGO</span>
+  <h1>エティモリンゴ<br>古代ことば図鑑</h1>
+  <p>すべて制作途中の開発データです。仕様を確かめるための試作で、
+    ゲームとして完成したものではありません。</p>
+  <nav class="links" aria-label="Prototype links">
+    <a href="etymopedia.html">
+      <span><span class="title">エティモペディア</span><span class="desc">英単語のはじまりを読む図鑑</span></span>
+      <span class="arrow">→</span>
+    </a>
+    <a href="etymon-explorer.html">
+      <span><span class="title">語源データベース</span><span class="desc">語根と英単語のデータ(開発用)</span></span>
+      <span class="arrow">→</span>
+    </a>
+    <a href="etymon-slash.html">
+      <span><span class="title">エティモン・スラッシュ</span><span class="desc">モンスターの下の英単語を、キーの上の字をなぞる か タップして書く</span></span>
+      <span class="arrow">→</span>
+    </a>
+    <a href="etymon-quest.html">
+      <span><span class="title">ワードフォール</span><span class="desc">落下する文字をつないで、雑魚戦または文章ボス戦に挑む</span></span>
+      <span class="arrow">→</span>
+    </a>
+    <a href="word-drop.html">
+      <span><span class="title">ワードドロップ</span><span class="desc">降り積もった文字のボールを指でなぞってつなぎ、順不同で単語に。鎖は1個の単語ボールに潰れて山が崩れ落ち、さらにつなぐともっと長い語へ育つ。英語モード(文字→英単語)と日本語モード(ひらがな→漢字の語)</span></span>
+      <span class="arrow">→</span>
+    </a>
+    <a href="word-suika.html">
+      <span><span class="title">ワードスイカ</span><span class="desc">文字を好きな位置へ落とし、順不同で英単語を合体させる物理ワードパズル</span></span>
+      <span class="arrow">→</span>
+    </a>
+    <a href="word-chain.html">
+      <span><span class="title">ひとつなぎ英単語</span><span class="desc">遮るボールのない直線を指でつなぎ、順不同の文字を英単語へ合成する</span></span>
+      <span class="arrow">→</span>
+    </a>
+    <a href="etymon-word-block-battle.html">
+      <span><span class="title">英単語スペリング遠征</span><span class="desc">3体のエティモンと遠征しながら、英単語のつづりを書く</span></span>
+      <span class="arrow">→</span>
+    </a>
+    <a href="lexicopia-hakoniwa_IP360.html">
+      <span><span class="title">エティモリンゴ箱庭</span><span class="desc">ことばの一族を育てる箱庭</span></span>
+      <span class="arrow">→</span>
+    </a>
+    <a href="mietara-yararel-boss.html">
+      <span><span class="title">ボス戦: 透明人間ミエタラヤラレール</span><span class="desc">英単語カードで戦う戦闘まわりの試作</span></span>
+      <span class="arrow">→</span>
+    </a>
+    <a href="etymon-word-forge.html">
+      <span><span class="title">ことば鍛成館</span><span class="desc">古代の概念を重ねて英単語カードをつくる試作</span></span>
+      <span class="arrow">→</span>
+    </a>
+    <a href="old/index-caplog-legacy.html">
+      <span><span class="title">Wild Wordopia(旧作)</span><span class="desc">カピバラGO型の元になった試作。アリスの国を90日ぶん進む</span></span>
+      <span class="arrow">→</span>
+    </a>
+  </nav>
+</main>
+</body>
+</html>

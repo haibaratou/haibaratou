@@ -1,0 +1,369 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>エティモリンゴ</title>
+<style>
+:root{
+  --bg:#fffdf7; --panel:#fff; --line:#e4dcc8; --line2:#cfc3a6;
+  --ink:#3a3226; --dim:#8a7d68;
+  --ok:#5fbf3c; --ok2:#4aa02c; --okbg:#eefbe6;
+  --ng:#e8604c; --ng2:#c44a38; --ngbg:#fdecea;
+  --acc:#f2a444; --acc2:#cf8323;
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;height:100%;overflow:hidden}
+body{background:var(--bg);color:var(--ink);
+  font-family:"Hiragino Maru Gothic ProN","Hiragino Sans","Noto Sans JP",system-ui,sans-serif;
+  font-size:16px;user-select:none;display:flex;flex-direction:column}
+.hide{display:none!important}
+button{font:inherit;cursor:pointer}
+
+/* ---- 上部 ---- */
+.hd{flex:0 0 auto;display:flex;align-items:center;gap:10px;padding:11px 14px}
+.x{border:0;background:transparent;color:var(--line2);font-size:26px;line-height:1;padding:0 4px}
+.prog{flex:1;height:14px;background:#eee6d4;border-radius:8px;overflow:hidden}
+.prog u{display:block;height:100%;background:var(--ok);border-radius:8px;transition:width .35s}
+.hearts{font-size:17px;letter-spacing:1px;color:var(--ng)}
+.streak{font-size:14px;font-weight:700;color:var(--acc)}
+
+.wrap{flex:1 1 auto;overflow-y:auto;padding:6px 16px 20px}
+
+/* ---- コース一覧 ---- */
+.cover{text-align:center;padding:12px 0 4px}
+.cover h1{font-size:27px;margin:6px 0 2px;letter-spacing:1px}
+.cover p{color:var(--dim);font-size:13.5px;margin:0 0 16px}
+.units{display:flex;flex-direction:column;gap:11px}
+.unit{display:flex;align-items:center;gap:12px;background:var(--panel);
+  border:3px solid var(--line);border-radius:18px;padding:11px 13px;text-align:left;width:100%}
+.unit:active{transform:translateY(2px)}
+.unit.done{border-color:var(--ok);background:var(--okbg)}
+.unit img{width:56px;height:56px;object-fit:contain;flex:0 0 auto}
+.unit .t{flex:1;min-width:0}
+.unit .t b{font-size:17px;display:block}
+.unit .t small{font-size:12.5px;color:var(--dim)}
+.unit .n{font-size:12px;color:var(--dim);white-space:nowrap}
+.unit .n b{color:var(--ok);font-size:15px}
+
+/* ---- 教える ---- */
+.teach{text-align:center;padding:14px 0}
+.teach img{width:min(46vw,180px)}
+.teach .root{font-size:15px;color:var(--dim);font-family:ui-monospace,monospace;margin-top:6px}
+.teach .mean{font-size:31px;font-weight:700;line-height:1.2;margin:2px 0 8px}
+.teach .note{font-size:14px;color:var(--dim);line-height:1.75;text-align:left;
+  background:var(--panel);border:3px solid var(--line);border-radius:16px;padding:12px 14px}
+.fam{display:flex;gap:7px;flex-wrap:wrap;justify-content:center;margin-top:12px}
+.fam span{background:#fff;border:2px solid var(--line);border-radius:999px;
+  padding:4px 12px;font-size:14px;font-weight:700}
+.fam span i{font-style:normal;font-weight:400;font-size:11.5px;color:var(--dim);margin-left:4px}
+
+/* ---- 問題 ---- */
+.qh{font-size:19px;font-weight:700;margin:8px 0 14px;line-height:1.4}
+.qh small{display:block;font-size:13px;color:var(--dim);font-weight:400;margin-top:3px}
+.stim{text-align:center;margin-bottom:16px}
+.stim img{width:min(40vw,150px);height:130px;object-fit:contain}
+.stim .w{font-size:34px;font-weight:700;letter-spacing:.5px;line-height:1.15}
+.stim .hint{display:inline-flex;align-items:center;gap:7px;margin-top:9px;background:#fff8e8;
+  border:2px solid var(--acc);border-radius:999px;padding:4px 14px 4px 5px;font-size:13.5px}
+.stim .hint img{width:30px;height:30px}
+.opts{display:flex;flex-direction:column;gap:9px}
+.opt{background:var(--panel);border:3px solid var(--line);border-bottom-width:5px;
+  border-radius:15px;padding:14px;text-align:left;font-size:17px}
+.opt:active{transform:translateY(2px);border-bottom-width:3px}
+.opt.sel{border-color:var(--acc);background:#fff8e8}
+.opt.right{border-color:var(--ok);background:var(--okbg)}
+.opt.wrong{border-color:var(--ng);background:var(--ngbg)}
+.opt small{display:block;font-size:12px;color:var(--dim)}
+
+/* ---- 綴り(ブロック) ---- */
+.build{min-height:74px;border-bottom:3px dashed var(--line2);display:flex;flex-wrap:wrap;
+  gap:6px;align-items:flex-start;padding:8px 2px 12px;margin-bottom:16px}
+.build:empty::after{content:"↓ かけらを ならべて つづりを つくる";color:var(--line2);font-size:13.5px}
+.blk{background:var(--panel);border:3px solid var(--line);border-bottom-width:5px;
+  border-radius:13px;padding:8px 13px 6px;text-align:center;line-height:1.15}
+.blk:active{transform:translateY(2px);border-bottom-width:3px}
+.blk b{font-size:22px;font-weight:700;letter-spacing:.5px}
+.blk small{display:block;font-size:10.5px;color:var(--dim);margin-top:1px}
+.blk.used{opacity:.25;pointer-events:none}
+.blk.mine{border-color:var(--acc);background:#fff8e8}
+.bank{display:flex;flex-wrap:wrap;gap:8px;justify-content:center}
+.spellhint{background:var(--panel);border:3px solid var(--line);border-radius:16px;
+  padding:11px 13px;margin-bottom:14px;display:flex;gap:11px;align-items:center}
+.spellhint img{width:74px;height:74px;object-fit:contain;flex:0 0 auto}
+.spellhint .t{flex:1;min-width:0}
+.spellhint .mean{font-size:20px;font-weight:700;line-height:1.25}
+.spellhint .b{font-size:12.5px;color:var(--dim);line-height:1.6;margin-top:3px}
+
+/* ---- 下部 ---- */
+.foot{flex:0 0 auto;border-top:2px solid var(--line);padding:12px 16px 16px;background:var(--panel)}
+.foot.ok{background:var(--okbg);border-color:var(--ok)}
+.foot.ng{background:var(--ngbg);border-color:var(--ng)}
+.fb{display:flex;align-items:flex-start;gap:9px;margin-bottom:10px}
+.fb .ic{font-size:23px;line-height:1.1}
+.fb .tx{font-size:15px;line-height:1.5}
+.fb .tx b{font-size:17px}
+.fb.ok .tx b{color:var(--ok2)} .fb.ng .tx b{color:var(--ng2)}
+.fb .tx small{display:block;font-size:12.5px;color:var(--dim);margin-top:3px}
+.go{width:100%;border:0;border-radius:15px;padding:15px;font-size:17px;font-weight:700;
+  background:var(--ok);color:#fff;box-shadow:0 5px 0 var(--ok2)}
+.go:active{transform:translateY(4px);box-shadow:0 1px 0 var(--ok2)}
+.go:disabled{background:#e6ddc9;color:#b3a68d;box-shadow:0 5px 0 #d4c9b0}
+.go.ng{background:var(--ng);box-shadow:0 5px 0 var(--ng2)}
+.go.acc{background:var(--acc);box-shadow:0 5px 0 var(--acc2);color:#3a2b05}
+
+/* ---- 結果 ---- */
+.res{text-align:center;padding:20px 0}
+.res img{width:min(42vw,160px)}
+.res h2{font-size:26px;margin:8px 0 4px}
+.res .sc{display:flex;gap:10px;justify-content:center;margin:14px 0}
+.res .sc div{flex:1;max-width:130px;background:var(--panel);border:3px solid var(--acc);
+  border-radius:15px;padding:9px}
+.res .sc b{display:block;font-size:25px;color:var(--acc2)}
+.res .sc small{font-size:11.5px;color:var(--dim)}
+</style>
+</head>
+<body>
+
+<div class="hd" id="hd"></div>
+<div class="wrap" id="wrap"></div>
+<div class="foot hide" id="foot"></div>
+
+<script id="ldata" type="application/json">{"lessons":[],"pool":[]}</script>
+<script>
+const A='../assets/', $=s=>document.querySelector(s);
+let D=JSON.parse(document.getElementById('ldata').textContent);
+let LS=D.lessons||[], POOL=D.pool||[], CHUNKS=D.chunks||[];
+let done=new Set(), hearts=5, streak=0, cur=null, qi=0, qs=[], picked=null, answered=false, right=0;
+
+const chImg=l=>A+'chara/'+l.img, wImg=w=>A+'word/'+w+'.png';
+const shuffle=a=>a.map(v=>[Math.random(),v]).sort((x,y)=>x[0]-y[0]).map(v=>v[1]);
+function distract(n,not){
+  const out=[];
+  while(out.length<n){
+    const v=POOL[Math.floor(Math.random()*POOL.length)];
+    if(!v||v===not||out.includes(v))continue;
+    out.push(v);
+  }
+  return out;
+}
+
+/* ---------- コース ---------- */
+function showCourse(){
+  $('#hd').innerHTML=`<div class="streak">🔥 ${streak}</div>
+    <div class="prog"><u style="width:${done.size/LS.length*100}%"></u></div>
+    <div class="hearts">${'♥'.repeat(hearts)}</div>`;
+  $('#foot').classList.add('hide');
+  $('#wrap').innerHTML=`<div class="cover">
+      <h1>エティモリンゴ</h1>
+      <p>ことばの もとを おぼえると、知らない英単語も 当てられるようになる</p>
+    </div><div class="units">`
+    + LS.map((l,i)=>`<button class="unit${done.has(l.key)?' done':''}" data-i="${i}">
+        <img src="${chImg(l)}" alt="">
+        <div class="t"><b>${l.jp}</b><small>*${l.key} ・ ${l.known.length+l.guess.length}語</small></div>
+        <div class="n">${done.has(l.key)?'<b>クリア</b>':`${i+1}`}</div></button>`).join('')
+    + `</div>`;
+}
+$('#wrap').addEventListener('click',ev=>{
+  const u=ev.target.closest('.unit'); if(u) startLesson(LS[+u.dataset.i]);
+});
+
+/* ---------- レッスン ---------- */
+function startLesson(l){
+  cur=l; qi=0; right=0; answered=false; picked=null;
+  qs=buildQs(l);
+  teach();
+}
+/* 出題:①絵で意味 ②日本語→英単語 ③家族さがし ④語根から推測(山場) */
+function buildQs(l){
+  const out=[];
+  const kn=shuffle([...l.known]);
+  kn.slice(0,2).forEach(w=>out.push({t:'mean',w}));
+  kn.slice(2,4).forEach(w=>out.push({t:'word',w}));
+  out.push({t:'family'});
+  // 綴り(ブロック)。かけらに割れる語だけ
+  const sp=shuffle([...l.known,...l.guess].filter(w=>w.sp&&w.sp.length>=2));
+  sp.slice(0,2).forEach(w=>out.push({t:'spell',w}));
+  shuffle([...l.guess]).slice(0,3).forEach(w=>out.push({t:'guess',w}));
+  return out;
+}
+function teach(){
+  $('#hd').innerHTML=`<button class="x" data-x="1">✕</button>
+    <div class="prog"><u style="width:0%"></u></div>
+    <div class="hearts">${'♥'.repeat(hearts)}</div>`;
+  $('#foot').classList.remove('hide','ok','ng');
+  $('#wrap').innerHTML=`<div class="teach">
+      <img src="${chImg(cur)}" alt="">
+      <div class="root">*${cur.key}</div>
+      <div class="mean">${cur.jp}</div>
+      ${cur.note?`<div class="note">${cur.note}</div>`:''}
+      <div class="fam">${cur.known.slice(0,5).map(w=>
+        `<span>${w.w}<i>${w.ja}</i></span>`).join('')}</div>
+    </div>`;
+  $('#foot').innerHTML=`<button class="go acc" data-go="start">おぼえた!</button>`;
+}
+function ask(){
+  if(qi>=qs.length){ result(); return; }
+  answered=false; picked=null;
+  const q=qs[qi];
+  $('#hd').innerHTML=`<button class="x" data-x="1">✕</button>
+    <div class="prog"><u style="width:${qi/qs.length*100}%"></u></div>
+    <div class="hearts">${'♥'.repeat(hearts)}</div>`;
+  $('#foot').classList.remove('ok','ng');
+  let head='',stim='',opts=[];
+  if(q.t==='mean'){
+    head=`<div class="qh">この ことばの いみは?</div>`;
+    stim=`<div class="stim">${q.w.pic?`<img src="${wImg(q.w.w)}" onerror="this.style.display='none'" alt="">`:''}
+      <div class="w">${q.w.w}</div></div>`;
+    opts=shuffle([q.w.ja,...distract(3,q.w.ja)]).map(v=>({v,ok:v===q.w.ja}));
+  }else if(q.t==='word'){
+    head=`<div class="qh">「${q.w.ja}」は どれ?</div>`;
+    const others=shuffle(LS.filter(l=>l.key!==cur.key)).slice(0,3)
+      .map(l=>l.known[Math.floor(Math.random()*l.known.length)].w);
+    opts=shuffle([q.w.w,...others]).map(v=>({v,ok:v===q.w.w}));
+  }else if(q.t==='family'){
+    head=`<div class="qh">この中で <b>${cur.jp}</b> の なかまは どれ?
+      <small>*${cur.key} から 生まれた ことば</small></div>`;
+    const mine=cur.known[Math.floor(Math.random()*cur.known.length)].w;
+    const others=shuffle(LS.filter(l=>l.key!==cur.key)).slice(0,3)
+      .map(l=>l.known[Math.floor(Math.random()*l.known.length)].w);
+    opts=shuffle([mine,...others]).map(v=>({v,ok:v===mine}));
+    q.w={w:mine,ja:'',b:''};
+  }else if(q.t==='spell'){
+    const parts=q.w.sp;
+    const dummy=shuffle(CHUNKS.filter(c=>!parts.some(x=>x.t===c))).slice(0,Math.max(3,5-parts.length));
+    q.blocks=shuffle([...parts.map(x=>({...x,ok:1})),...dummy.map(t=>({t,m:'',ok:0}))]);
+    q.built=[];
+    head=`<div class="qh">つづりを つくろう
+      <small>絵と 語源の文が ヒント。かけらには いみが 書いてある</small></div>`;
+    stim=`<div class="spellhint">
+        ${q.w.pic?`<img src="${wImg(q.w.w)}" onerror="this.style.display='none'" alt="">`:''}
+        <div class="t"><div class="mean">${q.w.ja}</div>
+          ${q.w.b?`<div class="b">${q.w.b}</div>`:''}</div></div>
+      <div class="build" id="build"></div>`;
+    $('#wrap').innerHTML=head+stim+`<div class="bank" id="bank">`
+      + q.blocks.map((b,i)=>`<button class="blk" data-b="${i}">
+          <b>${b.t}</b>${b.m?`<small>${b.m}</small>`:'<small>&nbsp;</small>'}</button>`).join('')
+      + `</div>`;
+    $('#foot').innerHTML=`<button class="go" data-go="check" disabled>かくにん</button>`;
+    return;
+  }else{
+    head=`<div class="qh">まだ 習っていない ことばです。<br>もとから いみを あててみよう
+      <small>知らない語でも、もとを知っていれば あてられる</small></div>`;
+    stim=`<div class="stim"><div class="w">${q.w.w}</div>
+      <div class="hint"><img src="${chImg(cur)}" alt="">
+        <b>${cur.jp}</b> の なかま</div></div>`;
+    opts=shuffle([q.w.ja,...distract(3,q.w.ja)]).map(v=>({v,ok:v===q.w.ja}));
+  }
+  q.opts=opts;
+  $('#wrap').innerHTML=head+stim+`<div class="opts">`
+    + opts.map((o,i)=>`<button class="opt" data-o="${i}">${o.v}</button>`).join('')+`</div>`;
+  $('#foot').innerHTML=`<button class="go" data-go="check" disabled>かくにん</button>`;
+}
+$('#wrap').addEventListener('click',ev=>{
+  const blk=ev.target.closest('.blk');
+  if(blk&&!answered){
+    const q=qs[qi], i=+blk.dataset.b;
+    if(blk.closest('#build')){ q.built=q.built.filter(x=>x!==i); }
+    else { if(q.built.includes(i))return; q.built.push(i); }
+    drawBuild(); return;
+  }
+  const b=ev.target.closest('.opt'); if(!b||answered)return;
+  picked=+b.dataset.o;
+  document.querySelectorAll('.opt').forEach((x,i)=>x.classList.toggle('sel',i===picked));
+  $('#foot').querySelector('.go').disabled=false;
+});
+$('#hd').addEventListener('click',ev=>{ if(ev.target.closest('[data-x]'))showCourse(); });
+$('#foot').addEventListener('click',ev=>{
+  const b=ev.target.closest('[data-go]'); if(!b)return;
+  const g=b.dataset.go;
+  if(g==='start'){ ask(); }
+  else if(g==='check'){ check(); }
+  else if(g==='next'){ qi++; ask(); }
+  else if(g==='home'){ showCourse(); }
+});
+function drawBuild(){
+  const q=qs[qi];
+  $('#build').innerHTML=q.built.map(i=>{
+    const b=q.blocks[i];
+    return `<button class="blk" data-b="${i}"><b>${b.t}</b>
+      ${b.m?`<small>${b.m}</small>`:'<small>&nbsp;</small>'}</button>`;}).join('');
+  document.querySelectorAll('#bank .blk').forEach((el,i)=>
+    el.classList.toggle('used',q.built.includes(i)));
+  $('#foot').querySelector('.go').disabled = q.built.length===0;
+}
+function checkSpell(){
+  const q=qs[qi];
+  answered=true;
+  const made=q.built.map(i=>q.blocks[i].t).join('');
+  const ok=made===q.w.w.toLowerCase();
+  if(ok)right++; else hearts=Math.max(0,hearts-1);
+  $('#build').innerHTML=q.w.sp.map(x=>
+    `<button class="blk mine"><b>${x.t}</b><small>${x.m||'&nbsp;'}</small></button>`).join('');
+  $('#foot').className='foot '+(ok?'ok':'ng');
+  $('#foot').innerHTML=`<div class="fb ${ok?'ok':'ng'}">
+      <div class="ic">${ok?'🎉':'💡'}</div>
+      <div class="tx"><b>${ok?'せいかい!':`こたえは ${q.w.w}`}</b>
+        <small>${q.w.sp.map(x=>`${x.t}(${x.m||'?'})`).join(' + ')} = ${q.w.w} ・ ${q.w.ja}</small>
+        ${q.w.b?`<small>${q.w.b}</small>`:''}</div></div>
+    <button class="go ${ok?'':'ng'}" data-go="next">つづける</button>`;
+  $('#hd').querySelector('.hearts').textContent='♥'.repeat(hearts);
+}
+function check(){
+  if(qs[qi].t==='spell'){ checkSpell(); return; }
+  const q=qs[qi], o=q.opts[picked];
+  answered=true;
+  document.querySelectorAll('.opt').forEach((x,i)=>{
+    x.classList.remove('sel');
+    if(q.opts[i].ok)x.classList.add('right');
+    else if(i===picked)x.classList.add('wrong');
+  });
+  const ok=o.ok;
+  if(ok)right++; else hearts=Math.max(0,hearts-1);
+  const w=q.w;
+  const why = q.t==='guess'
+    ? `<small>${w.w} は <b>${cur.jp}</b>(*${cur.key})の子。${w.b||''}</small>`
+    : (w.b?`<small>${w.b}</small>`:'');
+  $('#foot').className='foot '+(ok?'ok':'ng');
+  $('#foot').innerHTML=`<div class="fb ${ok?'ok':'ng'}">
+      <div class="ic">${ok?'🎉':'💡'}</div>
+      <div class="tx"><b>${ok?'せいかい!':'おしい!'}</b>
+        ${ok?'':` こたえは <b>${q.opts.find(x=>x.ok).v}</b>`}
+        ${why}</div></div>
+    <button class="go ${ok?'':'ng'}" data-go="next">つづける</button>`;
+  $('#hd').querySelector('.hearts').textContent='♥'.repeat(hearts);
+}
+function result(){
+  const clear=right>=Math.ceil(qs.length*0.6);
+  if(clear){ done.add(cur.key); streak++; }
+  $('#hd').innerHTML='';
+  $('#foot').classList.remove('ok','ng');
+  $('#wrap').innerHTML=`<div class="res">
+      <img src="${chImg(cur)}" alt="">
+      <h2>${clear?'レッスン クリア!':'もういちど やってみよう'}</h2>
+      <div class="sc">
+        <div><b>${right}/${qs.length}</b><small>せいかい</small></div>
+        <div><b>${cur.guess.length}</b><small>あてられる語</small></div>
+        <div><b>🔥${streak}</b><small>れんぞく</small></div>
+      </div>
+      <div class="note" style="text-align:left;font-size:13.5px">
+        <b>${cur.jp}</b>(*${cur.key})の なかまは あと
+        ${cur.known.length+cur.guess.length-qs.length}語 あります。
+        もとを おぼえると、${cur.guess.slice(0,3).map(w=>w.w).join(' / ')} のような
+        習っていない語も あてられるようになります。</div>
+    </div>`;
+  $('#foot').innerHTML=`<button class="go acc" data-go="home">コースへ もどる</button>`;
+}
+
+(async()=>{
+  if(location.protocol!=='file:'){
+    try{ const r=await fetch('data/pie/lesson.json');
+      if(r.ok){ const j=await r.json(); if(j.lessons&&j.lessons.length){LS=j.lessons;POOL=j.pool;CHUNKS=j.chunks||[];} } }catch(e){}
+  }
+  if(!LS.length){ $('#wrap').innerHTML='<h2>データがありません</h2>'
+    +'<p>python3 app/build_lesson.py を実行してください。</p>'; return; }
+  showCourse();
+})();
+</script>
+</body>
+</html>

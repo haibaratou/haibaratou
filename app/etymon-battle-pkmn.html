@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>エティモン バトル</title>
+<style>
+:root{
+  --sky:#a8d8ef; --sky2:#d6eef8; --ground:#8ecf6a; --ground2:#6fb84f;
+  --ink:#2f2a20; --dim:#7d7361; --card:#fffdf5; --line:#d8cdb0;
+  --hp1:#67c96a; --hp2:#f0c040; --hp3:#e8604c; --gold:#f5b942;
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;height:100%;overflow:hidden}
+body{background:var(--sky);color:var(--ink);
+  font-family:"Hiragino Maru Gothic ProN","Hiragino Sans","Noto Sans JP",system-ui,sans-serif;
+  font-size:15px;user-select:none;display:flex;flex-direction:column}
+.hide{display:none!important}
+button{font:inherit;cursor:pointer}
+
+/* ---- スタート ---- */
+#start{flex:1;overflow-y:auto;padding:16px 14px 30px;background:linear-gradient(var(--sky2),var(--sky))}
+#start h2{font-size:21px;margin:0 0 4px}
+#start p{color:var(--dim);font-size:13px;margin:0 0 14px}
+.pool{display:grid;grid-template-columns:repeat(auto-fill,minmax(88px,1fr));gap:8px}
+.pk{background:var(--card);border:3px solid var(--line);border-radius:16px;padding:6px 3px 7px;
+  text-align:center}
+.pk:active{transform:scale(.95)}
+.pk img{width:100%;height:64px;object-fit:contain}
+.pk .jp{font-size:12.5px;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+
+/* ---- フィールド ---- */
+.field{flex:1 1 auto;position:relative;overflow:hidden;
+  background:linear-gradient(var(--sky2) 0%,var(--sky) 46%,var(--ground) 46%,var(--ground2) 100%)}
+.foe,.me{position:absolute;display:flex;flex-direction:column;align-items:center}
+.foe{top:6%;right:6%;width:44%}
+.me{bottom:4%;left:5%;width:46%}
+.foe img,.me img{width:100%;max-height:170px;object-fit:contain;
+  filter:drop-shadow(0 6px 8px rgba(0,0,0,.28))}
+.me img{max-height:190px}
+.hit{animation:hit .35s}
+@keyframes hit{0%,100%{transform:none}25%{transform:translateX(-9px) scale(.97)}
+  60%{transform:translateX(7px)}}
+.appear{animation:app .5s cubic-bezier(.2,1.5,.4,1)}
+@keyframes app{0%{transform:translateY(-40px) scale(.5);opacity:0}100%{transform:none;opacity:1}}
+.faint{animation:ft .6s forwards}
+@keyframes ft{100%{transform:translateY(40px) rotate(12deg);opacity:0}}
+
+.plate{position:absolute;background:var(--card);border:3px solid var(--line);border-radius:14px;
+  padding:6px 11px 7px;min-width:150px;box-shadow:0 3px 0 rgba(0,0,0,.12)}
+.plate.f{top:5%;left:5%} .plate.m{bottom:6%;right:5%}
+.plate .nm{font-size:14px;font-weight:700;display:flex;align-items:baseline;gap:6px}
+.plate .nm small{font-size:11px;color:var(--dim);font-weight:400}
+.hpbar{height:9px;background:#e6dfcc;border-radius:5px;margin-top:4px;overflow:hidden}
+.hpbar u{display:block;height:100%;background:var(--hp1);transition:width .45s}
+.plate .hpn{font-size:11px;color:var(--dim);text-align:right;margin-top:2px;
+  font-variant-numeric:tabular-nums}
+
+/* ---- 下パネル ---- */
+.panel{flex:0 0 auto;background:var(--card);border-top:4px solid var(--line);
+  padding:10px 11px 13px;min-height:168px}
+.msg{font-size:15.5px;line-height:1.5;min-height:48px}
+.msg b{font-weight:700}
+.msg .eff{color:#c8641c;font-weight:700}
+.acts{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-top:8px}
+.acts button{background:#fff;border:3px solid var(--line);border-radius:13px;padding:8px 9px;
+  text-align:left;line-height:1.25}
+.acts button:active{transform:translateY(2px)}
+.acts button .w{font-size:15px;font-weight:700}
+.acts button .j{font-size:10.5px;color:var(--dim)}
+.acts button .t{font-size:10.5px;float:right;color:var(--tc);font-weight:700}
+.acts button:disabled{opacity:.45}
+.wide{grid-column:1/-1;background:var(--gold)!important;border-color:#c99a1e!important;
+  text-align:center!important;font-size:16px;font-weight:700}
+.next{width:100%;background:var(--gold);border:0;border-radius:13px;padding:12px;
+  font-size:16px;font-weight:700;color:#3a2b05;box-shadow:0 4px 0 #c08c1e;margin-top:8px}
+.next:active{transform:translateY(3px);box-shadow:0 1px 0 #c08c1e}
+
+/* ---- 手持ち ---- */
+.bag{display:flex;gap:5px;align-items:center;padding:5px 11px;background:#f3ecd8;
+  border-bottom:2px solid var(--line);overflow-x:auto}
+.bag img{width:34px;height:34px;object-fit:contain;flex:0 0 auto}
+.bag .lv{font-size:10px;color:var(--dim);flex:0 0 auto;margin-right:5px}
+.bag .cnt{margin-left:auto;font-size:12px;font-weight:700;flex:0 0 auto}
+</style>
+</head>
+<body>
+
+<section id="start">
+  <h2>さいしょの 1ぴきを えらぶ</h2>
+  <p>ことばの もとの子たち。わざは その子から生まれた 英単語です。</p>
+  <div class="pool" id="pool"></div>
+</section>
+
+<div class="bag hide" id="bag"></div>
+<div class="field hide" id="field">
+  <div class="plate f" id="plateF"></div>
+  <div class="plate m" id="plateM"></div>
+  <div class="foe" id="foeBox"></div>
+  <div class="me" id="meBox"></div>
+</div>
+<div class="panel hide" id="panel">
+  <div class="msg" id="msg"></div>
+  <div class="acts" id="acts"></div>
+</div>
+
+<script id="statdata" type="application/json">{"words":[],"etymons":{},"types":[],"chain":[]}</script>
+<script>
+const A='../assets/', $=s=>document.querySelector(s);
+let D=JSON.parse(document.getElementById('statdata').textContent);
+let WORDS=D.words||[], ETY=D.etymons||{}, CHAIN=D.chain||[];
+const TCOL={'ほのお':'#e8603c','みず':'#3c8fe8','ひかり':'#e8c23c','やみ':'#7a4fb0',
+  'きる':'#b0503c','まもる':'#4f8f5a','いのち':'#3cb87a','ちしき':'#5a7fd8',
+  'ことば':'#d85a9a','はやさ':'#d88a3c'};
+const idx=t=>CHAIN.indexOf(t);
+/* 10すくみ:1つ前に強い。2倍/0.5倍/等倍 */
+function mult(a,b){
+  const i=idx(a),j=idx(b); if(i<0||j<0)return 1;
+  const n=CHAIN.length;
+  if((i+1)%n===j) return 2;      // a は b に強い
+  if((j+1)%n===i) return .5;     // a は b に弱い
+  return 1;
+}
+/* その語根の子の英単語 = わざ。レベルが上がるほど強い語を覚える */
+function movesOf(key,lv){
+  const all=WORDS.filter(w=>w.root===key);
+  const cap=6+lv*3;
+  // 知っている語から覚える。同じくらいなら強いほう
+  const ok=all.filter(w=>w.sum<=cap).sort((a,b)=>(a.rare-b.rare)||(b.sum-a.sum));
+  const pick=[],seen=new Set();
+  for(const w of ok){ if(seen.has(w.bt))continue; seen.add(w.bt); pick.push(w); if(pick.length>=4)break; }
+  for(const w of ok){ if(pick.length>=4)break; if(!pick.includes(w))pick.push(w); }
+  if(pick.length) return pick;
+  // レベルが低くて どれも覚えられないときは、その一族で いちばん弱い語を持たせる
+  return all.sort((a,b)=>a.sum-b.sum).slice(0,4);
+}
+/* わざを4つ用意できる一族だけが 出てくる(空のままだと戦えない) */
+const PLAYABLE = () => Object.keys(ETY).filter(k=>WORDS.filter(w=>w.root===k).length>=4);
+const maxHP=(key,lv)=>28+lv*7+(WORDS.filter(w=>w.root===key).length%9);
+function mk(key,lv){
+  return {key,lv,...ETY[key],hp:maxHP(key,lv),max:maxHP(key,lv),moves:movesOf(key,lv)};
+}
+
+let team=[], me=null, foe=null, busy=false, caught=0;
+
+/* ---- はじめ ---- */
+function showStart(){
+  const ks=PLAYABLE();
+  $('#pool').innerHTML=ks.map(k=>`<button class="pk" data-k="${k}">
+    <img src="${A+'chara/'+ETY[k].img}" alt=""><div class="jp">${ETY[k].jp}</div></button>`).join('');
+}
+$('#pool').addEventListener('click',ev=>{
+  const b=ev.target.closest('.pk'); if(!b)return;
+  team=[mk(b.dataset.k,5)]; me=team[0];
+  $('#start').classList.add('hide');
+  ['#bag','#field','#panel'].forEach(s=>$(s).classList.remove('hide'));
+  encounter();
+});
+
+/* ---- 出会い ---- */
+function encounter(){
+  const ks=PLAYABLE().filter(k=>k!==me.key);
+  const lv=Math.max(3,me.lv+Math.floor(Math.random()*5)-2);
+  foe=mk(ks[Math.floor(Math.random()*ks.length)],lv);
+  me.hp=me.max;
+  draw(true);
+  say(`あっ! やせいの <b>${foe.jp}</b> が とびだしてきた!`);
+  setTimeout(showActs,700);
+}
+function draw(app){
+  $('#foeBox').innerHTML=`<img class="${app?'appear':''}" src="${A+'chara/'+foe.img}" alt="">`;
+  $('#meBox').innerHTML=`<img src="${A+'chara/'+me.img}" alt="">`;
+  plates();
+  $('#bag').innerHTML=team.map(t=>`<img src="${A+'chara/'+t.img}" alt="">
+    <span class="lv">Lv${t.lv}</span>`).join('')+`<span class="cnt">つかまえた ${caught}</span>`;
+}
+function plates(){
+  const bar=(o)=>{const p=Math.max(0,o.hp/o.max);
+    const c=p>.5?'var(--hp1)':p>.2?'var(--hp2)':'var(--hp3)';
+    return `<div class="nm">${o.jp}<small>Lv${o.lv}</small></div>
+      <div class="hpbar"><u style="width:${p*100}%;background:${c}"></u></div>
+      <div class="hpn">${Math.max(0,Math.round(o.hp))} / ${o.max}</div>`;};
+  $('#plateF').innerHTML=bar(foe); $('#plateM').innerHTML=bar(me);
+}
+const say=h=>$('#msg').innerHTML=h;
+
+/* ---- こうどう ---- */
+function showActs(){
+  busy=false;
+  say(`<b>${me.jp}</b> は どうする?`);
+  $('#acts').innerHTML=me.moves.map((m,i)=>`
+    <button data-m="${i}" style="--tc:${TCOL[m.bt]}">
+      <span class="t">${m.bt}</span>
+      <div class="w">${m.w}</div><div class="j">${m.ja||''} ・ いりょく${m.sum}</div></button>`).join('')
+    + `<button class="wide" data-act="catch">つかまえる!</button>`;
+}
+$('#acts').addEventListener('click',ev=>{
+  const b=ev.target.closest('button'); if(!b||busy)return;
+  busy=true;
+  if(b.dataset.act==='catch') tryCatch(); else useMove(+b.dataset.m);
+});
+
+function dmg(atk,def,m){
+  const x=mult(m.bt,def.moves[0]?def.moves[0].bt:'ことば');
+  const base=m.sum*(0.55+atk.lv*0.045);
+  return {v:Math.max(3,Math.round(base*x*(0.85+Math.random()*0.3))),x};
+}
+function useMove(i){
+  const m=me.moves[i]; if(!m){ showActs(); return; }
+  $('#acts').innerHTML='';
+  say(`<b>${me.jp}</b> の <b>${m.w}</b>(${m.ja})!`);
+  setTimeout(()=>{
+    const d=dmg(me,foe,m);
+    foe.hp-=d.v; $('#foeBox').firstChild.classList.add('hit');
+    plates();
+    say(`<b>${m.w}</b>! ${foe.jp}に ${d.v}の ダメージ`
+      + (d.x>1?`<br><span class="eff">こうかは ばつぐんだ!</span>`
+        : d.x<1?`<br><span class="eff">こうかは いまひとつ…</span>`:''));
+    setTimeout(()=>{
+      if(foe.hp<=0){ foe.hp=0;plates();$('#foeBox').firstChild.classList.add('faint');
+        say(`やせいの <b>${foe.jp}</b> は たおれた!`); levelUp(); return; }
+      foeTurn();
+    },900);
+  },600);
+}
+function foeTurn(){
+  if(!foe.moves.length){ showActs(); return; }
+  const m=foe.moves[Math.floor(Math.random()*foe.moves.length)];
+  const d=dmg(foe,me,m);
+  me.hp-=d.v; $('#meBox').firstChild.classList.add('hit'); plates();
+  say(`やせいの ${foe.jp} の <b>${m.w}</b>(${m.ja})!<br>${me.jp}に ${d.v}の ダメージ`
+    + (d.x>1?` <span class="eff">ばつぐん!</span>`:''));
+  setTimeout(()=>{
+    if(me.hp<=0){ me.hp=0;plates();$('#meBox').firstChild.classList.add('faint');
+      say(`<b>${me.jp}</b> は たおれてしまった…<br>手当てして また いこう。`);
+      $('#acts').innerHTML=`<button class="next" data-act="next">つぎへ</button>`; busy=false; return; }
+    showActs();
+  },1000);
+}
+function tryCatch(){
+  $('#acts').innerHTML='';
+  const p=Math.min(.92,0.18+(1-foe.hp/foe.max)*0.8);
+  say(`<b>${foe.jp}</b> に よびかけた…`);
+  setTimeout(()=>{
+    if(Math.random()<p){
+      caught++;
+      if(!team.some(t=>t.key===foe.key)) team.push(mk(foe.key,foe.lv));
+      say(`やった! <b>${foe.jp}</b> が なかまに なった!<br>
+        <span style="font-size:12.5px;color:var(--dim)">わざ: ${foe.moves.map(m=>m.w).join(' / ')}</span>`);
+      $('#acts').innerHTML=`<button class="next" data-act="next">つぎへ</button>`;
+      draw(); busy=false;
+    }else{
+      say(`あっ! ${foe.jp}は ふりむいて くれなかった…`);
+      setTimeout(foeTurn,800);
+    }
+  },900);
+}
+function levelUp(){
+  const before=me.moves.map(m=>m.w);
+  me.lv++; const nm=movesOf(me.key,me.lv);
+  const gained=nm.filter(m=>!before.includes(m.w));
+  me.moves=nm; me.max=maxHP(me.key,me.lv); me.hp=me.max;
+  setTimeout(()=>{
+    say(`<b>${me.jp}</b> は レベル${me.lv}に あがった!`
+      + (gained.length?`<br>あたらしい ことばを おぼえた: <b>${gained.map(g=>g.w).join(' / ')}</b>`:''));
+    plates();
+    $('#acts').innerHTML=`<button class="next" data-act="next">つぎへ</button>`;
+    busy=false;
+  },900);
+}
+$('#acts').addEventListener('click',ev=>{
+  const b=ev.target.closest('button[data-act="next"]'); if(!b)return;
+  encounter();
+});
+
+(async()=>{
+  if(location.protocol!=='file:'){
+    try{ const r=await fetch('data/pie/word_stats.json');
+      if(r.ok){ const j=await r.json(); if(j.words&&j.words.length){WORDS=j.words;ETY=j.etymons;CHAIN=j.chain;} } }catch(e){}
+  }
+  if(!WORDS.length){ $('#start').innerHTML='<h2>データがありません</h2>'
+    +'<p>python3 app/build_word_stats.py を実行してください。</p>'; return; }
+  showStart();
+})();
+</script>
+</body>
+</html>

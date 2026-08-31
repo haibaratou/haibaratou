@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>ことばで よぶ</title>
+<style>
+:root{
+  --sky:#a8d8ef; --sky2:#d9f0fa; --ground:#8ecf6a; --ground2:#6fb84f;
+  --ink:#2f2a20; --dim:#7d7361; --card:#fffdf5; --line:#d8cdb0;
+  --hp1:#67c96a; --hp2:#f0c040; --hp3:#e8604c; --gold:#f5b942; --miss:#b9aa8c;
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;height:100%;overflow:hidden}
+body{background:var(--sky);color:var(--ink);
+  font-family:"Hiragino Maru Gothic ProN","Hiragino Sans","Noto Sans JP",system-ui,sans-serif;
+  font-size:15px;display:flex;flex-direction:column}
+.hide{display:none!important}
+button{font:inherit;cursor:pointer}
+
+.field{flex:1 1 auto;position:relative;overflow:hidden;min-height:190px;
+  background:linear-gradient(var(--sky2) 0%,var(--sky) 52%,var(--ground) 52%,var(--ground2) 100%)}
+.foe{position:absolute;top:5%;right:7%;width:40%;text-align:center}
+.foe img{width:100%;max-height:150px;object-fit:contain;
+  filter:drop-shadow(0 6px 8px rgba(0,0,0,.28))}
+.caller{position:absolute;bottom:5%;left:6%;width:40%;text-align:center;opacity:0;transition:.3s}
+.caller.on{opacity:1}
+.caller img{width:100%;max-height:130px;object-fit:contain;
+  filter:drop-shadow(0 6px 8px rgba(0,0,0,.28))}
+.caller .nm{font-size:13px;font-weight:700;background:var(--card);border:2px solid var(--line);
+  border-radius:11px;padding:2px 9px;display:inline-block;margin-top:2px}
+.pop{animation:pop .5s cubic-bezier(.2,1.5,.4,1)}
+@keyframes pop{0%{transform:translateY(30px) scale(.5);opacity:0}100%{transform:none;opacity:1}}
+.hit{animation:hit .35s}
+@keyframes hit{0%,100%{transform:none}25%{transform:translateX(-9px)}60%{transform:translateX(7px)}}
+.faint{animation:ft .7s forwards}
+@keyframes ft{100%{transform:translateY(40px) rotate(12deg);opacity:0}}
+
+.plate{position:absolute;top:5%;left:5%;background:var(--card);border:3px solid var(--line);
+  border-radius:13px;padding:5px 11px 6px;min-width:146px;box-shadow:0 3px 0 rgba(0,0,0,.12)}
+.plate .nm{font-size:14px;font-weight:700}
+.plate .nm small{font-size:11px;color:var(--dim);font-weight:400;margin-left:5px}
+.hpbar{height:9px;background:#e6dfcc;border-radius:5px;margin-top:4px;overflow:hidden}
+.hpbar u{display:block;height:100%;transition:width .45s}
+.plate .hpn{font-size:11px;color:var(--dim);text-align:right;margin-top:1px;
+  font-variant-numeric:tabular-nums}
+
+.panel{flex:0 0 auto;background:var(--card);border-top:4px solid var(--line);padding:10px 12px 14px}
+.msg{font-size:15.5px;line-height:1.55;min-height:66px}
+.msg b{font-weight:700}
+.msg .src{font-size:12.5px;color:var(--dim);display:block;margin-top:3px}
+.msg .big{font-size:19px}
+.inp{display:flex;gap:7px;margin-top:8px}
+.inp input{flex:1;font:inherit;font-size:19px;padding:11px 13px;border:3px solid var(--line);
+  border-radius:13px;background:#fff;color:var(--ink);min-width:0}
+.inp input:focus{outline:0;border-color:var(--gold)}
+.inp button{background:var(--gold);border:0;border-radius:13px;padding:0 20px;
+  font-size:17px;font-weight:700;color:#3a2b05;box-shadow:0 4px 0 #c08c1e}
+.inp button:active{transform:translateY(3px);box-shadow:0 1px 0 #c08c1e}
+.hintrow{display:flex;gap:6px;margin-top:7px;overflow-x:auto;padding-bottom:2px}
+.hintrow button{flex:0 0 auto;background:#f3ecd8;border:2px solid var(--line);border-radius:10px;
+  padding:5px 11px;font-size:13px}
+.dexbar{display:flex;gap:5px;align-items:center;padding:5px 12px;background:#f3ecd8;
+  border-bottom:2px solid var(--line);overflow-x:auto;flex:0 0 auto;min-height:42px}
+.dexbar img{width:32px;height:32px;object-fit:contain;flex:0 0 auto}
+.dexbar .cnt{margin-left:auto;font-size:12px;font-weight:700;flex:0 0 auto;white-space:nowrap}
+.dexbar .none{font-size:12px;color:var(--dim)}
+</style>
+</head>
+<body>
+
+<div class="dexbar" id="dexbar"></div>
+<div class="field">
+  <div class="plate" id="plate"></div>
+  <div class="foe" id="foeBox"></div>
+  <div class="caller" id="callerBox"></div>
+</div>
+<div class="panel">
+  <div class="msg" id="msg">よみこみ中…</div>
+  <form class="inp" id="form" autocomplete="off">
+    <input id="inp" placeholder="英単語を いれてね" autocapitalize="off" autocorrect="off" spellcheck="false">
+    <button type="submit">よぶ</button>
+  </form>
+  <div class="hintrow" id="hints"></div>
+</div>
+
+<script id="lookupdata" type="application/json">{"words":{},"roots":{}}</script>
+<script>
+const A='../assets/', $=s=>document.querySelector(s);
+let D=JSON.parse(document.getElementById('lookupdata').textContent);
+let LOOK=D.words||{}, ROOTS=D.roots||{};
+const KCOL={'攻':'#e8603c','守':'#4f8f5a','癒':'#3cb87a','速':'#d88a3c','技':'#5a7fd8'};
+let foe=null, used=new Set(), metRoots=new Set(), streak=null, wins=0;
+
+const namedRoots=()=>Object.keys(ROOTS).filter(k=>ROOTS[k].named);
+function newFoe(){
+  const ks=namedRoots();
+  const k=ks[Math.floor(Math.random()*ks.length)];
+  const hp=45+wins*18;
+  foe={key:k,...ROOTS[k],hp,max:hp};
+  streak=null;
+  $('#foeBox').innerHTML=`<img class="pop" src="${A+'chara/'+foe.img}" alt="">`;
+  $('#callerBox').classList.remove('on');
+  plate();
+  say(`やせいの <b>${foe.jp}</b> が あらわれた!<br>
+    <span class="src">しっている 英単語を いれると、その ことばの おやが 出てきて たたかってくれる</span>`);
+  hints();
+}
+function plate(){
+  const p=Math.max(0,foe.hp/foe.max);
+  const c=p>.5?'var(--hp1)':p>.2?'var(--hp2)':'var(--hp3)';
+  $('#plate').innerHTML=`<div class="nm">${foe.jp}<small>*${foe.key}</small></div>
+    <div class="hpbar"><u style="width:${p*100}%;background:${c}"></u></div>
+    <div class="hpn">${Math.max(0,Math.round(foe.hp))} / ${foe.max}</div>`;
+}
+const say=h=>$('#msg').innerHTML=h;
+function dex(){
+  const list=[...metRoots].filter(k=>ROOTS[k]&&ROOTS[k].img);
+  $('#dexbar').innerHTML=(list.length
+    ? list.map(k=>`<img src="${A+'chara/'+ROOTS[k].img}" title="${ROOTS[k].jp}" alt="">`).join('')
+    : '<span class="none">よんだ おやが ここに たまる</span>')
+    + `<span class="cnt">よんだ ことば ${used.size}</span>`;
+}
+/* 打つ手が思いつかない子のために、いま出せる語をいくつか見せる(選ばなくてもよい) */
+function hints(){
+  const cand=['water','light','name','star','tree','friend','video','animal','music','school',
+    'mother','king','fire','night','sun','story','head','heart','house','food','moon','word'];
+  const ok=cand.filter(w=>LOOK[w]&&!used.has(w));
+  const pick=[];
+  while(pick.length<5&&ok.length) pick.push(ok.splice(Math.floor(Math.random()*ok.length),1)[0]);
+  $('#hints').innerHTML=pick.map(w=>`<button data-w="${w}">${w}</button>`).join('');
+}
+$('#hints').addEventListener('click',ev=>{
+  const b=ev.target.closest('button'); if(!b)return;
+  $('#inp').value=b.dataset.w; $('#form').requestSubmit();
+});
+
+$('#form').addEventListener('submit',ev=>{
+  ev.preventDefault();
+  const raw=$('#inp').value.trim().toLowerCase().replace(/[^a-z\- ]/g,'');
+  $('#inp').value='';
+  if(!raw) return;
+  call(raw);
+});
+
+function call(w){
+  const e=LOOK[w];
+  if(!e){
+    say(`<b>${w}</b> ── その ことばは まだ 見つかっていない。<br>
+      <span class="src">つづりを たしかめて、もういちど。</span>`);
+    return;
+  }
+  if(used.has(w)){
+    say(`<b>${w}</b> は もう よんだ。ちがう ことばで よんでみよう。`);
+    return;
+  }
+  used.add(w);
+  const r=ROOTS[e.r]||{jp:'',img:'',named:0};
+  metRoots.add(e.r);
+  // 同じ おやを つづけて よぶと れんさ
+  const chain = streak===e.r;
+  streak=e.r;
+  let dmg=e.p*(chain?1.6:1);
+  if(e.r===foe.key) dmg*=0.5;                 // 相手と同じ一族は 手加減してしまう
+  dmg=Math.round(dmg);
+  foe.hp-=dmg; plate();
+  $('#foeBox').firstChild.classList.add('hit');
+  if(r.img){
+    $('#callerBox').innerHTML=`<img class="pop" src="${A+'chara/'+r.img}" alt="">
+      <div class="nm">${r.jp}</div>`;
+    $('#callerBox').classList.add('on');
+  }else{
+    $('#callerBox').innerHTML=`<div class="nm" style="font-size:15px">*${e.r} ${r.jp||''}</div>`;
+    $('#callerBox').classList.add('on');
+  }
+  say(`<span class="big"><b>${w}</b>(${e.ja}) ── おやは <b>*${e.r}</b>${r.jp?`「${r.jp}」`:''}!</span>
+    ${e.b?`<span class="src">${e.b}</span>`:''}
+    <span class="src" style="color:${KCOL[e.k]}">${chain?'れんさ! ':''}${foe.jp}に ${dmg}の ダメージ
+      ${e.r===foe.key?'(おなじ一族なので 手かげんした)':''}</span>`);
+  dex(); hints();
+  if(foe.hp<=0){
+    foe.hp=0; plate(); $('#foeBox').firstChild.classList.add('faint');
+    wins++;
+    setTimeout(()=>{
+      say(`<b>${foe.jp}</b> は しずかに 帰っていった。<br>
+        <span class="src">よんだ ことば ${used.size} / であった おや ${metRoots.size}</span>`);
+      setTimeout(newFoe,1600);
+    },700);
+  }
+}
+
+(async()=>{
+  if(location.protocol!=='file:'){
+    try{ const r=await fetch('data/pie/lookup.json');
+      if(r.ok){ const j=await r.json(); if(j.words){LOOK=j.words;ROOTS=j.roots;} } }catch(e){}
+  }
+  if(!Object.keys(LOOK).length){ say('データがありません。python3 app/build_lookup.py を実行してください。'); return; }
+  dex(); newFoe();
+})();
+</script>
+</body>
+</html>

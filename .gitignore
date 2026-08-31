@@ -1,0 +1,12 @@
+# プレビュー用サーバのログ。中身は使い捨てなので追跡しない
+*.err.log
+*.out.log
+*.pyc
+.DS_Store
+Thumbs.db
+__pycache__/
+nohup.out
+﻿desktop.ini
+work/etymopedia_draft/
+# 参考にする辞書の生ページ(私用のキャッシュ。持ち出さない)
+app/data/pie/cache_refs/
