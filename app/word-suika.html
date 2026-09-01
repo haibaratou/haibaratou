@@ -70,7 +70,7 @@ const signature=s=>[...String(s).toLowerCase().replace(/[^a-z]/g,"")].sort().joi
 const shuffle=a=>{for(let i=a.length-1;i;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]]}return a};
 function setDictionary(entries,source="語源DB抜粋"){
   const seen=new Set();dictionary=[];wordBySignature=new Map();wordInfo=new Map();
-  entries.forEach((entry,index)=>{const raw=typeof entry==="string"?entry:entry.w,w=String(raw||"").toLowerCase();if(!/^[a-z]{2,8}$/.test(w)||seen.has(w))return;seen.add(w);dictionary.push(w);const fallback=FALLBACK_INFO[w]||["",index+1],info=typeof entry==="string"?{ja:fallback[0],r:fallback[1]}:{ja:String(entry.ja||""),r:Number(entry.r)||9999};wordInfo.set(w,info);const sig=signature(w);if(!wordBySignature.has(sig))wordBySignature.set(sig,w)});
+  entries.forEach((entry,index)=>{const raw=typeof entry==="string"?entry:entry.w,w=String(raw||"").toLowerCase();if(!/^[a-z]{2,24}$/.test(w)||seen.has(w))return;seen.add(w);dictionary.push(w);const fallback=FALLBACK_INFO[w]||["",index+1],info=typeof entry==="string"?{ja:fallback[0],r:fallback[1]}:{ja:String(entry.ja||""),r:Number(entry.r)||9999};wordInfo.set(w,info);const sig=signature(w);if(!wordBySignature.has(sig))wordBySignature.set(sig,[]);wordBySignature.get(sig).push(w)});
   const memo=new Map();
   const canBuild=sig=>{
     if(sig.length===1)return true;if(memo.has(sig))return memo.get(sig);
@@ -85,9 +85,8 @@ function setDictionary(entries,source="語源DB抜粋"){
   dictState.textContent=`${source} ${dictionary.length}語`;
 }
 setDictionary(FALLBACK,"語源DB抜粋");
-fetch("data/generated-etymon/words.json").then(r=>r.ok?r.json():Promise.reject()).then(rows=>{
-  const best=new Map();rows.forEach(x=>{const w=String(x.w||"").toLowerCase();if(!x.pic||!/^[a-z]{2,8}$/.test(w))return;const rank=Number(x.r)||9999;if(!best.has(w)||rank<best.get(w).r)best.set(w,{w,ja:x.ja||"",r:rank})});
-  setDictionary([...best.values()].sort((a,b)=>a.r-b.r),"語源DB");refillQueue();renderQueue();
+fetch("data/generated-etymon/word-suika-words.json").then(r=>r.ok?r.json():Promise.reject()).then(rows=>{
+  setDictionary(rows,"語源DB・画像照合済み");refillQueue();renderQueue();
 }).catch(()=>{});
 const currentStage=()=>STAGES[Math.min(stage-1,STAGES.length-1)];
 function renderStagePicker(){$("#stagePick").innerHTML=STAGES.map((_,i)=>`<button class="${selectedStage===i+1?"on":""}" type="button" data-stage="${i+1}" aria-pressed="${selectedStage===i+1}">${i+1}</button>`).join("");$("#stagePick").querySelectorAll("button").forEach(b=>b.onclick=()=>startStage(Number(b.dataset.stage)))}
@@ -148,11 +147,11 @@ function tryWordMerge(){
     for(let mask=1;mask<limit;mask++){
       if((mask&(mask-1))===0)continue;const chosen=[];let letters="";
       for(let k=0;k<count;k++)if(mask&(1<<k)){chosen.push(component[k]);letters+=bodies[component[k]].letters}
-      if(letters.length>8)continue;
+      if(letters.length>24)continue;
       const chosenSet=new Set(chosen),seen=new Set([chosen[0]]),todo=[chosen[0]];
       while(todo.length){const i=todo.pop();links[i].forEach(j=>{if(chosenSet.has(j)&&!seen.has(j)){seen.add(j);todo.push(j)}})}
       if(seen.size!==chosen.length)continue;
-      const word=wordBySignature.get(signature(letters));if(!word)continue;
+      const options=wordBySignature.get(signature(letters));if(!options?.length)continue;const word=options.find(w=>!discoveredWords.has(w))||options[Math.floor(Math.random()*options.length)];
       if(!best||word.length>best.word.length||(word.length===best.word.length&&chosen.length>best.indices.length))best={indices:chosen,word};
     }
   }

@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "source": "etymon-source/app/data/pie (generated public subset)",
+  "source": "etymon-source/app/data/pie (generated runtime snapshot)",
   "files": {
     "roots": {
       "file": "roots.json",
@@ -10,9 +10,9 @@
     },
     "words": {
       "file": "words.json",
-      "bytes": 5745789,
-      "count": 20857,
-      "sha256": "607400d39c8bc511c6039190817c2b56051ba03fe95d3b35c40ffe8397592cf5"
+      "bytes": 9969810,
+      "count": 49127,
+      "sha256": "ac2be573997a2e6929d3397b291522bab16026fb5398fc47c338e802dd77745e"
     },
     "affixes": {
       "file": "affixes.json",
@@ -28,9 +28,15 @@
     },
     "details_brief": {
       "file": "details_brief.json",
-      "bytes": 62572,
-      "count": 20857,
-      "sha256": "e38514969ee3dccf68235871859e716ca56e8da251bea91edebc17ebd3e8850f"
+      "bytes": 3408715,
+      "count": 49127,
+      "sha256": "ae67cae7775883679ea93925cce6dd602a1ac01f0cd090e8d4a89a5c663210b0"
+    },
+    "word_suika_words": {
+      "file": "word-suika-words.json",
+      "bytes": 176108,
+      "count": 4013,
+      "sha256": "35e1db190d9a8fa895b64f0fd9a27efc04ab2cfc74ea2e48f8c00eda4a2fa200"
     }
   }
 }
