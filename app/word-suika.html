@@ -11,7 +11,7 @@
 html,body{margin:0;min-height:100%;background:#191722;color:var(--ink);font-family:"M PLUS Rounded 1c","Yu Gothic",system-ui,sans-serif;overscroll-behavior:none}
 body{display:grid;place-items:center;padding:0}
 .game{width:min(100vw,720px);height:100dvh;min-height:560px;display:grid;grid-template-rows:auto minmax(0,1fr) auto;background:var(--cream);overflow:hidden;position:relative}
-.top{padding:max(8px,env(safe-area-inset-top)) 12px 9px;background:linear-gradient(180deg,#fff9df,#ffeaa1);border-bottom:4px solid var(--ink);display:grid;grid-template-columns:1fr auto;gap:8px;align-items:center;z-index:3}
+.top{padding:max(8px,env(safe-area-inset-top)) 12px 9px;background:linear-gradient(180deg,#fff9df,#ffeaa1);border-bottom:4px solid var(--ink);display:grid;grid-template-columns:1fr auto;gap:8px;align-items:center;z-index:3}.topRight{display:flex;align-items:center;gap:6px}.topBtns{display:flex;gap:5px}.topBtns button{min-height:42px}
 .brand{display:flex;align-items:center;gap:9px;min-width:0}.brandBall{width:42px;height:42px;border:3px solid var(--ink);border-radius:50%;display:grid;place-items:center;background:#fff;font-weight:1000;box-shadow:0 4px 0 rgba(41,35,45,.22)}
 h1{font-size:clamp(20px,5vw,29px);line-height:1;margin:0;font-weight:1000}.sub{font-size:11px;font-weight:800;margin-top:4px;color:#6e6070}
 .scoreBox{display:flex;gap:6px}.scoreCell{min-width:66px;text-align:center;background:#fff;border:3px solid var(--ink);border-radius:13px;padding:3px 8px;box-shadow:0 4px 0 rgba(41,35,45,.18)}.scoreCell small{display:block;font-size:9px;font-weight:900;color:#89778c}.scoreCell b{font-size:18px}
@@ -20,26 +20,26 @@ canvas{display:block;width:100%;height:100%;touch-action:none;cursor:crosshair}
 .queueHud{position:absolute;right:10px;top:10px;z-index:2;display:flex;align-items:center;gap:5px;background:rgba(255,255,255,.94);border:3px solid var(--ink);border-radius:18px;padding:5px 7px;pointer-events:none;box-shadow:0 4px 0 rgba(41,35,45,.18);white-space:nowrap}.currentBall{width:64px;height:64px;border:3px solid var(--ink);border-radius:50%;display:grid;place-items:center;background:var(--yellow);font-size:39px;font-weight:1000}.currentBall.word{font-size:18px}.nextRow{display:flex;gap:4px}.peekBall{width:32px;height:32px;border:2px solid var(--ink);border-radius:50%;display:grid;place-items:center;font-size:17px;font-weight:1000;background:#fff}.queueHud.choice{display:none}.choiceDock{position:static;z-index:3;display:none;gap:5px;padding:5px;background:#fff;border:3px solid var(--ink);border-radius:18px;box-shadow:0 4px 0 rgba(41,35,45,.18);margin-right:auto}.choiceDock.on{display:flex}.choiceBall{width:48px;height:48px;padding:0;border-radius:50%;font-size:25px;box-shadow:0 3px 0 rgba(41,35,45,.22)}.choiceBall.wordChoice{font-size:14px;letter-spacing:-.03em}.choiceBall.on{background:var(--yellow);transform:translateY(-3px);box-shadow:0 6px 0 rgba(41,35,45,.25)}
 .toast{position:absolute;left:50%;top:82px;z-index:4;transform:translate(-50%,-15px) scale(.9);opacity:0;min-width:180px;text-align:center;background:#fff;border:4px solid var(--ink);border-radius:18px;padding:8px 16px;font-weight:1000;font-size:22px;box-shadow:0 6px 0 rgba(41,35,45,.25);pointer-events:none;transition:.2s}.toast.on{opacity:1;transform:translate(-50%,0) scale(1)}.toast b{color:#e67623}.toast.new{background:#fff2a8;border-color:#e67623}.toast.new strong{display:block;color:#e94f68;font-size:34px;line-height:1;letter-spacing:.06em}.toast.new b{display:block;margin-top:3px;color:var(--ink);font-size:16px}
 .stageIntro{position:absolute;inset:0;z-index:9;display:grid;place-items:center;background:rgba(41,35,45,.52);opacity:0;visibility:hidden;pointer-events:none}.stageIntro.on{visibility:visible;animation:stageIntro 1.45s both}.stageIntroCard{width:min(560px,88%);text-align:center;background:#fff9e9;border:6px solid var(--ink);border-radius:28px;padding:24px 18px;box-shadow:0 10px 0 rgba(41,35,45,.28)}.stageIntro small{display:block;color:#e67623;font-size:clamp(18px,4vw,28px);font-weight:1000;letter-spacing:.12em}.stageIntro b{display:block;margin-top:9px;font-size:clamp(30px,7vw,52px);font-weight:1000;line-height:1.18}@keyframes stageIntro{0%{opacity:0;transform:scale(.72)}12%,72%{opacity:1;transform:scale(1)}88%{opacity:1;transform:scale(1.04)}100%{opacity:0;transform:scale(1.12)}}
-.bottom{padding:8px 10px max(9px,env(safe-area-inset-bottom));border-top:4px solid var(--ink);background:#fff9e9;display:flex;justify-content:flex-end;gap:8px;align-items:center}.bottomBtns{display:flex;gap:6px}.modeChange{padding-inline:10px;background:#fff}
+.bottom{padding:8px 10px max(9px,env(safe-area-inset-bottom));border-top:4px solid var(--ink);background:#fff9e9;display:flex;gap:8px;align-items:center}.modeChange{padding-inline:10px;background:#fff}
 .log{display:none}
 button{appearance:none;border:3px solid var(--ink);border-radius:13px;background:#fff;color:var(--ink);font:inherit;font-weight:1000;padding:9px 13px;box-shadow:0 4px 0 rgba(41,35,45,.22);cursor:pointer}button:active{transform:translateY(3px);box-shadow:0 1px 0 rgba(41,35,45,.22)}
 .over,.modeSelect{position:absolute;inset:0;z-index:10;display:none;place-items:center;background:rgba(25,23,34,.75);padding:24px}.over.on,.modeSelect.on{display:grid}.overCard,.modeCard{width:min(440px,94%);background:#fffaf0;border:5px solid var(--ink);border-radius:24px;text-align:center;padding:24px;box-shadow:0 10px 0 rgba(0,0,0,.25)}.overCard h2,.modeCard h2{font-size:30px;margin:0 0 8px}.overCard p,.modeCard p{font-weight:850}.overCard button{background:var(--yellow);font-size:19px}.modeButtons{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:18px}.modeButtons button{min-height:112px;font-size:21px}.modeButtons button:first-child{background:#fff}.modeButtons button:last-child{background:var(--yellow)}.modeButtons small{display:block;margin-top:7px;font-size:11px;line-height:1.45;color:#6e6070}
 .stagePick{display:grid;grid-template-columns:repeat(5,1fr);gap:7px;margin:14px 0 18px}.stagePick button{padding:9px 0;border-width:2px;border-radius:12px;font-size:17px;background:#fff}.stagePick button.on{background:var(--yellow);transform:translateY(-2px);box-shadow:0 6px 0 rgba(41,35,45,.25)}
-@media(max-width:430px){.game{min-height:500px}.top{padding-left:8px;padding-right:8px}.sub{display:none}.scoreCell{min-width:57px;padding-inline:5px}.queueHud{top:7px;max-width:calc(100% - 14px)}.choiceDock{gap:3px;padding:4px}.choiceBall{width:36px;height:36px;font-size:20px}.choiceBall.wordChoice{font-size:11px}.modeChange,#reset{width:52px;padding-inline:0}.modeChange{font-size:0}.modeChange::after{content:"ステージ";font-size:11px}#reset{font-size:0}#reset::after{content:"↻";font-size:27px}}
+@media(max-width:430px){.game{min-height:500px}.top{padding-left:8px;padding-right:8px;gap:5px}.brandBall{display:none}.brand{gap:0}.sub{display:none}.topRight{gap:3px}.topBtns{gap:3px}.scoreCell{min-width:52px;padding-inline:4px}.queueHud{top:7px;max-width:calc(100% - 14px)}.choiceDock{gap:3px;padding:4px}.choiceBall{width:36px;height:36px;font-size:20px}.choiceBall.wordChoice{font-size:11px}.modeChange,#reset{width:40px;padding-inline:0}.modeChange{font-size:0}.modeChange::after{content:"ST";font-size:11px}#reset{font-size:0}#reset::after{content:"↻";font-size:24px}}
 </style>
 </head>
 <body>
 <main class="game">
   <header class="top">
     <div class="brand"><span class="brandBall">Aa</span><div><h1>ワードスイカ</h1><div class="sub" id="stageInfo">STAGE 1・4文字でクリア</div></div></div>
-    <div class="scoreBox"><div class="scoreCell"><small>SCORE</small><b id="score">0</b></div><div class="scoreCell"><small>STAGE</small><b><span id="stage">1</span> / <span id="goal">4字</span></b></div></div>
+    <div class="topRight"><div class="scoreBox"><div class="scoreCell"><small>SCORE</small><b id="score">0</b></div><div class="scoreCell"><small>STAGE</small><b><span id="stage">1</span> / <span id="goal">4字</span></b></div></div><div class="topBtns"><button class="modeChange" id="modeChange" type="button">ステージ</button><button id="reset" type="button">↻ やりなおす</button></div></div>
   </header>
   <section class="boardWrap" id="boardWrap">
     <canvas id="board" aria-label="文字を落とす盤面"></canvas>
     <div class="queueHud" id="queueHud"><span class="currentBall" id="current">A</span><div class="nextRow" id="next"></div></div>
     <div class="toast" id="toast"></div>
   </section>
-  <footer class="bottom"><div class="choiceDock" id="choices" aria-label="選べる文字"></div><div class="log"><b id="log">好きな横位置をタップして落とす</b><span id="dictState">辞書を準備中…</span></div><div class="bottomBtns"><button class="modeChange" id="modeChange" type="button">ステージ</button><button id="reset" type="button">↻ やりなおす</button></div></footer>
+  <footer class="bottom"><div class="choiceDock" id="choices" aria-label="選べる文字"></div><div class="log"><b id="log">好きな横位置をタップして落とす</b><span id="dictState">辞書を準備中…</span></div></footer>
   <div class="stageIntro" id="stageIntro"><div class="stageIntroCard"><small id="stageIntroNumber">STAGE 1</small><b id="stageIntroGoal">4文字の英単語を作る</b></div></div>
   <div class="over" id="over"><div class="overCard"><h2 id="resultTitle">いっぱい！</h2><p id="result"></p><button id="again" type="button">もう一度</button></div></div>
   <div class="modeSelect on" id="modeSelect"><div class="modeCard"><h2>ステージ選択</h2><div class="stagePick" id="stagePick" aria-label="ステージを選ぶ"></div></div></div>
@@ -53,10 +53,10 @@ const STAGES=[
   {type:"length",goal:5,letters:"watchrightplane"},
   {type:"count",wordLength:3,count:3,letters:"catdogsunpenboxrun"},
   {type:"length",goal:6,letters:"friendpeopleworld"},
-  {type:"count",wordLength:3,count:4,letters:"theandforbutyouallcan"},
+  {type:"count",wordLength:3,count:4,letters:"theforbutyouallcan"},
   {type:"length",goal:7,letters:"searchlationactionknown",bonuses:["re","un"]},
   {type:"length",goal:8,letters:"informaquesmovedevelop",bonuses:["tion","ment"]},
-  {type:"length",goal:9,letters:"availreasonunderstandlearn",bonuses:["able","ing"]},
+  {type:"length",goal:9,letters:"availreasonknowledgelearn",bonuses:["able","ing"]},
   {type:"length",goal:10,letters:"communicadevelopenvironremark",bonuses:["tion","ment","able"]}
 ];
 const $=s=>document.querySelector(s),canvas=$("#board"),ctx=canvas.getContext("2d");
