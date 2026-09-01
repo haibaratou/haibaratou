@@ -29,8 +29,8 @@ button{appearance:none;border:3px solid var(--ink);border-radius:13px;background
 <body>
 <main class="game">
   <header class="top">
-    <div class="brand"><span class="brandBall">Aa</span><div><h1>ワードスイカ</h1><div class="sub">英単語を合体させる落ちものワードパズル</div></div></div>
-    <div class="scoreBox"><div class="scoreCell"><small>SCORE</small><b id="score">0</b></div><div class="scoreCell"><small>WORDS</small><b id="words">0</b></div></div>
+    <div class="brand"><span class="brandBall">Aa</span><div><h1>ワードスイカ</h1><div class="sub" id="stageInfo">STAGE 1・4文字でクリア</div></div></div>
+    <div class="scoreBox"><div class="scoreCell"><small>SCORE</small><b id="score">0</b></div><div class="scoreCell"><small>STAGE</small><b><span id="stage">1</span> / <span id="goal">4</span>字</b></div></div>
   </header>
   <section class="boardWrap" id="boardWrap">
     <canvas id="board" aria-label="文字を落とす盤面"></canvas>
@@ -40,14 +40,21 @@ button{appearance:none;border:3px solid var(--ink);border-radius:13px;background
   </section>
   <footer class="bottom"><div class="log"><b id="log">好きな横位置をタップして落とす</b><span id="dictState">辞書を準備中…</span></div><div class="bottomBtns"><button class="modeChange" id="modeChange" type="button">方式変更</button><button id="reset" type="button">↻ やりなおす</button></div></footer>
   <div class="over" id="over"><div class="overCard"><h2 id="resultTitle">いっぱい！</h2><p id="result"></p><button id="again" type="button">もう一度</button></div></div>
-  <div class="modeSelect on" id="modeSelect"><div class="modeCard"><h2>文字の選び方</h2><p>遊び方を選んでください</p><div class="modeButtons"><button type="button" data-mode="random">ランダム<small>届いた文字を順番に落とす</small></button><button type="button" data-mode="choice">5つから選ぶ<small>候補5文字から好きな文字を選んで落とす</small></button></div></div></div>
+  <div class="modeSelect on" id="modeSelect"><div class="modeCard"><h2>文字の選び方</h2><p>遊び方を選んでください</p><div class="modeButtons"><button type="button" data-mode="random">順番どおり<small>ステージ固定の文字を順番に落とす</small></button><button type="button" data-mode="choice">5つから選ぶ<small>固定候補5文字から好きな文字を選んで落とす</small></button></div></div></div>
 </main>
 <script>
 const FALLBACK=`as her do there out with and been which time could if or at she them about other up they me we one his for no their have also an be all that but my what of he can to when it like you who your him by more the than from this on not in is only some our over two these see then through any how first just between way know where even us before now down after well because life work being get new make here many those much use right same both good each man own long need day must around still while go too take under off think world never might data want going little found three again part without another against place come away system say head thought high are case during social face water within few every number help always state process power find set example last small human home great end old often room point year order love until side though went upon change since next am study form let give others best less mind research second law felt house himself together level door enough light model book name why feel group fact far night once control become value course tell among means ever open care sure present heart school nothing able woman self along several support above four health mother moment father young low energy behind voice full further due either line country mean common real show past kind hard role food death idea white free risk nature history word result matter problem front true future toward effect close five language half air view term someone money itself type period clear action reason per single age short turn blood city land interest inside story rate field read else include class outside black similar main century big herself move response alone policy design rest physical current section cell subject party answer society surface force quality whose activity decision return lower car disease account today third major size addition bring impact plan act mouth range culture cost forward project red access positive fire beyond truth simply meet loss amount instead team below purpose pressure presence content create office legal perhaps whom movement private remember wrong media stay complex special source art simple stage court ability poor phone share floor property nor seem issue product skin church report cut entire eye modern pay complete distance critical respect arm species normal allow road hold medical basis breath direct behavior music concept negative review region ten earth walk standard stand note object rule capital onto status weight solution offer recent industry science primary percent window blue program degree mental date husband success correct continue event safe income active faith capacity instance phase volume develop student round appear glass former task couple hundred contact plant address produce king manner tree basic remain indeed exactly digital factor except perfect strategy break base maybe peace avoid desire supply soil heavy doubt require improve demand via relation measure freedom cover ensure reaction edge reduce search internal evening identify extent contrast visit initial acid chair sample add setting build charge effort actual occur month worth unit street record sit foot exercise attempt neither vision benefit seat balance die animal notice gender prevent receive external constant rich despite river gold carry achieve nation apply protect exchange protein progress prior separate version anti conflict relative transfer thousand proper concern corner none overall regard exist feature affect ancient suggest religion unique contract upper dinner yes double nice birth crisis duty ahead accept release empty unless career describe expect quick opposite forth maintain strange afraid agent tone travel horse store secret enter input promise lose seek maximum regular perform cycle truly mode pleasure thirty command audience device discuss enemy severe stock sky obvious solid press worry credit crime conduct client detail spend dress officer software obtain apart passage till station surprise formal lie injury official mission alive judgment visual enjoy pair bound join screen escape storage agree thin relief ring joint video partner ear guide beneath aspect finger missing band adult frame inner forget square catch host extra survey outcome ball indicate unable decide contain capable garden platform chief beauty visible dynamic tend divine prove notion desk aid listen domain vehicle cent judge aside famous sequence danger advice island mention plane request glad magic typical plate aim manage fellow index ideal flat sin taste shirt`.split(/\s+/);
 const FALLBACK_INFO={her:["彼女の、彼女を",1],do:["する、役に立つ",1],there:["そこに",1],out:["外へ",1],with:["〜と一緒に",1],and:["〜と",1],been:["〜であった",1],which:["どちら",1],time:["時間、回",1],could:["できた",1],if:["もし〜ならば",1],or:["または",1],at:["〜に",1],she:["彼女は",1],them:["彼らを",1],about:["〜について",1],other:["ほかの",1],up:["上へ",1],they:["彼らは",1],me:["私を",1],we:["私たちは",1],one:["一つ",1],his:["彼の",1],for:["〜のために",1],no:["いいえ",1],their:["彼らの",1],have:["持っている",1],also:["〜もまた",1],an:["一つの",1],be:["である",1],all:["全ての",1],that:["それ",1],but:["しかし",1],my:["私の",1],what:["何",1],of:["〜の",1],he:["彼は",1],can:["〜できる",1],to:["〜へ",1],when:["いつ",1],it:["それは",1],like:["好む、〜のような",1],you:["あなた",1],who:["誰",1],your:["あなたの",1],him:["彼を",1],by:["〜によって",1],more:["もっと多くの",1],the:["その",1],than:["〜よりも",1],from:["〜から",1],this:["これ",1],on:["〜の上に",1],not:["〜でない",1],in:["中に",1],is:["〜である",1],only:["唯一の",5],some:["いくつかの",11],our:["私たちの",15],over:["〜の上に",17],two:["二つ",19],these:["これら",20],see:["見る",20],then:["そのとき",21],through:["〜を通って",28],any:["どんな〜でも",32],how:["どうやって",33],first:["第一の",37],just:["ちょうど",38],between:["〜の間に",39],way:["道、方法",42],know:["知る",43],where:["どこに",49],even:["〜さえ",54],us:["私たちを",54],before:["〜の前に",55],now:["今",58],down:["下へ",59],after:["〜のあとに",59],well:["よく、健康な",61],because:["なぜなら",61],life:["命",63],work:["仕事、作品",64],being:["存在",67],get:["得る、なる",70],new:["新しい",71],make:["作る",74],here:["ここに",74],many:["多くの",74],those:["それら",74],much:["たくさんの",78],use:["使う",81],right:["正しい、右",83],same:["同じ",84],both:["両方の",84],good:["良い",86],each:["それぞれの",88],man:["男性",89],own:["自分の",95],long:["長い",96],need:["必要",97],day:["日",98],must:["〜しなければならない",98],around:["周りに",98],still:["静かな",98],while:["〜する間に",98],go:["行く",100],too:["〜もまた",100],take:["取る",102],under:["下に",106],off:["離れて",108],think:["考える",109],world:["世界",110],never:["決して〜ない",112],might:["力、〜かもしれない",112],data:["データ",112],want:["欲しい",114],going:["行くこと",116],little:["小さい",116],found:["設立する",117],three:["三つ",117],again:["再び",118],part:["部分、役",118],without:["〜なしに",119],another:["別の",121],against:["〜に反対して",122],place:["場所",123],come:["来る",124],away:["離れて",125],system:["体系",126],say:["言う",128],head:["頭",128],thought:["考え",130],high:["高い",131],are:["〜である",133],case:["場合、事件",134],during:["〜の間に",136],social:["社会の",137],face:["顔",140]};
+const STAGES=[
+  {goal:4,letters:"andlhsetroic"},
+  {goal:5,letters:"watchrightplane"},
+  {goal:6,letters:"friendpeopleworld"},
+  {goal:7,letters:"anotherwithoutbetween"},
+  {goal:8,letters:"languageinterestquestion"}
+];
 const $=s=>document.querySelector(s),canvas=$("#board"),ctx=canvas.getContext("2d");
-const wrap=$("#boardWrap"),scoreEl=$("#score"),wordsEl=$("#words"),queueHud=$("#queueHud"),currentEl=$("#current"),nextEl=$("#next"),choicesEl=$("#choices"),logEl=$("#log"),dictState=$("#dictState"),toast=$("#toast"),modeSelect=$("#modeSelect");
-let W=0,H=0,dpr=1,bodies=[],particles=[],queue=[],aimX=220,last=performance.now(),nextId=1,score=0,wordCount=0,canDrop=false,over=false,dangerFrames=0,toastTimer=0,burstFlash=0,burstLabel=null,mode="",choiceIndex=0;
+const wrap=$("#boardWrap"),scoreEl=$("#score"),stageEl=$("#stage"),goalEl=$("#goal"),stageInfoEl=$("#stageInfo"),queueHud=$("#queueHud"),currentEl=$("#current"),nextEl=$("#next"),choicesEl=$("#choices"),logEl=$("#log"),dictState=$("#dictState"),toast=$("#toast"),modeSelect=$("#modeSelect");
+let W=0,H=0,dpr=1,bodies=[],particles=[],queue=[],aimX=220,last=performance.now(),nextId=1,score=0,wordCount=0,canDrop=false,over=false,dangerFrames=0,toastTimer=0,burstFlash=0,burstLabel=null,mode="",choiceIndex=0,stage=1,stageCursor=0,stageCleared=false,stageClearTimer=0;
 let dictionary=[],wordBySignature=new Map(),wordInfo=new Map(),buildTargets=[];
 const DISCOVERY_KEY="word-suika-discovered-v1";let discoveredWords=new Set();
 try{discoveredWords=new Set(JSON.parse(localStorage.getItem(DISCOVERY_KEY)||"[]"))}catch(e){}
@@ -75,19 +82,16 @@ fetch("data/generated-etymon/words.json").then(r=>r.ok?r.json():Promise.reject()
   const best=new Map();rows.forEach(x=>{const w=String(x.w||"").toLowerCase();if(!x.pic||!/^[a-z]{2,8}$/.test(w))return;const rank=Number(x.r)||9999;if(!best.has(w)||rank<best.get(w).r)best.set(w,{w,ja:x.ja||"",r:rank})});
   setDictionary([...best.values()].sort((a,b)=>a.r-b.r),"語源DB");refillQueue();renderQueue();
 }).catch(()=>{});
-function appendTarget(){
-  const target=buildTargets[Math.floor(Math.random()*buildTargets.length)]||"and";
-  queue.push(...shuffle([...target]));
-}
+const currentStage=()=>STAGES[Math.min(stage-1,STAGES.length-1)];
+function nextStageLetter(){const letters=currentStage().letters;return letters[(stageCursor++)%letters.length]}
 function refillQueue(){
-  if(!queue.length)queue.push("a","n","d");
-  while(queue.length<16)appendTarget();
+  while(queue.length<16)queue.push(nextStageLetter());
 }
 function choiceCandidates(){
   refillQueue();let found=[];
   for(let tries=0;tries<12;tries++){
     const seen=new Set();found=[];queue.forEach((ch,index)=>{if(found.length<5&&!seen.has(ch)){seen.add(ch);found.push({ch,index})}});
-    if(found.length>=5)break;appendTarget();
+    if(found.length>=5)break;queue.push(nextStageLetter());
   }
   return found;
 }
@@ -111,15 +115,15 @@ function addBody(label,x,y,word=""){
   const raw=word||label.toLowerCase(),isWord=!!word,r=isWord?Math.min(106,44*Math.pow(1.12,raw.length-1)):40;
   const info=wordInfo.get(raw)||{};const b={id:nextId++,label:raw.toUpperCase(),letters:raw.toLowerCase(),word:isWord?raw:"",ja:isWord?(info.ja||"和訳なし"):"",x,y,r,vx:(Math.random()-.5)*10,vy:0,color:colors[(raw.charCodeAt(0)+raw.length)%colors.length],born:performance.now(),img:isWord?wordImage(raw):null};bodies.push(b);return b;
 }
-function dropAt(x){if(!mode||!canDrop||over)return;refillQueue();x=Math.max(57,Math.min(W-57,x));let ch;if(mode==="choice"){ch=queue.splice(choiceIndex,1)[0];choiceIndex=0}else ch=queue.shift();addBody(ch,x,61);aimX=x;canDrop=false;setTimeout(()=>canDrop=true,420);renderQueue();logEl.textContent=`${ch.toUpperCase()} を落とした`}
+function dropAt(x){if(!mode||!canDrop||over)return;refillQueue();x=Math.max(57,Math.min(W-57,x));let ch;if(mode==="choice"){ch=queue.splice(choiceIndex,1)[0];choiceIndex=0}else ch=queue.shift();addBody(ch,x,61);aimX=x;canDrop=false;setTimeout(()=>{if(!over&&!stageClearTimer&&!bodies.some(b=>b.clearsStage))canDrop=true},420);renderQueue();logEl.textContent=`${ch.toUpperCase()} を落とした`}
 function mergeBodies(parts,word){
   const total=parts.reduce((sum,b)=>sum+b.r*b.r,0),x=parts.reduce((sum,b)=>sum+b.x*b.r*b.r,0)/total,y=parts.reduce((sum,b)=>sum+b.y*b.r*b.r,0)/total;
   const source=new Set(parts),names=parts.map(b=>b.label);bodies=bodies.filter(o=>!source.has(o));const n=addBody(word,x,y,word);n.vx=parts.reduce((sum,b)=>sum+b.vx,0)/parts.length*.35;n.vy=Math.min(...parts.map(b=>b.vy))-55;
-  score+=word.length*word.length*10;wordCount++;scoreEl.textContent=score;wordsEl.textContent=wordCount;
+  score+=word.length*word.length*10;wordCount++;scoreEl.textContent=score;
   const isNew=!discoveredWords.has(word);if(isNew){discoveredWords.add(word);try{localStorage.setItem(DISCOVERY_KEY,JSON.stringify([...discoveredWords]))}catch(e){}}
   logEl.textContent=`${names.join(" + ")} → ${word.toUpperCase()}`;showToast(word,isNew);
   for(let i=0;i<18;i++)particles.push({x,y,vx:(Math.random()-.5)*220,vy:(Math.random()-.8)*180,life:1,color:n.color});
-  if(word.length===8)n.vanishAt=performance.now()+700;
+  if(word.length>=currentStage().goal){n.vanishAt=performance.now()+700;n.clearsStage=true;canDrop=false}
 }
 function tryWordMerge(){
   const links=bodies.map(()=>new Set());
@@ -146,7 +150,7 @@ function tryWordMerge(){
   if(best){mergeBodies(best.indices.map(i=>bodies[i]),best.word);return true}return false;
 }
 function showToast(word,isNew=false){clearTimeout(toastTimer);toast.classList.toggle("new",isNew);toast.innerHTML=isNew?`<strong>NEW!</strong><b>${word.toUpperCase()}</b>`:`WORD! <b>${word.toUpperCase()}</b>`;toast.classList.add("on");toastTimer=setTimeout(()=>toast.classList.remove("on"),1000)}
-function vanishLongWords(){const now=performance.now(),gone=bodies.filter(b=>b.vanishAt&&now>=b.vanishAt);if(!gone.length)return;const ids=new Set(gone.map(b=>b.id));bodies=bodies.filter(b=>!ids.has(b.id));gone.forEach(b=>{for(let i=0;i<84;i++){const a=Math.random()*Math.PI*2,speed=110+Math.random()*430;particles.push({x:b.x,y:b.y,vx:Math.cos(a)*speed,vy:Math.sin(a)*speed-90,life:1.25,color:colors[i%colors.length],size:4+Math.random()*9})}burstLabel={word:b.label,ja:b.ja||"和訳なし",life:1};logEl.textContent=`${b.label} 8文字完成！`});burstFlash=1}
+function vanishClearedWords(){const now=performance.now(),gone=bodies.filter(b=>b.vanishAt&&now>=b.vanishAt);if(!gone.length)return;const ids=new Set(gone.map(b=>b.id));bodies=bodies.filter(b=>!ids.has(b.id));gone.forEach(b=>{for(let i=0;i<84;i++){const a=Math.random()*Math.PI*2,speed=110+Math.random()*430;particles.push({x:b.x,y:b.y,vx:Math.cos(a)*speed,vy:Math.sin(a)*speed-90,life:1.25,color:colors[i%colors.length],size:4+Math.random()*9})}burstLabel={word:b.label,ja:b.ja||"和訳なし",goal:currentStage().goal,life:1};logEl.textContent=`${b.label} ${currentStage().goal}文字クリア！`;if(b.clearsStage){clearTimeout(stageClearTimer);stageClearTimer=setTimeout(()=>showStageClear(b),950)}});burstFlash=1}
 function physics(dt){
   const s=Math.min(.033,dt/1000),floor=H-9-(mode==="choice"?78:0);
   bodies.forEach(b=>{b.vy+=720*s;b.vx*=Math.pow(.994,dt/16.67);b.vy*=Math.pow(.997,dt/16.67);b.x+=b.vx*s;b.y+=b.vy*s});
@@ -159,11 +163,11 @@ function physics(dt){
     }
     bodies.forEach(b=>{if(b.x<b.r+4){b.x=b.r+4;b.vx=Math.abs(b.vx)*.25}if(b.x>W-b.r-4){b.x=W-b.r-4;b.vx=-Math.abs(b.vx)*.25}if(b.y>floor-b.r){b.y=floor-b.r;b.vy=-Math.abs(b.vy)*.08;if(Math.abs(b.vy)<8)b.vy=0}});
   }
-  tryWordMerge();vanishLongWords();
+  tryWordMerge();vanishClearedWords();
   particles.forEach(p=>{p.vy+=400*s;p.x+=p.vx*s;p.y+=p.vy*s;p.life-=s*1.8});particles=particles.filter(p=>p.life>0);
   burstFlash=Math.max(0,burstFlash-s*2.5);
   if(burstLabel){burstLabel.life-=s/1.55;if(burstLabel.life<=0)burstLabel=null}
-  const danger=bodies.some(b=>performance.now()-b.born>2500&&b.y-b.r<88&&Math.abs(b.vy)<30);dangerFrames=danger?dangerFrames+1:Math.max(0,dangerFrames-2);if(dangerFrames>150)gameOver();
+  const resolvingStage=!!stageClearTimer||bodies.some(b=>b.clearsStage),danger=!resolvingStage&&bodies.some(b=>performance.now()-b.born>2500&&b.y-b.r<88&&Math.abs(b.vy)<30);dangerFrames=danger?dangerFrames+1:Math.max(0,dangerFrames-2);if(dangerFrames>150)gameOver();
 }
 function roundRect(c,x,y,w,h,r){c.beginPath();c.roundRect(x,y,w,h,r)}
 function drawBody(b){
@@ -172,13 +176,16 @@ function drawBody(b){
 }
 function draw(){ctx.clearRect(0,0,W,H);ctx.fillStyle="rgba(255,255,255,.2)";for(let y=120;y<H;y+=62){ctx.fillRect(0,y,W,1)}if(mode==="choice"){ctx.fillStyle="rgba(255,249,233,.88)";ctx.fillRect(0,H-82,W,82);ctx.strokeStyle="rgba(41,35,45,.28)";ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(0,H-82);ctx.lineTo(W,H-82);ctx.stroke()}ctx.setLineDash([8,8]);ctx.strokeStyle=dangerFrames?"#e94f68":"rgba(41,35,45,.28)";ctx.lineWidth=3;ctx.beginPath();ctx.moveTo(0,88);ctx.lineTo(W,88);ctx.stroke();ctx.setLineDash([]);
   const previewCh=mode==="choice"?(queue[choiceIndex]||queue[0]):queue[0];ctx.strokeStyle="rgba(41,35,45,.42)";ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(aimX,0);ctx.lineTo(aimX,Math.min(H,205));ctx.stroke();ctx.save();ctx.shadowColor="rgba(41,35,45,.28)";ctx.shadowBlur=0;ctx.shadowOffsetY=7;ctx.beginPath();ctx.arc(aimX,61,55,0,Math.PI*2);ctx.fillStyle="#fff7cf";ctx.fill();ctx.shadowColor="transparent";ctx.lineWidth=5;ctx.strokeStyle="#29232d";ctx.stroke();ctx.fillStyle="#29232d";ctx.font="1000 60px system-ui";ctx.textAlign="center";ctx.textBaseline="middle";ctx.fillText((previewCh||"").toUpperCase(),aimX,63);ctx.restore();
-  bodies.forEach(drawBody);particles.forEach(p=>{ctx.globalAlpha=Math.min(1,Math.max(0,p.life));ctx.fillStyle=p.color;ctx.beginPath();ctx.arc(p.x,p.y,p.size||4,0,Math.PI*2);ctx.fill()});ctx.globalAlpha=1;if(burstFlash){ctx.fillStyle=`rgba(255,245,155,${burstFlash*.48})`;ctx.fillRect(0,0,W,H)}if(burstLabel){const a=Math.min(1,burstLabel.life*4),bw=Math.min(W-28,430),bh=118,bx=(W-bw)/2,by=Math.max(118,H*.25);ctx.save();ctx.globalAlpha=a;ctx.beginPath();ctx.roundRect(bx,by,bw,bh,22);ctx.fillStyle="rgba(255,255,255,.95)";ctx.fill();ctx.lineWidth=5;ctx.strokeStyle="#29232d";ctx.stroke();ctx.textAlign="center";ctx.textBaseline="middle";ctx.fillStyle="#e67623";ctx.font="1000 16px system-ui";ctx.fillText("8 LETTER WORD!",W/2,by+20);ctx.fillStyle="#29232d";ctx.font=`1000 ${Math.min(44,bw/9)}px system-ui`;ctx.fillText(burstLabel.word,W/2,by+59);ctx.fillStyle="#6e6070";ctx.font="850 16px system-ui";ctx.fillText(burstLabel.ja,W/2,by+94);ctx.restore()}}
+  bodies.forEach(drawBody);particles.forEach(p=>{ctx.globalAlpha=Math.min(1,Math.max(0,p.life));ctx.fillStyle=p.color;ctx.beginPath();ctx.arc(p.x,p.y,p.size||4,0,Math.PI*2);ctx.fill()});ctx.globalAlpha=1;if(burstFlash){ctx.fillStyle=`rgba(255,245,155,${burstFlash*.48})`;ctx.fillRect(0,0,W,H)}if(burstLabel){const a=Math.min(1,burstLabel.life*4),bw=Math.min(W-28,430),bh=118,bx=(W-bw)/2,by=Math.max(118,H*.25);ctx.save();ctx.globalAlpha=a;ctx.beginPath();ctx.roundRect(bx,by,bw,bh,22);ctx.fillStyle="rgba(255,255,255,.95)";ctx.fill();ctx.lineWidth=5;ctx.strokeStyle="#29232d";ctx.stroke();ctx.textAlign="center";ctx.textBaseline="middle";ctx.fillStyle="#e67623";ctx.font="1000 16px system-ui";ctx.fillText(`${burstLabel.goal} LETTER CLEAR!`,W/2,by+20);ctx.fillStyle="#29232d";ctx.font=`1000 ${Math.min(44,bw/9)}px system-ui`;ctx.fillText(burstLabel.word,W/2,by+59);ctx.fillStyle="#6e6070";ctx.font="850 16px system-ui";ctx.fillText(burstLabel.ja,W/2,by+94);ctx.restore()}}
 function loop(now){const dt=now-last;last=now;if(!over)physics(dt);draw();requestAnimationFrame(loop)}
-function gameOver(){if(over)return;over=true;$("#resultTitle").textContent="いっぱい！";$("#result").textContent=`${wordCount}語を完成　${score}点`;$("#over").classList.add("on")}
-function reset(){clearTimeout(toastTimer);toast.classList.remove("on","new");bodies=[];particles=[];queue=[];score=0;wordCount=0;dangerFrames=0;burstFlash=0;burstLabel=null;over=false;canDrop=!!mode;choiceIndex=0;scoreEl.textContent=0;wordsEl.textContent=0;$("#over").classList.remove("on");logEl.textContent=mode==="choice"?"候補を選んで、落とす位置をタップ":"好きな横位置をタップして落とす";refillQueue();renderQueue()}
-function chooseMode(nextMode){mode=nextMode;modeSelect.classList.remove("on");reset()}
-function changeMode(){mode="";canDrop=false;bodies=[];particles=[];queue=[];queueHud.classList.remove("choice");choicesEl.classList.remove("on");modeSelect.classList.add("on")}
-canvas.addEventListener("pointermove",e=>{const r=canvas.getBoundingClientRect();aimX=Math.max(57,Math.min(W-57,e.clientX-r.left))});canvas.addEventListener("pointerdown",e=>{e.preventDefault();const r=canvas.getBoundingClientRect();dropAt(e.clientX-r.left)});$("#reset").onclick=reset;$("#again").onclick=reset;
+function showStageClear(b){if(over)return;over=true;stageCleared=true;const lastStage=stage>=STAGES.length;$("#resultTitle").textContent=lastStage?"ALL CLEAR!":`STAGE ${stage} CLEAR!`;$("#result").textContent=`${b.label}（${b.ja||"和訳なし"}） ／ ${score}点`;$("#again").textContent=lastStage?"最初から":"次のステージ";$("#over").classList.add("on")}
+function gameOver(){if(over)return;over=true;stageCleared=false;$("#resultTitle").textContent=`STAGE ${stage} 失敗`;$("#result").textContent=`${wordCount}語を完成　${score}点`;$("#again").textContent="同じステージを再挑戦";$("#over").classList.add("on")}
+function updateStageDisplay(){const goal=currentStage().goal;stageEl.textContent=stage;goalEl.textContent=goal;stageInfoEl.textContent=`STAGE ${stage}・${goal}文字でクリア`}
+function reset(){clearTimeout(stageClearTimer);stageClearTimer=0;clearTimeout(toastTimer);toast.classList.remove("on","new");bodies=[];particles=[];queue=[];stageCursor=0;score=0;wordCount=0;dangerFrames=0;burstFlash=0;burstLabel=null;over=false;stageCleared=false;canDrop=!!mode;choiceIndex=0;scoreEl.textContent=0;$("#over").classList.remove("on");logEl.textContent=mode==="choice"?"候補を選んで、落とす位置をタップ":"好きな横位置をタップして落とす";updateStageDisplay();refillQueue();renderQueue()}
+function chooseMode(nextMode){mode=nextMode;stage=1;modeSelect.classList.remove("on");reset()}
+function changeMode(){clearTimeout(stageClearTimer);stageClearTimer=0;stage=1;mode="";canDrop=false;bodies=[];particles=[];queue=[];queueHud.classList.remove("choice");choicesEl.classList.remove("on");modeSelect.classList.add("on");updateStageDisplay()}
+function continueAfterResult(){if(stageCleared)stage=stage>=STAGES.length?1:stage+1;reset()}
+canvas.addEventListener("pointermove",e=>{const r=canvas.getBoundingClientRect();aimX=Math.max(57,Math.min(W-57,e.clientX-r.left))});canvas.addEventListener("pointerdown",e=>{e.preventDefault();const r=canvas.getBoundingClientRect();dropAt(e.clientX-r.left)});$("#reset").onclick=reset;$("#again").onclick=continueAfterResult;
 document.querySelectorAll("[data-mode]").forEach(b=>b.onclick=()=>chooseMode(b.dataset.mode));$("#modeChange").onclick=changeMode;
 requestAnimationFrame(t=>{last=t;loop(t)});
 </script>
