@@ -10,9 +10,9 @@
     },
     "words": {
       "file": "words.json",
-      "bytes": 11203233,
+      "bytes": 11206491,
       "count": 49127,
-      "sha256": "8e1e0f5037aa2fcaf534819a3fcb097b624aebaf4657872a5289d2b8325e1340"
+      "sha256": "14ba46d0c3d08337b94081d45635c864cad77aa0bcaf134fbc6b23885fa59ab4"
     },
     "affixes": {
       "file": "affixes.json",
@@ -40,12 +40,12 @@
     },
     "det": {
       "file": "det/*.json",
-      "bytes": 42662767,
+      "bytes": 42769397,
       "count": 27
     },
     "eo": {
       "file": "eo/*.json",
-      "bytes": 21004443,
+      "bytes": 21243040,
       "count": 27
     }
   }
