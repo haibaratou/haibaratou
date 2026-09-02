@@ -296,7 +296,7 @@ td.cMemo input.filled{border-color:var(--accent2);background:#f2fbf8}
 "use strict";
 const $=s=>document.querySelector(s);
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-const PIE_V='cfecfe9ab3';   // build_pie_data.py がデータのハッシュに書き換える(キャッシュ破り)
+const PIE_V='c5f2b3a446';   // build_pie_data.py がデータのハッシュに書き換える(キャッシュ破り)
 let ROOTS=[], WORDS=[], AFFIXES=[], BRIEF=null, byRoot=new Map();
 // 単語をクリックしたときの詳細。母艦から生成した同じフォルダの中を読む
 //   det/ … Merriam-Webster / Wiktionary / 英辞郎 / Weblio / 発音・カナ・音節
