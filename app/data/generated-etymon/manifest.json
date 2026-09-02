@@ -37,6 +37,16 @@
       "bytes": 176140,
       "count": 4013,
       "sha256": "fda75e8ca87e43fefd619a18c42e24d8475c8755e0102a06300916c76cc69b98"
+    },
+    "det": {
+      "file": "det/*.json",
+      "bytes": 42128143,
+      "count": 27
+    },
+    "eo": {
+      "file": "eo/*.json",
+      "bytes": 20107763,
+      "count": 27
     }
   }
 }

@@ -296,13 +296,27 @@ td.cMemo input.filled{border-color:var(--accent2);background:#f2fbf8}
 "use strict";
 const $=s=>document.querySelector(s);
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-const PIE_V='c7e0a8132e';   // build_pie_data.py がデータのハッシュに書き換える(キャッシュ破り)
+const PIE_V='cfecfe9ab3';   // build_pie_data.py がデータのハッシュに書き換える(キャッシュ破り)
 let ROOTS=[], WORDS=[], AFFIXES=[], BRIEF=null, byRoot=new Map();
-// 購入辞書・取得キャッシュは非公開の母艦だけに置く。公開版は公開用スナップショットを使う。
-function detOf(){return Promise.resolve(null)}
+// 単語をクリックしたときの詳細。母艦から生成した同じフォルダの中を読む
+//   det/ … Merriam-Webster / Wiktionary / 英辞郎 / Weblio / 発音・カナ・音節
+//   eo/  … etymonline の記事
+// 頭文字ごとに分けてあるので、開いた語のぶんだけ取りにいく(全部は読まない)。
+const G='data/generated-etymon/';
+const _shard={};
+function _initial(w){const c=(w||'')[0];return /^[a-z]$/i.test(c)?c.toLowerCase():'_';}
+function _load(kind,word){
+  const c=_initial(word), key=kind+'/'+c;
+  if(!_shard[key]){
+    _shard[key]=fetch(G+kind+'/'+c+'.json?v='+PIE_V)
+      .then(x=>x.ok?x.json():{}).catch(()=>({}));
+  }
+  return _shard[key];
+}
+function detOf(word,i){return _load('det',word).then(d=>d[String(i)]||null);}
 let EO_SLUG=new Set();
 function eoPick(){return Promise.resolve({})}
-function eoShard(){return Promise.resolve({})}
+function eoShard(word){return _load('eo',word);}
 async function fillEO(word,row,w){
   const box=row.querySelector('.eoLocal span');if(!box)return;
   const all=(await eoShard(word))[word];
