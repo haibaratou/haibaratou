@@ -10,9 +10,9 @@
     },
     "words": {
       "file": "words.json",
-      "bytes": 9969810,
+      "bytes": 11156553,
       "count": 49127,
-      "sha256": "ac2be573997a2e6929d3397b291522bab16026fb5398fc47c338e802dd77745e"
+      "sha256": "4a1e96bfcbd13c91616328988cca47d80ef762b627b3d3c0645cc612a22f4d80"
     },
     "affixes": {
       "file": "affixes.json",
@@ -28,15 +28,15 @@
     },
     "details_brief": {
       "file": "details_brief.json",
-      "bytes": 3408715,
+      "bytes": 147382,
       "count": 49127,
-      "sha256": "ae67cae7775883679ea93925cce6dd602a1ac01f0cd090e8d4a89a5c663210b0"
+      "sha256": "66d7431978ccca6736894bf28ea259990bf772fc2b5f2dceabbb7b715f5030cb"
     },
     "word_suika_words": {
       "file": "word-suika-words.json",
-      "bytes": 176108,
+      "bytes": 176140,
       "count": 4013,
-      "sha256": "35e1db190d9a8fa895b64f0fd9a27efc04ab2cfc74ea2e48f8c00eda4a2fa200"
+      "sha256": "fda75e8ca87e43fefd619a18c42e24d8475c8755e0102a06300916c76cc69b98"
     }
   }
 }
