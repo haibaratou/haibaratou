@@ -7,140 +7,168 @@
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Spectral:wght@600&family=IBM+Plex+Sans+JP:wght@400;500;600&family=IBM+Plex+Mono:wght@400&display=swap">
 <style>
 :root{--paper:#E9EBE6;--card:#F4F5F2;--sunk:#DFE3DC;--line:#CBD1CA;--line2:#DEE2DB;
- --ink:#16211F;--ink2:#43514D;--ink3:#6E7B76;--accent:#2E7D6F;--accent-soft:#DCE8E4;--rust:#A3542F}
+ --ink:#16211F;--ink2:#43514D;--ink3:#6E7B76;--accent:#2E7D6F;--accent-soft:#DCE8E4;
+ --rust:#A3542F;--rail:320px;--head:58px}
 @media (prefers-color-scheme:dark){:root{--paper:#12181A;--card:#1A2124;--sunk:#151B1D;
  --line:#2C3639;--line2:#232B2E;--ink:#DDE3E0;--ink2:#A3AFAB;--ink3:#7C8884;
  --accent:#5FB3A1;--accent-soft:#1E3733;--rust:#C97B50}}
 *{box-sizing:border-box}
+html,body{height:100%}
 body{background:var(--paper);color:var(--ink);margin:0;font-size:15px;line-height:1.7;
- font-family:"IBM Plex Sans JP","Hiragino Sans",system-ui,sans-serif}
-.wrap{max-width:940px;margin:0 auto;padding:0 20px}
-header{background:var(--card);border-bottom:1px solid var(--line)}
-.mast{display:flex;flex-wrap:wrap;gap:12px 24px;align-items:baseline;padding:22px 0 18px}
-h1{font-family:Spectral,"Hiragino Mincho ProN",serif;font-weight:600;font-size:26px;margin:0}
-.sub{color:var(--ink2);font-size:13.5px;margin:3px 0 0;max-width:62ch}
-.counts{margin-left:auto;display:flex;gap:20px}
-.c b{display:block;font-family:"IBM Plex Mono",monospace;font-size:19px}
-.c span{font-size:11px;color:var(--ink3);letter-spacing:.05em}
-.bar{position:sticky;top:0;z-index:5;background:var(--card);border-bottom:1px solid var(--line)}
-.barin{display:flex;gap:8px;flex-wrap:wrap;align-items:center;padding:11px 0}
-#q{flex:1 1 230px;min-width:170px;padding:8px 11px;font:inherit;font-size:14px;color:var(--ink);
+ font-family:"IBM Plex Sans JP","Hiragino Sans",system-ui,sans-serif;
+ display:flex;flex-direction:column;overflow:hidden}
+/* ---- 上の帯 ---- */
+.top{height:var(--head);flex:none;display:flex;align-items:center;gap:16px;padding:0 18px;
+ background:var(--card);border-bottom:1px solid var(--line)}
+.brand{font-family:Spectral,"Hiragino Mincho ProN",serif;font-weight:600;font-size:18px;
+ white-space:nowrap}
+#q{flex:1 1 auto;max-width:400px;padding:7px 11px;font:inherit;font-size:14px;color:var(--ink);
  background:var(--paper);border:1px solid var(--line);border-radius:7px}
 #q:focus{outline:2px solid var(--accent);outline-offset:1px}
-.chip{font:inherit;font-size:12.5px;padding:6px 11px;cursor:pointer;color:var(--ink2);
- background:transparent;border:1px solid var(--line);border-radius:99px}
+.chip{font:inherit;font-size:12px;padding:5px 10px;cursor:pointer;color:var(--ink2);
+ background:transparent;border:1px solid var(--line);border-radius:99px;white-space:nowrap}
 .chip[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:var(--card)}
-.hits{margin-left:auto;font-family:"IBM Plex Mono",monospace;font-size:12.5px;color:var(--ink3)}
-main{padding:6px 0 60px}
-.row{display:grid;grid-template-columns:60px minmax(0,1fr);gap:4px 15px;
- padding:14px 0;border-bottom:1px solid var(--line2);cursor:pointer}
-.row:hover{background:var(--card)}
-.thumb{width:60px;height:60px;object-fit:contain;background:var(--sunk);border-radius:8px;grid-row:span 3}
-.thumb.none{display:flex;align-items:center;justify-content:center;color:var(--ink3);font-size:11px}
-.hw{font-size:20px;font-weight:600;line-height:1.35}
-.hw .y{font-size:12.5px;color:var(--ink3);font-weight:400;margin-left:9px}
-.meta{display:flex;gap:7px;flex-wrap:wrap;font-size:11.5px;color:var(--ink2);align-items:center}
-.pos{background:var(--accent-soft);border-radius:99px;padding:1px 8px}
-.en{font-size:12.5px;color:var(--ink3);font-style:italic}
-.nodef{color:var(--rust);font-size:11.5px}
-.det{grid-column:2;margin-top:9px}
-.sec{border-left:2px solid var(--accent-soft);padding:2px 0 2px 12px;margin-bottom:11px}
-.sec b{display:block;font-size:11.5px;color:var(--accent);font-weight:500;letter-spacing:.02em}
-.sec .h{font-size:13px;color:var(--ink2);margin-bottom:2px}
-.sec p{margin:0;font-size:14px;white-space:pre-wrap}
-.more{display:block;width:100%;margin:24px 0;padding:12px;font:inherit;cursor:pointer;
- background:var(--card);color:var(--ink);border:1px solid var(--line);border-radius:8px}
-footer{border-top:1px solid var(--line);color:var(--ink3);font-size:12.5px;padding:18px 0 40px}
-footer p{margin:0 0 5px;max-width:70ch}
+.stat{margin-left:auto;font-family:"IBM Plex Mono",monospace;font-size:12px;color:var(--ink3);
+ white-space:nowrap}
+/* ---- 二面 ---- */
+.panes{flex:1 1 auto;display:flex;min-height:0}
+.rail{width:var(--rail);flex:none;border-right:1px solid var(--line);overflow-y:auto;
+ background:var(--card)}
+.item{display:grid;grid-template-columns:34px 1fr;gap:2px 10px;align-items:center;
+ padding:8px 14px;cursor:pointer;border-bottom:1px solid var(--line2)}
+.item:hover{background:var(--paper)}
+.item[aria-current="true"]{background:var(--accent-soft)}
+.item img,.item .noimg{width:34px;height:34px;border-radius:6px;grid-row:span 2;
+ object-fit:contain;background:var(--sunk)}
+.item .w{font-size:15px;font-weight:600;line-height:1.35;overflow:hidden;text-overflow:ellipsis;
+ white-space:nowrap}
+.item .y{font-size:11.5px;color:var(--ink3);line-height:1.3;overflow:hidden;
+ text-overflow:ellipsis;white-space:nowrap}
+.item .dot{width:5px;height:5px;border-radius:50%;background:var(--rust);display:inline-block;
+ margin-left:5px;vertical-align:middle}
+.more{display:block;width:100%;padding:11px;font:inherit;font-size:13px;cursor:pointer;
+ background:transparent;color:var(--ink2);border:none;border-top:1px solid var(--line2)}
+.more:hover{background:var(--paper)}
+/* ---- 本文 ---- */
+.view{flex:1 1 auto;overflow-y:auto;padding:22px 26px 60px}
+.empty{color:var(--ink3);padding:60px 0;text-align:center}
+.entry{max-width:1000px}
+.ehead{display:flex;gap:18px;align-items:flex-start;flex-wrap:wrap;margin-bottom:20px}
+.ehead img{width:104px;height:104px;object-fit:contain;background:var(--card);
+ border:1px solid var(--line2);border-radius:12px;flex:none}
+.etitle h2{font-family:Spectral,"Hiragino Mincho ProN",serif;font-size:32px;margin:0;
+ font-weight:600;line-height:1.25}
+.etitle .yomi{color:var(--ink3);font-size:14px;margin-top:2px}
+.etags{display:flex;gap:6px;flex-wrap:wrap;margin-top:9px}
+.tag{font-size:11.5px;padding:2px 9px;border-radius:99px;background:var(--accent-soft);
+ color:var(--ink2)}
+.tag.en{background:var(--sunk);font-style:italic}
+/* 2辞書を横に並べる */
+.cols{display:grid;gap:16px}
+@media(min-width:1000px){.cols{grid-template-columns:1fr 1fr;align-items:start}}
+.dic{background:var(--card);border:1px solid var(--line2);border-radius:11px;overflow:hidden}
+.dic>h3{margin:0;padding:9px 14px;font-size:12px;font-weight:500;letter-spacing:.03em;
+ color:var(--accent);background:var(--accent-soft);border-bottom:1px solid var(--line2)}
+.sense{padding:11px 14px;border-bottom:1px solid var(--line2)}
+.sense:last-child{border-bottom:none}
+.sense .h{font-size:14px;font-weight:600;margin-bottom:3px}
+.sense p{margin:0;font-size:14px;white-space:pre-wrap;line-height:1.85}
+.wip{color:var(--rust);font-size:13px;padding:14px}
+/* 狭い画面は1面ずつ */
+@media(max-width:860px){
+  :root{--rail:100%}
+  .panes.detail .rail{display:none}
+  .panes:not(.detail) .view{display:none}
+  .rail{border-right:none}
+  .back{display:inline-block;margin-bottom:14px;font:inherit;font-size:13px;cursor:pointer;
+   background:var(--card);color:var(--ink);border:1px solid var(--line);border-radius:7px;
+   padding:6px 12px}
+}
+@media(min-width:861px){.back{display:none}}
 </style></head><body>
-<header><div class="wrap mast">
- <div><h1>日本語語源辞典</h1>
- <p class="sub">基本語彙に、国語辞典の語義と語源をそのまま並べたものです。単語をクリックすると辞書ごとの記述が出ます。</p></div>
- <div class="counts">
-  <div class="c"><b id="cAll">—</b><span>見出し語</span></div>
-  <div class="c"><b id="cDef">—</b><span>語義あり</span></div>
-  <div class="c"><b id="cPic">—</b><span>絵あり</span></div>
- </div></div></header>
-<div class="bar"><div class="wrap barin">
- <input id="q" type="search" placeholder="見出し・読みでさがす(例: 猫 / ねこ / 山)" autocomplete="off">
- <button class="chip" id="fDef" aria-pressed="true">語義があるものだけ</button>
- <button class="chip" id="fPic" aria-pressed="false">絵があるものだけ</button>
- <span class="hits" id="hits"></span>
-</div></div>
-<main class="wrap" id="list"><p style="padding:40px 0;color:var(--ink3)">読み込んでいます…</p></main>
-<footer class="wrap">
- <p>語義・語源は コトバンク(デジタル大辞泉・精選版 日本国語大辞典 ほか)と Weblio国語辞典 の記述をそのまま引いています。出典は各項目に表示しています。</p>
- <p>見出し語は JMdict (EDRDG, CC BY-SA 4.0) の常用語から。絵は英単語データベースのものを流用しています。</p>
-</footer>
+<div class="top">
+  <span class="brand">日本語語源辞典</span>
+  <input id="q" type="search" placeholder="見出し・読みでさがす" autocomplete="off">
+  <button class="chip" id="fDef" aria-pressed="true">語義あり</button>
+  <button class="chip" id="fPic" aria-pressed="false">絵あり</button>
+  <span class="stat" id="stat">—</span>
+</div>
+<div class="panes" id="panes">
+  <nav class="rail" id="rail"></nav>
+  <section class="view" id="view"><p class="empty">左の一覧から語を選んでください。</p></section>
+</div>
 <script>
-const ROWS_URL='data/ja/ja_index.json', DET='data/ja/ja_det/';
+const IDX='data/ja/ja_index.json', DET='data/ja/ja_det/';
 const $=s=>document.querySelector(s);
 const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
-const ROWS_KANA={'あ':'あいうえおぁぃぅぇぉ','か':'かきくけこがぎぐげご','さ':'さしすせそざじずぜぞ',
+const R={'あ':'あいうえおぁぃぅぇぉ','か':'かきくけこがぎぐげご','さ':'さしすせそざじずぜぞ',
  'た':'たちつてとだぢづでどっ','な':'なにぬねの','は':'はひふへほばびぶべぼぱぴぷぺぽ',
  'ま':'まみむめも','や':'やゆよゃゅょ','ら':'らりるれろ','わ':'わをんゎ'};
-const C2R={};for(const r in ROWS_KANA)for(const c of ROWS_KANA[r])C2R[c]=r;
-function kanaRow(c){if(!c)return '_';
- if(c>='ァ'&&c<='ヴ')c=String.fromCharCode(c.charCodeAt(0)-0x60);
- return C2R[c]||'_';}
-let ROWS=[],cur=[],shown=0,onlyDef=true,onlyPic=false,q='';
-const shardCache={};
-function loadShard(row){
-  if(!shardCache[row])shardCache[row]=fetch(DET+row+'.json').then(r=>r.ok?r.json():{}).catch(()=>({}));
-  return shardCache[row];
-}
-fetch(ROWS_URL).then(r=>r.json()).then(d=>{
-  ROWS=d;
-  $('#cAll').textContent=d.length.toLocaleString();
-  $('#cDef').textContent=d.filter(r=>r[5]).length.toLocaleString();
-  $('#cPic').textContent=d.filter(r=>r[3]).length.toLocaleString();
-  run();
-});
+const C2R={};for(const r in R)for(const c of R[r])C2R[c]=r;
+const row=c=>{if(!c)return '_';if(c>='ァ'&&c<='ヴ')c=String.fromCharCode(c.charCodeAt(0)-0x60);
+ return C2R[c]||'_';};
+let ROWS=[],cur=[],shown=0,onlyDef=true,onlyPic=false,q='',sel=null;
+const cache={};
+const shard=r=>cache[r]||(cache[r]=fetch(DET+r+'.json').then(x=>x.ok?x.json():{}).catch(()=>({})));
+
+fetch(IDX).then(r=>r.json()).then(d=>{ROWS=d;run();});
+
 $('#fDef').onclick=()=>{onlyDef=!onlyDef;$('#fDef').setAttribute('aria-pressed',String(onlyDef));run();};
 $('#fPic').onclick=()=>{onlyPic=!onlyPic;$('#fPic').setAttribute('aria-pressed',String(onlyPic));run();};
 let t=null;
 $('#q').addEventListener('input',e=>{clearTimeout(t);t=setTimeout(()=>{q=e.target.value.trim();run();},140);});
+
 function run(){
   cur=ROWS.filter(r=>(!onlyDef||r[5])&&(!onlyPic||r[3])
-    &&(!q||r[0].includes(q)||r[1].includes(q)||(r[4]||'').toLowerCase().includes(q.toLowerCase())));
-  shown=0;$('#list').innerHTML='';$('#hits').textContent=cur.length.toLocaleString()+' 語';
-  draw();
+    &&(!q||r[0].includes(q)||r[1].includes(q)));
+  shown=0;$('#rail').innerHTML='';
+  $('#stat').textContent=cur.length.toLocaleString()+' / '+ROWS.length.toLocaleString()+' 語';
+  fill();
 }
-function draw(){
-  const part=cur.slice(shown,shown+60);
-  const old=$('#list').querySelector('.more');if(old)old.remove();
-  if(!part.length&&!shown){$('#list').innerHTML='<p style="padding:40px 0;color:var(--ink3)">見つかりませんでした。</p>';return;}
-  $('#list').insertAdjacentHTML('beforeend',part.map((r,i)=>`<article class="row" data-w="${esc(r[0])}" data-y="${esc(r[1])}">
-   ${r[3]?`<img class="thumb" src="../assets/word/${encodeURIComponent(r[3])}.png" alt="" loading="lazy">`
-        :'<div class="thumb none">絵なし</div>'}
-   <div class="hw">${esc(r[0])}<span class="y">${esc(r[1])}</span></div>
-   <div class="meta">${r[2]?`<span class="pos">${esc(r[2])}</span>`:''}
-     ${r[5]?'':'<span class="nodef">辞書の記述はこれから取得します</span>'}
-     <span class="en">${esc(r[4])}</span></div>
-   <div class="det" hidden></div></article>`).join(''));
+function fill(){
+  const part=cur.slice(shown,shown+80);
+  const old=$('#rail').querySelector('.more');if(old)old.remove();
+  if(!part.length&&!shown){$('#rail').innerHTML='<p class="empty">見つかりませんでした。</p>';return;}
+  $('#rail').insertAdjacentHTML('beforeend',part.map(r=>`<div class="item" data-w="${esc(r[0])}" data-y="${esc(r[1])}">
+    ${r[3]?`<img src="../assets/word/${encodeURIComponent(r[3])}.png" alt="" loading="lazy">`
+         :'<div class="noimg"></div>'}
+    <div class="w">${esc(r[0])}${r[5]?'':'<span class="dot" title="辞書の記述はこれから"></span>'}</div>
+    <div class="y">${esc(r[1])}</div></div>`).join(''));
   shown+=part.length;
-  $('#list').querySelectorAll('.row:not([data-b])').forEach(el=>{
+  $('#rail').querySelectorAll('.item:not([data-b])').forEach(el=>{
     el.dataset.b='1';
-    el.onclick=async()=>{
-      const box=el.querySelector('.det');
-      if(!box.hidden){box.hidden=true;return;}
-      box.hidden=false;
-      if(box.dataset.done)return;
-      box.dataset.done='1';
-      box.innerHTML='<p style="color:var(--ink3);font-size:13px">読み込み中…</p>';
-      const sh=await loadShard(kanaRow((el.dataset.y||el.dataset.w)[0]));
-      const v=sh[el.dataset.w];
-      box.innerHTML=(v&&v.length)?v.map(s=>`<div class="sec">
-        <b>${esc(s[0])}<span style="color:var(--ink3)"> ・ ${esc(s[1])}</span></b>
-        ${s[2]?`<div class="h">${esc(s[2])}</div>`:''}
-        <p>${esc(s[3])}</p></div>`).join('')
-        :'<p style="color:var(--ink3);font-size:13px">この語の辞書の記述は、まだ取得していません。</p>';
-    };
+    el.onclick=()=>open(el);
   });
   if(shown<cur.length){
-    $('#list').insertAdjacentHTML('beforeend',
-      `<button class="more">つづきを見る(残り ${(cur.length-shown).toLocaleString()})</button>`);
-    $('#list').querySelector('.more').onclick=draw;
+    $('#rail').insertAdjacentHTML('beforeend',
+      `<button class="more">さらに ${Math.min(80,cur.length-shown)} 語(残り ${(cur.length-shown).toLocaleString()})</button>`);
+    $('#rail').querySelector('.more').onclick=fill;
   }
+}
+async function open(el){
+  $('#rail').querySelectorAll('.item').forEach(x=>x.removeAttribute('aria-current'));
+  el.setAttribute('aria-current','true');
+  $('#panes').classList.add('detail');
+  const w=el.dataset.w, y=el.dataset.y;
+  const r=ROWS.find(x=>x[0]===w)||[w,y,'','','',0];
+  $('#view').innerHTML=`<button class="back">← 一覧へ</button>
+   <div class="entry"><div class="ehead">
+    ${r[3]?`<img src="../assets/word/${encodeURIComponent(r[3])}.png" alt="">`:''}
+    <div class="etitle"><h2>${esc(w)}</h2><div class="yomi">${esc(y)}</div>
+     <div class="etags">${r[2]?`<span class="tag">${esc(r[2])}</span>`:''}
+      ${r[4]?`<span class="tag en">${esc(r[4])}</span>`:''}</div></div>
+   </div><div class="cols" id="cols"><p class="wip">読み込み中…</p></div></div>`;
+  $('#view').querySelector('.back').onclick=()=>$('#panes').classList.remove('detail');
+  $('#view').scrollTop=0;
+  const sh=await shard(row((y||w)[0]));
+  const v=sh[w];
+  if(!v||!v.length){$('#cols').innerHTML='<p class="wip">この語の辞書の記述は、まだ取得していません。</p>';return;}
+  const by={};
+  for(const s of v){(by[s[0]]=by[s[0]]||[]).push(s);}
+  const order=['デジタル大辞泉','精選版 日本国語大辞典'];
+  const names=[...order.filter(n=>by[n]),...Object.keys(by).filter(n=>!order.includes(n))];
+  $('#cols').innerHTML=names.map(n=>`<div class="dic"><h3>${esc(n)}</h3>
+    ${by[n].map(s=>`<div class="sense">${s[2]?`<div class="h">${esc(s[2])}</div>`:''}
+      <p>${esc(s[3])}</p></div>`).join('')}</div>`).join('');
 }
 </script></body></html>
