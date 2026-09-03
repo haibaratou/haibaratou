@@ -29,6 +29,79 @@ KANA = re.compile(r'^[ぁ-んァ-ヴー]+$')
 #   「長いものを刈りこむ」のではなく「短いものを選ぶ」。どれも長いときは、
 #   いちばん短いものを **そのまま** 使う。切り詰めない。
 #   (画面が狭いときは CSS の側で … と省く。データは欠けさせない)
+# ---- 引くための手がかり(品詞・意味カテゴリ・分野・注記) -----------------
+# 名詞が 17,201/20,763(83%)なので、品詞だけでは絞れない。
+# 意味カテゴリは英単語データベースの手付け(word_tag.csv の s 列)を、
+# 英訳を手がかりに流用する。絵の流用と同じ仕組み。
+POS_JA = [                                   # 上から順に当てる
+    ('動詞', ('v1', 'v5', 'v4', 'vs', 'vk', 'vz', 'vn', 'vr', 'vi', 'vt', 'aux-v')),
+    ('形容詞', ('adj-i', 'adj-na', 'adj-f', 'adj-t', 'adj-pn', 'adj-ku', 'adj-shiku')),
+    ('副詞', ('adv', 'adv-to')),
+    ('感動詞', ('int',)),
+    ('接続詞', ('conj',)),
+    ('助詞', ('prt', 'aux', 'aux-adj')),
+    ('代名詞', ('pn',)),
+    ('名詞', ('n', 'adj-no', 'n-adv', 'n-t')),
+    ('言いまわし', ('exp',)),
+    # ここから下は、ほかに何も当たらなかったときだけ。
+    # 「山」の第一語義は [n, ctr] で、助数詞を先に見ると名詞でなくなる
+    ('接頭・接尾', ('pref', 'suf', 'n-pref', 'n-suf', 'ctr')),
+]
+FIELD_JA = {
+    'food': '食', 'sports': 'スポーツ', 'baseb': 'スポーツ', 'sumo': 'スポーツ',
+    'golf': 'スポーツ', 'boxing': 'スポーツ', 'MA': 'スポーツ', 'ski': 'スポーツ',
+    'comp': '情報', 'internet': '情報', 'math': '数学', 'physics': '科学',
+    'chem': '科学', 'biol': '科学', 'astron': '科学', 'geol': '科学',
+    'med': '医学', 'anat': '医学', 'pharm': '医学', 'music': '音楽',
+    'Buddh': '宗教', 'Christn': '宗教', 'Shinto': '宗教', 'law': '法律',
+    'finc': '経済', 'bus': '経済', 'econ': '経済', 'gramm': 'ことば',
+    'ling': 'ことば', 'go': '遊び', 'shogi': '遊び', 'cards': '遊び',
+    'mahj': '遊び', 'games': '遊び', 'mil': '軍事', 'print': '印刷',
+    'archit': '建築', 'agric': '農業', 'bot': '生物', 'zool': '生物',
+    'phil': '思想', 'psych': '思想', 'art': '芸術', 'cloth': '衣',
+    'engr': '工学', 'elec': '工学', 'electr': '工学', 'tradem': '商標',
+}
+NOTE_JA = {'uk': 'かな書き', 'abbr': '略語', 'col': '俗語', 'sl': '俗語',
+           'net-sl': 'ネット', 'arch': '古語', 'obs': '古語', 'hist': '歴史',
+           'on-mim': '擬音・擬態', 'yoji': '四字熟語', 'hon': '敬語',
+           'pol': '丁寧', 'hum': '謙譲', 'derog': 'ののしり', 'chn': '幼児語',
+           'fam': 'くだけた', 'form': 'あらたまった', 'dated': '古めかしい',
+           'vulg': '下品', 'joc': 'ふざけ', 'proverb': 'ことわざ',
+           'id': '慣用句', 'rare': 'まれ'}
+
+
+def pos_ja(codes):
+    """JMdict の品詞コードを、引くための1語にまとめる
+
+    ★ 「名詞 + する」(勉強・旅行・アース)は名詞。JMdict は n と vs を並べて
+      付けるので、動詞を先に見ると名詞が消える。用言そのもの(v1/v5…)が
+      無ければ名詞として扱う。
+    """
+    VERB = ('v1', 'v5', 'v4', 'v2', 'vk', 'vz', 'vn', 'vr')
+    if not any(c.startswith(VERB) for c in codes):
+        # 用言そのものが無い。形容動詞(元気=adj-na,n)は形容詞、
+        # 「名詞+する」(勉強=n,vs,vt)は名詞。ここを見ずに vs/vi/vt を
+        # 先に拾うと、勉強も元気も動詞になってしまう
+        if any(c.startswith('adj') and c != 'adj-no' for c in codes):
+            return '形容詞'
+        if 'n' in codes:
+            return '名詞'
+    for name, keys in POS_JA:
+        for c in codes:
+            if c in keys or any(c.startswith(k) for k in keys if len(k) > 2):
+                return name
+    return ''
+
+
+def script_of(w):
+    """表記の種類。パズルで引くときの手がかりになる"""
+    if any('\u4e00' <= c <= '\u9fff' for c in w):
+        return '漢'
+    if any('ァ' <= c <= 'ヴ' or c == 'ー' for c in w):
+        return 'カ'
+    return 'ひ'
+
+
 def unparen(t):
     """括弧の添え書きを外す。入れ子(Canis (lupus) familiaris)も外す"""
     out, depth = [], 0
@@ -159,6 +232,7 @@ def main():
     ap.add_argument('--jmdict', required=True)
     ap.add_argument('--images', default='', help='絵のあるフォルダ(assets/word)')
     ap.add_argument('--words', default='', help='英単語DBの words.json')
+    ap.add_argument('--tags', default='', help='英単語DBの word_tag.csv(意味カテゴリ)')
     a = ap.parse_args()
     text = gzip.open(a.jmdict, 'rt', encoding='utf-8').read()
 
@@ -172,6 +246,34 @@ def main():
                     g = g.strip()
                     if g:
                         pic.setdefault(g, x['w'])
+
+    # 意味カテゴリ。英単語データベースの手付け(word_tag.csv の s 列)を流用する。
+    # 「事」「様子」は何にでも当たる受け皿なので採らない。これを通すと
+    # 犬 が canine(犬のような)を拾って 様子 になる。
+    VAGUE = ('事', '様子')
+    cat = {}
+    if a.tags and Path(a.tags).exists():
+        import csv
+        seen_cat = {}
+        for x in csv.DictReader(Path(a.tags).open(encoding='utf-8-sig')):
+            c = (x.get('s') or '').split()
+            if c and c[0] not in VAGUE:
+                seen_cat.setdefault(x['w'].strip().lower(), set()).add(c[0])
+        # 同じ綴りで分類が割れる語は使わない。word_tag.csv は語根ごとに行が
+        # あるので pie が2行(鳥の pie=生物 / 食べる pie=食物)になり、
+        # 先に書いてあるほうを採ると パイ が 生物 になる
+        cat = {w: list(v)[0] for w, v in seen_cat.items() if len(v) == 1}
+    # 日本語の側からも引く(英単語DBの和訳 → その語のカテゴリ)
+    ja_cat = {}
+    if a.words and cat:
+        for x in json.loads(Path(a.words).read_text(encoding='utf-8')):
+            c = cat.get(x['w'].lower())
+            if not c:
+                continue
+            for g in (x.get('ja') or '').split('、'):
+                g = g.strip()
+                if g:
+                    ja_cat.setdefault(g, c)
 
     # 同じ見出しの項目をまとめてから、主の読みを選ぶ
     cand = {}
@@ -189,7 +291,21 @@ def main():
         _, yomi, b = xs[0]
         # ほかの読みも残す(空=から/そら、市場=いちば/しじょう)
         alt = [y for _, y, _ in xs[1:] if y and y != yomi]
-        pos = sorted({p.strip('&;') for p in tag(b, 'pos')})
+        codes = [p.strip('&;') for p in tag(b, 'pos')]
+        pos = sorted(set(codes))
+        # 品詞は 第一語義のものを主にする(勉強=名詞。動詞は そのあと)
+        s1 = re.search(r'<sense>(.*?)</sense>', b, re.S)
+        kpos = pos_ja([p.strip('&;') for p in tag(s1.group(1) if s1 else b, 'pos')]) \
+            or pos_ja(codes)
+        fld = ''
+        for f in (x.strip('&;') for x in tag(s1.group(1) if s1 else b, 'field')):
+            if f in FIELD_JA:
+                fld = FIELD_JA[f]
+                break
+        notes = []
+        for m in (x.strip('&;') for x in tag(s1.group(1) if s1 else b, 'misc')):
+            if m in NOTE_JA and NOTE_JA[m] not in notes:
+                notes.append(NOTE_JA[m])
         gl = [norm(g) for g in tag(b, 'gloss')]
         # 絵を当てるのは **第一語義** だけ。二番目以降の意味まで手がかりにすると、
         # 「手」に arm(腕)の絵が付くような取りちがえが起きる
@@ -203,6 +319,11 @@ def main():
             'en': en,                               # 見出しの下に出す言いかえ
             'g1': [g for g in g1 if g],             # 第一語義(絵を当てる手がかり)
             'yomi_alt': list(dict.fromkeys(alt))[:3],   # ほかの読み
+            'kpos': kpos,                           # 引くための品詞(1語)
+            'cat': '',                              # 意味カテゴリ(あとで当てる)
+            'field': fld,                           # 分野
+            'note': notes[:2],                      # 注記(古語・俗語 など)
+            'sc': script_of(head),                  # 漢 / カ / ひ
             'pri': sorted((set(tag(b, 'ke_pri')) | set(tag(b, 're_pri'))) & PRI),
             'pic': '',                              # 流用できる絵(あとで当てる)
         })
@@ -210,6 +331,20 @@ def main():
     #   1. JMdict の英訳が そのまま絵の名まえ (お金 → money.png)
     #   2. 英単語データベースの和訳が この見出しと一致 (腹部 → abdomen.png)
     for r in rows:
+        # 意味カテゴリ。英訳が同じ英単語の手付けを流用する。
+        #   ・名詞だけに当てる。形容詞や副詞に当てると
+        #     美しい→事、とても→数 のように、綴りが同じ別語の分類を拾う
+        #   ・「事」は何にでも当たる受け皿なので採らない
+        if r['kpos'] == '名詞':
+            for g in r['g1']:                       # 第一語義の訳を順に
+                c = cat.get(norm(unparen(g)).lower())
+                if c:
+                    r['cat'] = c
+                    break
+            if not r['cat']:                        # 日本語の側から
+                r['cat'] = ja_cat.get(r['w'], '')
+            if not r['cat'] and r['pic']:           # 絵を借りた英単語から
+                r['cat'] = cat.get(r['pic'].lower(), '')
         # 第一語義の いちばん目 の訳だけを見る。二番目まで見にいくと
         # 「手(hand; arm)」に arm の絵が付いてしまう
         for cand in (r['g1'][:1] or ['']):

@@ -30,6 +30,18 @@ body{background:var(--paper);color:var(--ink);margin:0;font-size:15px;line-heigh
 .chip[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:var(--card)}
 .stat{margin-left:auto;font-family:"IBM Plex Mono",monospace;font-size:12px;color:var(--ink3);
  white-space:nowrap}
+/* ---- 絞りこみの帯 ---- */
+.filters{flex:none;display:flex;align-items:center;gap:8px;padding:7px 18px;overflow-x:auto;
+ background:var(--card);border-bottom:1px solid var(--line)}
+.filters label{display:flex;align-items:center;gap:5px;font-size:11.5px;color:var(--ink3);
+ white-space:nowrap}
+.filters select{font:inherit;font-size:12.5px;color:var(--ink);background:var(--paper);
+ border:1px solid var(--line);border-radius:7px;padding:4px 7px;max-width:150px}
+.filters select:focus{outline:2px solid var(--accent);outline-offset:1px}
+.filters .clear{margin-left:auto}
+.item .t{grid-column:2;display:flex;gap:4px;flex-wrap:wrap;margin-top:2px}
+.item .t span{font-size:10px;line-height:1.5;padding:0 5px;border-radius:99px;
+ color:var(--ink3);background:var(--sunk)}
 /* ---- 二面 ---- */
 .panes{flex:1 1 auto;display:flex;min-height:0}
 .rail{width:var(--rail);flex:none;border-right:1px solid var(--line);overflow-y:auto;
@@ -53,7 +65,11 @@ body{background:var(--paper);color:var(--ink);margin:0;font-size:15px;line-heigh
 .more:hover{background:var(--paper)}
 /* ---- 本文 ---- */
 .view{flex:1 1 auto;overflow-y:auto;padding:22px 26px 60px}
-.empty{color:var(--ink3);padding:60px 0;text-align:center}
+.empty b{color:var(--ink2)}
+.empty .chip{margin-top:10px}
+.empty{color:var(--ink3);padding:48px 20px;text-align:center;line-height:1.8}
+.empty b{color:var(--ink2)}
+.empty .chip{margin-top:12px}
 .entry{max-width:1000px}
 .ehead{display:flex;gap:18px;align-items:flex-start;flex-wrap:wrap;margin-bottom:20px}
 .ehead img{width:104px;height:104px;object-fit:contain;background:var(--card);
@@ -92,10 +108,27 @@ body{background:var(--paper);color:var(--ink);margin:0;font-size:15px;line-heigh
 </style></head><body>
 <div class="top">
   <span class="brand">日本語語源辞典</span>
-  <input id="q" type="search" placeholder="見出し・読みでさがす" autocomplete="off">
+  <input id="q" type="search" placeholder="見出し・読み・英語でさがす" autocomplete="off">
   <button class="chip" id="fDef" aria-pressed="true">語義あり</button>
   <button class="chip" id="fPic" aria-pressed="false">絵あり</button>
   <span class="stat" id="stat">—</span>
+</div>
+<div class="filters">
+  <label>品詞 <select id="fPos"></select></label>
+  <label>意味 <select id="fCat"></select></label>
+  <label>分野 <select id="fFld"></select></label>
+  <label>表記 <select id="fSc"><option value="">すべて</option>
+    <option value="漢">漢字</option><option value="ひ">ひらがな</option>
+    <option value="カ">カタカナ</option></select></label>
+  <label>字数 <select id="fLen"><option value="">すべて</option>
+    <option value="1">1字</option><option value="2">2字</option><option value="3">3字</option>
+    <option value="4">4字</option><option value="5">5字</option><option value="6">6字以上</option>
+  </select></label>
+  <label>並び <select id="fSort">
+    <option value="a">五十音</option><option value="s">字数の少ない順</option>
+    <option value="l">字数の多い順</option><option value="p">絵のある語から</option>
+  </select></label>
+  <button class="chip clear" id="fClr">絞りこみを消す</button>
 </div>
 <div class="panes" id="panes">
   <nav class="rail" id="rail"></nav>
@@ -112,10 +145,40 @@ const C2R={};for(const r in R)for(const c of R[r])C2R[c]=r;
 const row=c=>{if(!c)return '_';if(c>='ァ'&&c<='ヴ')c=String.fromCharCode(c.charCodeAt(0)-0x60);
  return C2R[c]||'_';};
 let ROWS=[],cur=[],shown=0,onlyDef=true,onlyPic=false,q='',sel=null;
+// 索引の列: 0見出し 1読み 2品詞 3絵 4言いかえ 5語義の有無 6意味 7分野 8注記 9表記
+const F={pos:'',cat:'',fld:'',sc:'',len:'',sort:'a'};
+// 並べ替えの手がかり。カタカナはひらがなに寄せ、小書き・伸ばしは大書きに揃える
+const SMALL={'ぁ':'あ','ぃ':'い','ぅ':'う','ぇ':'え','ぉ':'お','っ':'つ','ゃ':'や','ゅ':'ゆ','ょ':'よ','ゎ':'わ'};
+const kana=t=>String(t||'').replace(/[ァ-ヴ]/g,c=>String.fromCharCode(c.charCodeAt(0)-0x60))
+  .replace(/[ぁぃぅぇぉっゃゅょゎ]/g,c=>SMALL[c]).replace(/ー/g,'');
+const yomiOf=r=>kana((r[1]||'').split('・')[0]||r[0]);
+const lenOf=r=>yomiOf(r).length;
 const cache={};
 const shard=r=>cache[r]||(cache[r]=fetch(DET+r+'.json').then(x=>x.ok?x.json():{}).catch(()=>({})));
 
-fetch(IDX).then(r=>r.json()).then(d=>{ROWS=d;run();});
+fetch(IDX).then(r=>r.json()).then(d=>{ROWS=d;buildOptions();run();});
+
+// 選べる値は データから作る。手で並べると、増えたときに合わなくなる
+function buildOptions(){
+  const fill=(el,col,label)=>{
+    const n={};for(const r of ROWS){if(r[col])n[r[col]]=(n[r[col]]||0)+1;}
+    const ks=Object.keys(n).sort((a,b)=>n[b]-n[a]);
+    el.innerHTML='<option value="">すべて</option>'+
+      ks.map(k=>`<option value="${esc(k)}">${esc(k)}(${n[k].toLocaleString()})</option>`).join('');
+  };
+  fill($('#fPos'),2);fill($('#fCat'),6);fill($('#fFld'),7);
+}
+for(const [id,key] of [['fPos','pos'],['fCat','cat'],['fFld','fld'],['fSc','sc'],
+                       ['fLen','len'],['fSort','sort']]){
+  $('#'+id).onchange=e=>{F[key]=e.target.value;run();};
+}
+$('#fClr').onclick=()=>{
+  for(const k in F)F[k]=k==='sort'?'a':'';
+  for(const id of ['fPos','fCat','fFld','fSc','fLen'])$('#'+id).value='';
+  $('#fSort').value='a';
+  onlyPic=false;$('#fPic').setAttribute('aria-pressed','false');
+  $('#q').value='';q='';run();
+};
 
 $('#fDef').onclick=()=>{onlyDef=!onlyDef;$('#fDef').setAttribute('aria-pressed',String(onlyDef));run();};
 $('#fPic').onclick=()=>{onlyPic=!onlyPic;$('#fPic').setAttribute('aria-pressed',String(onlyPic));run();};
@@ -123,22 +186,53 @@ let t=null;
 $('#q').addEventListener('input',e=>{clearTimeout(t);t=setTimeout(()=>{q=e.target.value.trim();run();},140);});
 
 function run(){
-  cur=ROWS.filter(r=>(!onlyDef||r[5])&&(!onlyPic||r[3])
-    &&(!q||r[0].includes(q)||r[1].includes(q)));
+  const qk=kana(q).toLowerCase();
+  cur=ROWS.filter(r=>{
+    if(onlyDef&&!r[5])return false;
+    if(onlyPic&&!r[3])return false;
+    if(F.pos&&r[2]!==F.pos)return false;
+    if(F.cat&&r[6]!==F.cat)return false;
+    if(F.fld&&r[7]!==F.fld)return false;
+    if(F.sc&&r[9]!==F.sc)return false;
+    if(F.len){const n=lenOf(r);if(F.len==='6'?n<6:n!==+F.len)return false;}
+    if(!q)return true;
+    // 見出し・読み・英語の言いかえ、どれで引いてもよい
+    return r[0].includes(q)||kana(r[1]).includes(qk)||(r[4]||'').toLowerCase().includes(qk);
+  });
+  const key=F.sort==='s'||F.sort==='l'?lenOf:null;
+  if(F.sort==='a')cur.sort((a,b)=>yomiOf(a).localeCompare(yomiOf(b),'ja'));
+  else if(key)cur.sort((a,b)=>(key(a)-key(b))*(F.sort==='l'?-1:1)
+    ||yomiOf(a).localeCompare(yomiOf(b),'ja'));
+  else if(F.sort==='p')cur.sort((a,b)=>(b[3]?1:0)-(a[3]?1:0)
+    ||yomiOf(a).localeCompare(yomiOf(b),'ja'));
   shown=0;$('#rail').innerHTML='';
   $('#stat').textContent=cur.length.toLocaleString()+' / '+ROWS.length.toLocaleString()+' 語';
+  $('#q').placeholder=onlyDef?'見出し・読み・英語でさがす(語義ありの中)':'見出し・読み・英語でさがす';
   fill();
 }
 function fill(){
   const part=cur.slice(shown,shown+80);
   const old=$('#rail').querySelector('.more');if(old)old.remove();
-  if(!part.length&&!shown){$('#rail').innerHTML='<p class="empty">見つかりませんでした。</p>';return;}
+  if(!part.length&&!shown){
+    // 「語義あり」は既定で入っている。取得が済んだ語しか通らないので、
+    // 0件のときは その分だけ隠れていることを言う
+    const n=ROWS.filter(r=>!onlyDef||r[5]).length;
+    $('#rail').innerHTML='<p class="empty">見つかりませんでした。'+
+      (onlyDef?`<br><br>いまは<b>語義あり</b>で絞っていて、${n.toLocaleString()}語しか通していません`+
+       `(全${ROWS.length.toLocaleString()}語)。辞書の記述の取得は進行中です。`+
+       `<br><button class="chip" id="offDef">語義ありを外してさがす</button>`:'')+'</p>';
+    const b=$('#offDef');
+    if(b)b.onclick=()=>{onlyDef=false;$('#fDef').setAttribute('aria-pressed','false');run();};
+    return;
+  }
   $('#rail').insertAdjacentHTML('beforeend',part.map(r=>`<div class="item" data-w="${esc(r[0])}" data-y="${esc(r[1])}">
     ${r[3]?`<img src="../assets/word/${encodeURIComponent(r[3])}.png" alt="" loading="lazy">`
          :'<div class="noimg"></div>'}
     <div class="w">${esc(r[0])}${r[5]?'':'<span class="dot" title="辞書の記述はこれから"></span>'}</div>
     <div class="y">${esc(r[1])}</div>
-    ${r[4]?`<div class="e">${esc(r[4])}</div>`:''}</div>`).join(''));
+    ${r[4]?`<div class="e">${esc(r[4])}</div>`:''}
+    ${(r[6]||r[7])?`<div class="t">${[r[6],r[7]].filter(Boolean)
+        .map(x=>`<span>${esc(x)}</span>`).join('')}</div>`:''}</div>`).join(''));
   shown+=part.length;
   $('#rail').querySelectorAll('.item:not([data-b])').forEach(el=>{
     el.dataset.b='1';
@@ -155,13 +249,14 @@ async function open(el){
   el.setAttribute('aria-current','true');
   $('#panes').classList.add('detail');
   const w=el.dataset.w, y=el.dataset.y;
-  const r=ROWS.find(x=>x[0]===w)||[w,y,'','','',0];
+  const r=ROWS.find(x=>x[0]===w)||[w,y,'','','',0,'','','',''];
   $('#view').innerHTML=`<button class="back">← 一覧へ</button>
    <div class="entry"><div class="ehead">
     ${r[3]?`<img src="../assets/word/${encodeURIComponent(r[3])}.png" alt="">`:''}
     <div class="etitle"><h2>${esc(w)}</h2><div class="yomi">${esc(y)}</div>
      ${r[4]?`<div class="para">${esc(r[4])}</div>`:''}
-     <div class="etags">${r[2]?`<span class="tag">${esc(r[2])}</span>`:''}</div></div>
+     <div class="etags">${[r[2],r[6],r[7],...(r[8]||'').split('・')].filter(Boolean)
+       .map(x=>`<span class="tag">${esc(x)}</span>`).join('')}</div></div>
    </div><div class="cols" id="cols"><p class="wip">読み込み中…</p></div></div>`;
   $('#view').querySelector('.back').onclick=()=>$('#panes').classList.remove('detail');
   $('#view').scrollTop=0;
