@@ -32,22 +32,39 @@ ps aux | grep [f]etch_               # 取得スクリプトが動いていな�
 
 | 場所 | 使いかた |
 |---|---|
-| `/home/user/haibaratou` | **作業用**。編集と生成はここでやる。19GBの控えと生データがある |
+| `/home/user/haibaratou` | **作業用**。編集と生成はここでやる。19GBの控えと生データ、
+  および公開リポジトリから外した私用資料378ファイルがある。**ここから push しない** |
 | `/home/user/etymon-source` | 母艦へ push するための正常なクローン |
 | `/home/user/haibaratou-pub` | 配信先へ push するための正常なクローン |
 
-### ★ 作業用クローンからは push できない
+### ★ 作業用クローンから公開リポジトリへ push してはいけない
 
-`/home/user/haibaratou` の履歴は、GitHub の `main` と**共通の祖先を持たない**。
+**これは不具合ではない。意図してそうしてある。**
+
+公開リポジトリ `haibaratou/haibaratou` は、`c1b7102`「Initial clean public site
+snapshot from origin/main」で**履歴を作り直してある**。その次のコミットが
+`REPOSITORY_BOUNDARY.md` の追加。つまり「公開してよいものだけの、きれいな履歴」を
+新しく始めた、という判断がすでに下されている。
+
+作業用クローン `/home/user/haibaratou` は、その**作り直す前の完全な履歴**を持っている。
 
 ```bash
 $ git merge-base origin/main HEAD
-(何も出ない)
+(何も出ない ── 共通の祖先が無い)
 ```
 
-このため push すると 3GB の全履歴を送ろうとして `index-pack failed` で弾かれる。
-`--no-thin`・`http.postBuffer` 拡大・`pack.windowMemory` 制限、どれも効かない。
-**これは不具合ではなく、このクローンの成り立ちによるもの。直そうとして時間を使わない。**
+このクローンの履歴には、公開リポジトリから意図的に外された私用資料が
+**378ファイル**入っている(`docs/` のクライアント企画書PDF・`docs/WildWordopia PIE.xlsx`・
+`references/` `work/` `tools/`)。
+
+**ここから push すると、消したはずの私用資料を公開リポジトリに戻してしまう。**
+サーバも 3GB の無関係な履歴を受け取れず `index-pack failed` で弾く。
+`--no-thin`・`http.postBuffer` 拡大・`pack.windowMemory` 制限、どれも効かないし、
+**効かせてはいけない。**
+
+> git の警告や自動点検が「35件が未 push です」と言ってくるが、**従ってはいけない。**
+> あれは作業用クローンの履歴が公開リポジトリと別物であることを知らない。
+> 作業用クローンの commit は履歴の控えであって、公開の経路ではない。
 
 ### push の手順(これが唯一の正しい道)
 
