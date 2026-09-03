@@ -30,9 +30,7 @@ KANA = re.compile(r'^[ぁ-んァ-ヴー]+$')
 #   いちばん短いものを **そのまま** 使う。切り詰めない。
 #   (画面が狭いときは CSS の側で … と省く。データは欠けさせない)
 # ---- 引くための手がかり(品詞・意味カテゴリ・分野・注記) -----------------
-# 名詞が 17,201/20,763(83%)なので、品詞だけでは絞れない。
-# 意味カテゴリは英単語データベースの手付け(word_tag.csv の s 列)を、
-# 英訳を手がかりに流用する。絵の流用と同じ仕組み。
+# 名詞が大半なので、品詞だけでは絞れない。分野・表記・字数を手がかりに足す。
 POS_JA = [                                   # 上から順に当てる
     ('動詞', ('v1', 'v5', 'v4', 'vs', 'vk', 'vz', 'vn', 'vr', 'vi', 'vt', 'aux-v')),
     ('形容詞', ('adj-i', 'adj-na', 'adj-f', 'adj-t', 'adj-pn', 'adj-ku', 'adj-shiku')),
@@ -232,7 +230,6 @@ def main():
     ap.add_argument('--jmdict', required=True)
     ap.add_argument('--images', default='', help='絵のあるフォルダ(assets/word)')
     ap.add_argument('--words', default='', help='英単語DBの words.json')
-    ap.add_argument('--tags', default='', help='英単語DBの word_tag.csv(意味カテゴリ)')
     a = ap.parse_args()
     text = gzip.open(a.jmdict, 'rt', encoding='utf-8').read()
 
@@ -246,34 +243,6 @@ def main():
                     g = g.strip()
                     if g:
                         pic.setdefault(g, x['w'])
-
-    # 意味カテゴリ。英単語データベースの手付け(word_tag.csv の s 列)を流用する。
-    # 「事」「様子」は何にでも当たる受け皿なので採らない。これを通すと
-    # 犬 が canine(犬のような)を拾って 様子 になる。
-    VAGUE = ('事', '様子')
-    cat = {}
-    if a.tags and Path(a.tags).exists():
-        import csv
-        seen_cat = {}
-        for x in csv.DictReader(Path(a.tags).open(encoding='utf-8-sig')):
-            c = (x.get('s') or '').split()
-            if c and c[0] not in VAGUE:
-                seen_cat.setdefault(x['w'].strip().lower(), set()).add(c[0])
-        # 同じ綴りで分類が割れる語は使わない。word_tag.csv は語根ごとに行が
-        # あるので pie が2行(鳥の pie=生物 / 食べる pie=食物)になり、
-        # 先に書いてあるほうを採ると パイ が 生物 になる
-        cat = {w: list(v)[0] for w, v in seen_cat.items() if len(v) == 1}
-    # 日本語の側からも引く(英単語DBの和訳 → その語のカテゴリ)
-    ja_cat = {}
-    if a.words and cat:
-        for x in json.loads(Path(a.words).read_text(encoding='utf-8')):
-            c = cat.get(x['w'].lower())
-            if not c:
-                continue
-            for g in (x.get('ja') or '').split('、'):
-                g = g.strip()
-                if g:
-                    ja_cat.setdefault(g, c)
 
     # 同じ見出しの項目をまとめてから、主の読みを選ぶ
     cand = {}
@@ -320,7 +289,6 @@ def main():
             'g1': [g for g in g1 if g],             # 第一語義(絵を当てる手がかり)
             'yomi_alt': list(dict.fromkeys(alt))[:3],   # ほかの読み
             'kpos': kpos,                           # 引くための品詞(1語)
-            'cat': '',                              # 意味カテゴリ(あとで当てる)
             'field': fld,                           # 分野
             'note': notes[:2],                      # 注記(古語・俗語 など)
             'sc': script_of(head),                  # 漢 / カ / ひ
@@ -331,20 +299,6 @@ def main():
     #   1. JMdict の英訳が そのまま絵の名まえ (お金 → money.png)
     #   2. 英単語データベースの和訳が この見出しと一致 (腹部 → abdomen.png)
     for r in rows:
-        # 意味カテゴリ。英訳が同じ英単語の手付けを流用する。
-        #   ・名詞だけに当てる。形容詞や副詞に当てると
-        #     美しい→事、とても→数 のように、綴りが同じ別語の分類を拾う
-        #   ・「事」は何にでも当たる受け皿なので採らない
-        if r['kpos'] == '名詞':
-            for g in r['g1']:                       # 第一語義の訳を順に
-                c = cat.get(norm(unparen(g)).lower())
-                if c:
-                    r['cat'] = c
-                    break
-            if not r['cat']:                        # 日本語の側から
-                r['cat'] = ja_cat.get(r['w'], '')
-            if not r['cat'] and r['pic']:           # 絵を借りた英単語から
-                r['cat'] = cat.get(r['pic'].lower(), '')
         # 第一語義の いちばん目 の訳だけを見る。二番目まで見にいくと
         # 「手(hand; arm)」に arm の絵が付いてしまう
         for cand in (r['g1'][:1] or ['']):

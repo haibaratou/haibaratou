@@ -113,7 +113,7 @@ def main():
         out.append({
             'w': w, 'yomi': ys[0] if ys else '', 'yomi_all': ys[:4],
             'pos': r['pos'], 'kpos': r.get('kpos', ''), 'pic': r['pic'],
-            'cat': r.get('cat', ''), 'field': r.get('field', ''),
+            'field': r.get('field', ''),
             'note': r.get('note', []), 'sc': r.get('sc', ''),
             'en': r['en'],
             'ja': '',      # 語義(まとめた一文)。資料を読む工程で書く
@@ -126,10 +126,10 @@ def main():
     # 画面用に2つに分ける。辞書の記述は語が増えるほど重くなるので、
     # 起動時に読むのは索引だけにして、本文は開いた語のぶんだけ取りにいく。
     # 索引の列: 見出し / 読み / 品詞 / 絵 / 言いかえ / 語義の有無 /
-    #           意味カテゴリ / 分野 / 注記 / 表記の種類
+    #           分野 / 注記 / 表記の種類
     idx = [[x['w'], '・'.join(x['yomi_all']), x['kpos'], x['pic'],
             '; '.join(x['en'][:2]), 1 if x['src'] else 0,
-            x['cat'], x['field'], '・'.join(x['note']), x['sc']] for x in out]
+            x['field'], '・'.join(x['note']), x['sc']] for x in out]
     (JA / 'ja_index.json').write_text(
         json.dumps(idx, ensure_ascii=False, separators=(',', ':')), encoding='utf-8')
     shard = {}

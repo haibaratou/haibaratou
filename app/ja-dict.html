@@ -125,7 +125,6 @@ body{background:var(--paper);color:var(--ink);margin:0;font-size:15px;line-heigh
   <span class="stat" id="stat">—</span>
 </div>
 <div class="filters" id="filters">
-  <div class="frow"><span class="flab">意味</span><div class="chips" id="tCat"></div></div>
   <div class="frow"><span class="flab">品詞</span><div class="chips" id="tPos"></div></div>
   <div class="frow"><span class="flab">分野</span><div class="chips" id="tFld"></div></div>
   <div class="frow"><span class="flab">表記</span><div class="chips" id="tSc"></div>
@@ -149,7 +148,7 @@ const row=c=>{if(!c)return '_';if(c>='ァ'&&c<='ヴ')c=String.fromCharCode(c.cha
 let ROWS=[],cur=[],shown=0,onlyDef=true,onlyPic=false,q='',sel=null;
 // 索引の列: 0見出し 1読み 2品詞 3絵 4言いかえ 5語義の有無 6意味 7分野 8注記 9表記
 // 押されているタグ。同じ組のなかは「どれか」、組をまたぐと「すべて」
-const F={cat:new Set(),pos:new Set(),fld:new Set(),sc:new Set(),len:new Set()};
+const F={pos:new Set(),fld:new Set(),sc:new Set(),len:new Set()};
 let sortBy='a';
 // 並べ替えの手がかり。カタカナはひらがなに寄せ、小書き・伸ばしは大書きに揃える
 const SMALL={'ぁ':'あ','ぃ':'い','ぅ':'う','ぇ':'え','ぉ':'お','っ':'つ','ゃ':'や','ゅ':'ゆ','ょ':'よ','ゎ':'わ'};
@@ -170,10 +169,9 @@ const SORTS=[['a','五十音'],['s','字数の少ない順'],['l','字数の多�
 
 // タグの組。どの列を見るか / どこに描くか / 見せかたのラベル
 const GROUPS=[
-  ['cat','#tCat',r=>r[6],null],
   ['pos','#tPos',r=>r[2],null],
-  ['fld','#tFld',r=>r[7],null],
-  ['sc','#tSc',r=>r[9],k=>SC_LABEL[k]||k],
+  ['fld','#tFld',r=>r[6],null],
+  ['sc','#tSc',r=>r[8],k=>SC_LABEL[k]||k],
   ['len','#tLen',r=>{const n=lenOf(r);return n?String(Math.min(n,6)):'';},k=>LEN_LABEL[k]||k],
 ];
 const tally=(rows,fn)=>{const n={};for(const r of rows){const k=fn(r);if(k)n[k]=(n[k]||0)+1;}return n;};
@@ -239,9 +237,8 @@ function pass(r,skip){
   if(onlyDef&&!r[5])return false;
   if(onlyPic&&!r[3])return false;
   if(skip!=='pos'&&F.pos.size&&!F.pos.has(r[2]))return false;
-  if(skip!=='cat'&&F.cat.size&&!F.cat.has(r[6]))return false;
-  if(skip!=='fld'&&F.fld.size&&!F.fld.has(r[7]))return false;
-  if(skip!=='sc'&&F.sc.size&&!F.sc.has(r[9]))return false;
+  if(skip!=='fld'&&F.fld.size&&!F.fld.has(r[6]))return false;
+  if(skip!=='sc'&&F.sc.size&&!F.sc.has(r[8]))return false;
   if(skip!=='len'&&F.len.size&&!F.len.has(String(Math.min(lenOf(r),6))))return false;
   if(!q)return true;
   // 見出し・読み・英語の言いかえ、どれで引いてもよい
@@ -282,9 +279,8 @@ function fill(){
     <div class="w">${esc(r[0])}${r[5]?'':'<span class="dot" title="辞書の記述はこれから"></span>'}</div>
     <div class="y">${esc(r[1])}</div>
     ${r[4]?`<div class="e">${esc(r[4])}</div>`:''}
-    ${(r[6]||r[7])?`<div class="t">${[[r[6],'cat'],[r[7],'fld']].filter(x=>x[0])
-        .map(([x,k])=>`<span data-k="${k}" data-v="${esc(x)}">${esc(x)}</span>`)
-        .join('')}</div>`:''}</div>`).join(''));
+    ${r[6]?`<div class="t"><span data-k="fld" data-v="${esc(r[6])}">${esc(r[6])}</span></div>`
+        :''}</div>`).join(''));
   $('#rail').querySelectorAll('.t span').forEach(el=>el.onclick=ev=>{
     ev.stopPropagation();tapTag(el.dataset.k,el.dataset.v);});
   shown+=part.length;
@@ -303,13 +299,13 @@ async function open(el){
   el.setAttribute('aria-current','true');
   $('#panes').classList.add('detail');
   const w=el.dataset.w, y=el.dataset.y;
-  const r=ROWS.find(x=>x[0]===w)||[w,y,'','','',0,'','','',''];
+  const r=ROWS.find(x=>x[0]===w)||[w,y,'','','',0,'','',''];
   $('#view').innerHTML=`<button class="back">← 一覧へ</button>
    <div class="entry"><div class="ehead">
     ${r[3]?`<img src="../assets/word/${encodeURIComponent(r[3])}.png" alt="">`:''}
     <div class="etitle"><h2>${esc(w)}</h2><div class="yomi">${esc(y)}</div>
      ${r[4]?`<div class="para">${esc(r[4])}</div>`:''}
-     <div class="etags">${[r[2],r[6],r[7],...(r[8]||'').split('・')].filter(Boolean)
+     <div class="etags">${[r[2],r[6],...(r[7]||'').split('・')].filter(Boolean)
        .map(x=>`<span class="tag">${esc(x)}</span>`).join('')}</div></div>
    </div><div class="cols" id="cols"><p class="wip">読み込み中…</p></div></div>`;
   $('#view').querySelector('.back').onclick=()=>$('#panes').classList.remove('detail');
