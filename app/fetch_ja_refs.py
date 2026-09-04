@@ -233,6 +233,10 @@ def run(words, srcs, reparse=False):
                     # すでに控えがある。国語辞典が入っていれば それで済ませ、
                     # 入っていなければ次の表記を試す
                     if parse(w, fp.read_text(encoding='utf-8')):
+                        # 前のパスで別の見出しとして取った控えのことがある
+                        # (彼処 の控えが 彼処 に紐づいたまま。いまの見出しは あそこ)。
+                        # 紐づけ先を いまの見出しに直す
+                        (d / (ck + '.w')).write_text(w, encoding='utf-8')
                         got = True
                         break
                     continue
