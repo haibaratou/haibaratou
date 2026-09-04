@@ -191,7 +191,11 @@ RARE = re.compile(r'&(rK|sK|oK|iK);')          # まれ・検索用・古い・�
 
 
 def head_and_yomi(b, pri):
-    """見出しと読みを決める。返り値 (見出し, 読み)"""
+    """見出しと読みと、使わなかった別表記を決める。返り値 (見出し, 読み, 別表記)
+
+    別表記は コトバンクを引くときの控え。かなを見出しにした語は、
+    辞書のページが漢字側にあることがある(おでん→御田、あそこ→彼処)。
+    """
     ks = [{'t': (tag(k, 'keb') or [''])[0],
            'rare': bool(RARE.search(k)),
            'pri': bool(set(tag(k, 'ke_pri')) & pri)} for k in K_ELE.findall(b)]
@@ -202,7 +206,7 @@ def head_and_yomi(b, pri):
     ks = [k for k in ks if k['t']]
     rs = [r for r in rs if r['t']]
     if not rs:
-        return (ks[0]['t'] if ks else ''), ''
+        return (ks[0]['t'] if ks else ''), '', []
 
     # 漢字表記は、まれな印の付いていないものから。印のあるものを先に
     live = [k for k in ks if not k['rare']]
@@ -212,13 +216,14 @@ def head_and_yomi(b, pri):
         # 使える漢字表記が無い(彼の・お握り など)。かなを見出しにする
         r = next((x for x in rs if x['pri'] and not x['nokanji']),
                  next((x for x in rs if not x['nokanji']), rs[0]))
-        return r['t'], ''
+        # 見出しはかな。漢字表記は 辞書を引くときの控えに回す
+        return r['t'], '', [k['t'] for k in ks]
 
     # その漢字表記の読み。re_restr があれば、それに合うものだけ
     ok = [r for r in rs if not r['nokanji']
           and (not r['restr'] or kanji['t'] in r['restr'])]
     r = next((x for x in ok if x['pri']), ok[0] if ok else rs[0])
-    return kanji['t'], r['t']
+    return kanji['t'], r['t'], [k['t'] for k in ks if k['t'] != kanji['t']]
 
 
 def tag(block, name):
@@ -250,16 +255,20 @@ def main():
         b = m.group(1)
         if not (set(tag(b, 'ke_pri')) | set(tag(b, 're_pri'))) & PRI:
             continue
-        head, yomi = head_and_yomi(b, PRI)
+        head, yomi, alt = head_and_yomi(b, PRI)
         if head:
-            cand.setdefault(head, []).append((entry_rank(b, PRI), yomi, b))
+            cand.setdefault(head, []).append((entry_rank(b, PRI), yomi, b, alt))
 
     rows = []
     for head, xs in cand.items():
         xs.sort(key=lambda x: -x[0])
-        _, yomi, b = xs[0]
+        _, yomi, b, spell = xs[0]
         # ほかの読みも残す(空=から/そら、市場=いちば/しじょう)
-        alt = [y for _, y, _ in xs[1:] if y and y != yomi]
+        alt = [y for _, y, _, _ in xs[1:] if y and y != yomi]
+        # 辞書を引くときの控え。全角は半角に直したものも試す(Ｔシャツ→Tシャツ)
+        nk = unicodedata.normalize('NFKC', head)
+        spell = [x for x in list(dict.fromkeys(spell + ([nk] if nk != head else [])))
+                 if x and x != head]
         codes = [p.strip('&;') for p in tag(b, 'pos')]
         pos = sorted(set(codes))
         # 品詞は 第一語義のものを主にする(勉強=名詞。動詞は そのあと)
@@ -292,6 +301,7 @@ def main():
             'field': fld,                           # 分野
             'note': notes[:2],                      # 注記(古語・俗語 など)
             'sc': script_of(head),                  # 漢 / カ / ひ
+            'spell': spell,                         # 辞書を引くときの別表記
             'pri': sorted((set(tag(b, 'ke_pri')) | set(tag(b, 're_pri'))) & PRI),
             'pic': '',                              # 流用できる絵(あとで当てる)
         })
@@ -314,6 +324,10 @@ def main():
         json.dumps(rows, ensure_ascii=False, indent=1), encoding='utf-8')
     (OUT / 'ja_words.txt').write_text(
         '\n'.join(r['w'] for r in rows), encoding='utf-8')
+    # 見出し + 別表記。コトバンクは かなの見出しだと百科事典しか置いていない
+    # ことがあるので、漢字表記も控えて順に試す
+    (OUT / 'ja_words.tsv').write_text(
+        '\n'.join('\t'.join([r['w']] + r['spell']) for r in rows), encoding='utf-8')
     print(f'基本語彙 {len(rows):,}語 → data/ja/ja_seed.json')
     print(f'  そのうち 絵が流用できる語 {n_pic:,}語')
 
