@@ -29,7 +29,7 @@
     python3 app/fetch_ja_refs.py --words data/ja/ja_words.txt --src weblio
     python3 app/fetch_ja_refs.py --words ... --reparse    # 控えから読み直すだけ
 """
-import argparse, hashlib, json, os, random, re, subprocess, sys, time
+import argparse, gzip, hashlib, json, os, random, re, subprocess, sys, time
 from pathlib import Path
 
 BASE = Path(__file__).resolve().parent
@@ -39,6 +39,29 @@ UA = ('Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 '
       '(KHTML, like Gecko) Chrome/124.0 Safari/537.36')
 # 2万語あるので、礼儀を保てる範囲で詰める。弾かれたら(403/429)その場で止まる
 WAIT = {'kotobank': (2.5, 1.0), 'weblio': (2.5, 1.0)}
+
+
+# 生ページは gzip で持つ。1件200KB前後 × 2万件で 5GB を超え、置き場が尽きた。
+# 圧縮すると 1.4GB になる。捨てると取り直しに何時間もかかるので、圧縮して残す。
+def read_raw(fp):
+    if fp.suffix == '.gz':
+        with gzip.open(fp, 'rt', encoding='utf-8', errors='ignore') as f:
+            return f.read()
+    return fp.read_text(encoding='utf-8')
+
+
+def write_raw(fp, body):
+    """.raw.gz で書く。返り値は書いた場所"""
+    gz = fp.with_suffix('.raw.gz') if fp.suffix == '.raw' else fp
+    with gzip.open(gz, 'wt', encoding='utf-8') as f:
+        f.write(body)
+    return gz
+
+
+def raw_path(d, ck):
+    """控えの場所。古い .raw が残っていればそれも見る"""
+    gz = d / (ck + '.raw.gz')
+    return gz if gz.exists() else d / (ck + '.raw')
 
 
 def key_of(word):
@@ -202,10 +225,11 @@ def run(words, srcs, reparse=False):
                     out = json.loads(fp_json.read_text(encoding='utf-8'))
                 except json.JSONDecodeError:
                     out = {}
-            for f in sorted(d.glob('*.raw')):
-                w = (f.with_suffix('.w').read_text(encoding='utf-8')
-                     if f.with_suffix('.w').exists() else f.stem)
-                t = parse(w, f.read_text(encoding='utf-8'))
+            for f in sorted(list(d.glob('*.raw')) + list(d.glob('*.raw.gz'))):
+                ck = f.name.split('.')[0]
+                wf = d / (ck + '.w')
+                w = wf.read_text(encoding='utf-8') if wf.exists() else ck
+                t = parse(w, read_raw(f))
                 if t and t.strip():
                     out[w] = t
             fp_json.write_text(json.dumps(out, ensure_ascii=False, indent=1),
@@ -226,13 +250,13 @@ def run(words, srcs, reparse=False):
             got = False
             for sp in [w] + list(spells):
                 ck = key_of(sp)
-                fp = d / (ck + '.raw')
+                fp = raw_path(d, ck)
                 if fp.exists() and fp.stat().st_size == 0:
                     fp.unlink()                # 空の控えは「取れなかった」もの
                 if fp.exists():
                     # すでに控えがある。国語辞典が入っていれば それで済ませ、
                     # 入っていなければ次の表記を試す
-                    if parse(w, fp.read_text(encoding='utf-8')):
+                    if parse(w, read_raw(fp)):
                         # 前のパスで別の見出しとして取った控えのことがある
                         # (彼処 の控えが 彼処 に紐づいたまま。いまの見出しは あそこ)。
                         # 紐づけ先を いまの見出しに直す
@@ -246,7 +270,10 @@ def run(words, srcs, reparse=False):
                           f'(この回に取れたのは {n_new}語)', file=sys.stderr)
                     stop = True
                     break
-                fp.write_text(body, encoding='utf-8')
+                if body:
+                    write_raw(d / (ck + '.raw'), body)
+                else:
+                    (d / (ck + '.raw')).write_text('', encoding='utf-8')  # 404 の印
                 (d / (ck + '.w')).write_text(w, encoding='utf-8')   # 見出しに紐づける
                 n_new += 1
                 time.sleep(base + random.uniform(0, jitter))
