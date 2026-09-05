@@ -302,7 +302,7 @@ let ROOTS=[], WORDS=[], AFFIXES=[], BRIEF=null, byRoot=new Map();
 const DET_SHARD={};
 function detOf(word,i){
   const c=/^[a-z]/i.test(word)?word[0].toLowerCase():'_';
-  if(!DET_SHARD[c])DET_SHARD[c]=fetch('data/pie/det/'+c+'.json?v='+PIE_V)
+  if(!DET_SHARD[c])DET_SHARD[c]=fetch(DATA_DIR+'det/'+c+'.json?v='+PIE_V)
     .then(r=>r.ok?r.json():{}).catch(()=>({}));
   return DET_SHARD[c].then(sh=>sh[i]||null);
 }
@@ -311,13 +311,13 @@ let EO_SLUG=new Set();   // etymonline に実在する見出し(data/pie/eo_slug
    混ざらないようにする。build_eo_pick.py が data/pie/eo_pick.json を作る。 */
 let EO_PICK=null;
 function eoPick(){
-  if(!EO_PICK)EO_PICK=fetch('data/pie/eo_pick.json?v='+PIE_V).then(r=>r.ok?r.json():{}).catch(()=>({}));
+  if(!EO_PICK)EO_PICK=fetch(DATA_DIR+'eo_pick.json?v='+PIE_V).then(r=>r.ok?r.json():{}).catch(()=>({}));
   return EO_PICK;
 }
 const EO_SHARD={};       // 先頭文字 → {単語: 項目} (data/pie/eo/*.json を必要なときだけ読む)
 function eoShard(w){
   const k=/^[a-z]/i.test(w)?w[0].toLowerCase():'_';
-  if(!EO_SHARD[k])EO_SHARD[k]=fetch('data/pie/eo/'+k+'.json?v='+PIE_V).then(r=>r.ok?r.json():{}).catch(()=>({}));
+  if(!EO_SHARD[k])EO_SHARD[k]=fetch(DATA_DIR+'eo/'+k+'.json?v='+PIE_V).then(r=>r.ok?r.json():{}).catch(()=>({}));
   return EO_SHARD[k];
 }
 async function fillEO(word,row,w){
@@ -376,6 +376,17 @@ let F={min:'',max:'',lang:'',pos:'',comp:false,noroot:false,pic:'',tag:'',sortCo
 localStorage.removeItem('etymon-explorer-filter-v2');   // 旧版の保存値を破棄
 const saveF=()=>{};   // 絞り込みは保存しない(開き直せばまっさら)
 
+/* データの置き場。作業用クローンは data/pie、配信先は data/generated-etymon に
+   同じものを持つ(export_public_game_data.py が書き出す)。置き場が2つあることに
+   意味はないので、起動時に在るほうを見つけて以後そこを使う。
+   これを入れる前は data/pie 決め打ちで、配信先では辞書本文が1件も出なかった。 */
+let DATA_DIR='data/pie/';
+async function findDataDir(){
+  for(const d of ['data/pie/','data/generated-etymon/']){
+    try{ const r=await fetch(d+'roots.json?v='+PIE_V,{method:'HEAD'}); if(r.ok){DATA_DIR=d;return d;} }catch(e){}
+  }
+  return DATA_DIR;   // どちらも無ければ埋め込みの控えで動く
+}
 /* HTMLに埋めた控えを ほどく。gzip+base64 → JSON。
    DecompressionStream は Chrome80 / Firefox113 / Safari16.4 以降にある */
 async function unpack(b64){
@@ -385,11 +396,12 @@ async function unpack(b64){
   return JSON.parse(txt);
 }
 async function loadData(){
+  await findDataDir();
   try{
     const [r,w,a]=await Promise.all([
-      fetch('data/pie/roots.json?v='+PIE_V).then(x=>{if(!x.ok)throw 0;return x.json();}),
-      fetch('data/pie/words.json?v='+PIE_V).then(x=>{if(!x.ok)throw 0;return x.json();}),
-      fetch('data/pie/affixes.json?v='+PIE_V).then(x=>{if(!x.ok)throw 0;return x.json();}),
+      fetch(DATA_DIR+'roots.json?v='+PIE_V).then(x=>{if(!x.ok)throw 0;return x.json();}),
+      fetch(DATA_DIR+'words.json?v='+PIE_V).then(x=>{if(!x.ok)throw 0;return x.json();}),
+      fetch(DATA_DIR+'affixes.json?v='+PIE_V).then(x=>{if(!x.ok)throw 0;return x.json();}),
     ]);
     ROOTS=r;WORDS=w;AFFIXES=a;
   }catch(e){
@@ -427,10 +439,10 @@ async function loadData(){
     byRoot.get(c).push(w);
   }
   // 単語詳細(約30MB)は別ファイルを非同期で読む。届いたら表を描き直す
-  fetch('data/pie/eo_slugs.json?v='+PIE_V).then(x=>x.ok?x.json():[]) 
+  fetch(DATA_DIR+'eo_slugs.json?v='+PIE_V).then(x=>x.ok?x.json():[]) 
     .then(list=>{EO_SLUG=new Set(list);}).catch(()=>{});
   // 一覧の「語源」列に要るのは d[0] だけ。9項目そろった本体は詳細を開いたときに取る。
-  fetch('data/pie/details_brief.json?v='+PIE_V).then(x=>{if(!x.ok)throw 0;return x.json();})
+  fetch(DATA_DIR+'details_brief.json?v='+PIE_V).then(x=>{if(!x.ok)throw 0;return x.json();})
     .then(d=>{BRIEF=d;fillDefs();}).catch(e=>{});
   // 版番号も出す。HTML自体にはキャッシュ破りが効かないので、
   // 「更新したのに画面が変わらない」ときはここを見れば古い版を掴んでいると分かる。
