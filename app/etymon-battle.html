@@ -833,7 +833,7 @@ function stats(w){
 /* ===========================================================================
    データ
    =========================================================================== */
-let WORDS=[],TAGS=dict(),GLOSS=dict(),ENEMIES=[],WBY=dict(),ALLW=[],ROOTS=dict();
+let WORDS=[],GLOSS=dict(),ENEMIES=[],WBY=dict(),ALLW=[],ROOTS=dict();
 // 単語レコードは必ずこれで引く。WBY は小文字キーなので直に WBY[w] とすると
 // Capital 始まりや大文字混じりの語で undefined になる(実際それで落ちた)。
 const rec=w=>WBY[String(w||'').toLowerCase()]||dict();
@@ -845,14 +845,13 @@ const JA_FIX=dict({ale:'エール（麦酒）',bolt:'ボルト（ねじ）',dial
   crank:'クランク（回す取っ手）',pin:'ピン（留め具）',bonus:'ボーナス（賞与）'});
 const jaOf=w=>JA_FIX[String(w||'').toLowerCase()]||rec(w).ja||'';
 async function load(){
-  const [w,t,g,e,rt]=await Promise.all([
+  const [w,g,e,rt]=await Promise.all([
     fetch('data/pie/words.json').then(r=>r.json()),
-    fetch('data/pie/tags.json').then(r=>r.json()),
     fetch('data/pie/gloss.json').then(r=>r.json()).catch(()=>({})),
     fetch('data/pie/enemies.json').then(r=>r.json()),
     fetch('data/pie/roots.json').then(r=>r.json()).catch(()=>[]),
   ]);
-  WORDS=w;TAGS=dict(t);GLOSS=dict(g);ENEMIES=e;
+  WORDS=w;GLOSS=dict(g);ENEMIES=e;
   rt.forEach(r=>{ROOTS[r.key]=r;});
   STAT_CACHE=dict();   // 語根が入る前に作った数値は捨てる(レア度と語根の意味が入らない)
   const seen=new Set();
@@ -910,8 +909,10 @@ function aspHits(w,e){
       ||(a._preSp.test(lc)&&(rec(lc).p||[]).some(k=>
            ((ROOTS[k]||{}).aff||[]).some(f=>a._pre.test(f))))
     )){h.push({i,k:'crit'});return;}
+    // good は<b>語根が合う</b>ときだけ。意味タグ指定(g.t==='tag')は当てにならず
+    // 外したので、その指定を持つ相手は上の crit(祖先が答え)だけで戦う。
     const g=a.good;
-    if(g&&(g.t==='tag'?g.v.includes(TAGS[w]):(rec(lc).p||[]).includes(g.v)))h.push({i,k:'good'});
+    if(g&&g.t!=='tag'&&(rec(lc).p||[]).includes(g.v))h.push({i,k:'good'});
   });
   return h;
 }
@@ -1420,22 +1421,11 @@ function finish(calm){
 const STAR=A+'ui/word_et_star.png';
 /* 語根キャラの絵は50体ぶんしか無い。無い語は<b>意味タグで絵文字を出し分ける</b> ―
    全部同じ記号だと札の見分けがつかず、めくる楽しみが消えるので。 */
-const TAG_ICON=dict({
-  'noun.food':'🍞','noun.plant':'🌿','noun.animal':'🐑','noun.body':'🖐','noun.person':'🧑',
-  'noun.possession':'💰','noun.quantity':'🔢','noun.time':'⏳','noun.event':'✨','noun.act':'🏃',
-  'noun.artifact':'🔧','noun.substance':'⚗️','noun.location':'🗺','noun.feeling':'💗','noun.attribute':'🎀',
-  'noun.state':'🛏','noun.communication':'🎵','noun.group':'👑','noun.cognition':'💡','noun.motive':'🔥',
-  'noun.phenomenon':'🌪','noun.process':'🌀','noun.object':'🪨','noun.shape':'🔷','noun.relation':'🔗',
-  'verb.consumption':'🍽','verb.contact':'✊','verb.motion':'💨','verb.emotion':'💞','verb.change':'🔄',
-  'verb.communication':'💬','verb.cognition':'🧠','verb.creation':'🛠','verb.possession':'🎁',
-  'verb.body':'🫀','verb.perception':'👁','verb.social':'🤝','verb.stative':'⚖️','verb.competition':'⚔️',
-  'verb.weather':'☔','adj.all':'🎨','adj.pert':'🎨','adv.all':'➰',
-});
 function iconOf(w){
-  // <b>数字を持つ札は役割の絵</b>にする。意味タグは当てにならず、
-  // arrow(矢)が noun.communication で🎵、cure(治療)が noun.artifact で🔧 になった。
-  // 数字を持たない「ことば」札だけ、意味タグで絵を出し分ける。
-  return stats(w).ic||TAG_ICON[TAGS[rec(w).w]]||'💬';
+  // <b>札の絵は役割から決める</b>。以前は意味タグでも出し分けていたが、
+  // arrow(矢)が noun.communication で🎵、cure(治療)が noun.artifact で🔧 になり、
+  // 当てにならなかった。タグごと外し、役割が無い札は一律「ことば」の絵にする。
+  return stats(w).ic||'💬';
 }
 function hueOf(k){let h=0;for(let i=0;i<k.length;i++)h=(h*31+k.charCodeAt(i))%360;return h;}
 /* <b>前置詞の祖先</b>。purveyor は *per1(前へ) と *weid-(見る) の2つから出来ていて、

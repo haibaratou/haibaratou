@@ -683,12 +683,24 @@ async function load(){
   const [ws,rs,tg,vc,np,gl]=await Promise.all([
     fetch('data/pie/words.json').then(r=>r.json()),
     fetch('data/pie/roots.json').then(r=>r.json()),
-    fetch('data/pie/tags.json').then(r=>r.json()),
+    fetch('data/pie/tags.json').then(r=>r.json()).catch(()=>({})),   // 撤去済み
     fetch('data/pie/valence.csv').then(r=>r.text()).catch(()=>''),
     fetch('data/pie/nopie.json').then(r=>r.json()).catch(()=>({})),
     fetch('data/pie/gloss.json').then(r=>r.json()).catch(()=>({})),
   ]);
   WORDS=ws;TAGS=tg;NOPIE=np;GLOSS=gl;
+  // 意味タグ(tags.json)と正負(valence.csv)は撤去した。ここの検討はその2つを
+  // 前提にしていたので、無いときは何を見ていたページなのかを断り書きで出す。
+  if(!Object.keys(TAGS).length){
+    const b=document.createElement('div');
+    b.style.cssText='background:#fff3cd;color:#664d03;padding:10px 14px;'
+      +'border:1px solid #ffe69c;border-radius:8px;margin:10px;font-size:13px;line-height:1.6';
+    b.innerHTML='<b>このページが調べていた意味タグは撤去されました。</b><br>'
+      +'WordNet の意味カテゴリ(tags.json)と正負(valence.csv)は、'
+      +'arrow(矢)が「ことば」になるような取り違えが多く、判定の誤作動の元だったため'
+      +'データごと外しました。以下の検討は<b>当時の記録</b>として残しています。';
+    document.body.prepend(b);
+  }
   // valence.csv: word,ja,tag,auto,fix  … fix があれば fix を優先(手で直した値)
   // 語義にカンマが入っていても壊れないよう、先頭と末尾から取る
   vc.split(/\r?\n/).slice(1).forEach(ln=>{
