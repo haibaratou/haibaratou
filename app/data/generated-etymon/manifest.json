@@ -10,9 +10,9 @@
     },
     "words": {
       "file": "words.json",
-      "bytes": 11206491,
-      "count": 49127,
-      "sha256": "14ba46d0c3d08337b94081d45635c864cad77aa0bcaf134fbc6b23885fa59ab4"
+      "bytes": 10818518,
+      "count": 49170,
+      "sha256": "c0545c3635564d55008d1e88edf183087f8359c2e00e1f6db8f09ad67ef12cd2"
     },
     "affixes": {
       "file": "affixes.json",
@@ -22,9 +22,9 @@
     },
     "word_block": {
       "file": "word_block.json",
-      "bytes": 843762,
+      "bytes": 842688,
       "count": 9,
-      "sha256": "aaef2f5f2c4d6868223281660bb10aa74bc0919722c48bf7653e3578981c2f84"
+      "sha256": "927a778c8c0240eb10c6e0de01172f4dcba2d6344b1d1eaff9170c8fcdff9539"
     },
     "details_brief": {
       "file": "details_brief.json",
